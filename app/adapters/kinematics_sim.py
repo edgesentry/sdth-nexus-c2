@@ -50,7 +50,9 @@ class KinematicsSim:
         self.history.append((self.latitude, self.longitude))
         return self.latitude, self.longitude
 
-    def run_until_arrival(self, max_steps: int = 120, dt_sec: float = 1.0) -> list[tuple[float, float]]:
+    def run_until_arrival(
+        self, max_steps: int = 120, dt_sec: float = 1.0
+    ) -> list[tuple[float, float]]:
         for _ in range(max_steps):
             if self.waypoint is None:
                 break

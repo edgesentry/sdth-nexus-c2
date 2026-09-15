@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import httpx
-
-from app.adapters.kinematics_sim import KinematicsSim
 from core.coa import CourseOfAction
 from core.proxy import EffectorProxy
 from core.schema import ExecutionReceipt
+
+from app.adapters.kinematics_sim import KinematicsSim
 
 
 class ClearbotRestAdapter(EffectorProxy):
@@ -47,7 +47,10 @@ class ClearbotRestAdapter(EffectorProxy):
             telemetry={
                 "http": body,
                 "path_tail": path[-5:],
-                "position": {"latitude": self.kinematics.latitude, "longitude": self.kinematics.longitude},
+                "position": {
+                    "latitude": self.kinematics.latitude,
+                    "longitude": self.kinematics.longitude,
+                },
             },
         )
         receipt.seal()
@@ -72,4 +75,4 @@ class ClearbotRestAdapter(EffectorProxy):
         async with httpx.AsyncClient(timeout=self.timeout_sec) as client:
             resp = await client.get(f"{self.endpoint}/api/v1/telemetry")
             resp.raise_for_status()
-            return resp.json()
+            return cast(dict[str, Any], resp.json())

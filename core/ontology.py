@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import datetime
 from math import asin, cos, radians, sin, sqrt
-from typing import Iterable
+from typing import Any
 
 from core.schema import Observation, sha256_hex
 
@@ -31,7 +32,7 @@ class Track:
     observation_ids: list[str] = field(default_factory=list)
     digests: list[str] = field(default_factory=list)
     updated_at: datetime | None = None
-    attributes: dict = field(default_factory=dict)
+    attributes: dict[str, Any] = field(default_factory=dict)
 
     def fused_digest(self) -> str:
         joined = "|".join(sorted(self.digests))
@@ -95,8 +96,13 @@ class SpatialEntityGraph:
         return list(self.tracks.values())
 
     def observations_for(self, track_id: str) -> list[Observation]:
-        return [o for o in self.observations if (o.entity_hint or o.source_id) == track_id
-                or o.observation_id in (self.tracks.get(track_id).observation_ids if track_id in self.tracks else [])]
+        return [
+            o
+            for o in self.observations
+            if (o.entity_hint or o.source_id) == track_id
+            or o.observation_id
+            in (self.tracks[track_id].observation_ids if track_id in self.tracks else [])
+        ]
 
     def _find_nearby(self, lat: float, lon: float, preferred_id: str) -> Track | None:
         if preferred_id in self.tracks:

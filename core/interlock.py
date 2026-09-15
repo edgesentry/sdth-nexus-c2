@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
+from typing import Any
 
 from core.coa import CourseOfAction
 
@@ -29,7 +30,7 @@ class DeterministicInterlock:
     def __init__(
         self,
         *,
-        forbidden_zones: list[dict] | None = None,
+        forbidden_zones: list[dict[str, Any]] | None = None,
         max_speed_kt: float = 40.0,
         reject_null_coordinates: bool = True,
         active_coa_ids: set[str] | None = None,

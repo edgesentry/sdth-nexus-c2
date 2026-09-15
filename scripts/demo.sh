@@ -6,6 +6,7 @@ cd "$ROOT"
 
 export CLEARBOT_BASE_URL="${CLEARBOT_BASE_URL:-http://127.0.0.1:8000}"
 export GATE_TIMEOUT_SEC="${GATE_TIMEOUT_SEC:-5}"
+export SCENARIO="${SCENARIO:-S1}"
 
 uv sync
 
@@ -21,5 +22,5 @@ for _ in $(seq 1 50); do
   sleep 0.1
 done
 
-uv run python -m app.main --yes --timeout "${GATE_TIMEOUT_SEC}"
-echo "Demo complete."
+uv run python -m app.main --scenario "${SCENARIO}" --yes --timeout "${GATE_TIMEOUT_SEC}"
+echo "Demo complete (scenario=${SCENARIO})."

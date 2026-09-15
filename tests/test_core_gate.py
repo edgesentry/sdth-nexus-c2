@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 
 import pytest
-
 from core.coa import ActionTier, CourseOfAction, GateVerdict
 from core.gate import LatencyBoundedGate
 from core.interlock import DeterministicInterlock, point_in_polygon

@@ -6,7 +6,7 @@ from typing import Any
 
 import uvicorn
 from fastapi import FastAPI
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 app = FastAPI(title="Clearbot Mock", version="0.1.0")
 
