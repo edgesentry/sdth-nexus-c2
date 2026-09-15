@@ -1,0 +1,26 @@
+# App-layer policy for demo C2 cycle (venue-specific numbers live here, not in core/)
+gate:
+  default_timeout_seconds: 5.0
+
+tiers:
+  confidence_auto_approve_min: 0.95
+  min_corroborating_sources_tier1: 2
+  inspect_default_tier: 1
+
+interlock:
+  # Reject COAs whose target falls inside these polygons (lat, lon rings; closed).
+  forbidden_zones:
+    - name: demo_no_go
+      polygon:
+        - [1.2300, 103.8500]
+        - [1.2300, 103.8520]
+        - [1.2320, 103.8520]
+        - [1.2320, 103.8500]
+        - [1.2300, 103.8500]
+  max_speed_kt: 40.0
+  reject_null_coordinates: true
+
+agent:
+  position_mismatch_m_threshold: 500.0
+  spoof_speed_kt_threshold: 1.0
+  approach_speed_kt_min: 10.0
