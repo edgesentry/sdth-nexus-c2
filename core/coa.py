@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import Any
 from uuid import uuid4
 
@@ -15,7 +15,7 @@ class ActionTier(int, Enum):
     TIER_2_DUAL_KEY = 2
 
 
-class GateVerdict(str, Enum):
+class GateVerdict(StrEnum):
     APPROVED = "APPROVED"
     REJECTED_FAST = "REJECTED_FAST"
     REJECTED_OPERATOR = "REJECTED_OPERATOR"

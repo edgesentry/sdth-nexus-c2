@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from core.schema import Observation
@@ -18,7 +18,7 @@ def normalize_sensor_event(event: dict[str, Any]) -> Observation:
     if isinstance(observed_at, str):
         observed_at = datetime.fromisoformat(observed_at.replace("Z", "+00:00"))
     elif observed_at is None:
-        observed_at = datetime.now(timezone.utc)
+        observed_at = datetime.now(UTC)
 
     speed_kt = float(event.get("speed_kt", 0.0))
     obs = Observation(
@@ -33,10 +33,22 @@ def normalize_sensor_event(event: dict[str, Any]) -> Observation:
         modality=str(event.get("modality", "generic")),
         attributes={
             "speed_kt": speed_kt,
-            **{k: v for k, v in event.items() if k not in {
-                "source_id", "entity_id", "latitude", "longitude", "speed_kt",
-                "heading_deg", "confidence", "observed_at", "modality",
-            }},
+            **{
+                k: v
+                for k, v in event.items()
+                if k
+                not in {
+                    "source_id",
+                    "entity_id",
+                    "latitude",
+                    "longitude",
+                    "speed_kt",
+                    "heading_deg",
+                    "confidence",
+                    "observed_at",
+                    "modality",
+                }
+            },
         },
     )
     obs.ensure_digest()

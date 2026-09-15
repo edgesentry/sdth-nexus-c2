@@ -1,4 +1,4 @@
-"""SDTH C2 cycle: scenario → ontology → agent COA → HITL gate → effector."""
+"""SDTH C2 cycle: defense scenario → ontology → COA → HITL → effector."""
 
 from __future__ import annotations
 
@@ -7,28 +7,30 @@ import asyncio
 import os
 from pathlib import Path
 
-from rich.console import Console
-
-from app.adapters.clearbot_rest import ClearbotRestAdapter
-from app.adapters.southbound_sensor import normalize_sensor_event
-from app.agent import find_first_contradiction_coa
-from app.scenarios.strait_incident import build_strait_incident
-from app.ui.console import prompt_operator_decision
 from core.audit import AuditLogger
 from core.coa import GateVerdict
 from core.gate import LatencyBoundedGate
 from core.ontology import SpatialEntityGraph
 from core.policy import TieredPolicy
+from core.proxy import EffectorProxy
 from core.stub import StubEffector
+from rich.console import Console
+
+from app.adapters.clearbot_rest import ClearbotRestAdapter
+from app.adapters.southbound_sensor import normalize_sensor_event
+from app.scenarios.base import get_scenario, list_scenario_ids
+from app.ui.console import prompt_operator_decision
 
 console = Console()
 
-ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_POLICY = ROOT / "config" / "maritime_defense_policy.yaml"
+APP_DIR = Path(__file__).resolve().parent
+ROOT = APP_DIR.parent
+DEFAULT_POLICY = APP_DIR / "config" / "maritime_defense_policy.yaml"
 
 
 async def run_c2_cycle(
     *,
+    scenario_id: str = "S1",
     policy_path: Path = DEFAULT_POLICY,
     clearbot_base_url: str | None = None,
     audit_path: Path | None = None,
@@ -36,46 +38,43 @@ async def run_c2_cycle(
     use_stub: bool = False,
     gate_timeout_sec: float | None = None,
 ) -> GateVerdict:
+    scenario = get_scenario(scenario_id)
     policy = TieredPolicy.from_yaml(policy_path)
-    agent_cfg = policy.raw.get("agent", {})
     timeout = gate_timeout_sec or policy.default_timeout_seconds
 
     audit = AuditLogger(audit_path or ROOT / ".audit" / "gate.jsonl")
-    graph = SpatialEntityGraph()
+    graph = SpatialEntityGraph(associate_radius_m=2_000.0)
 
-    events = build_strait_incident()
+    events = scenario.build_events()
     observations = [normalize_sensor_event(e) for e in events]
     graph.ingest_many(observations)
-    audit.append("observations_ingested", "Info", {"count": len(observations)})
-
-    result = find_first_contradiction_coa(
-        graph,
-        mismatch_m_threshold=float(agent_cfg.get("position_mismatch_m_threshold", 500.0)),
-        spoof_speed_kt_threshold=float(agent_cfg.get("spoof_speed_kt_threshold", 1.0)),
-        approach_speed_kt_min=float(agent_cfg.get("approach_speed_kt_min", 10.0)),
-        timeout_seconds=timeout,
+    audit.append(
+        "observations_ingested",
+        "Info",
+        {"count": len(observations), "scenario": scenario.id},
     )
-    if result is None:
-        console.print("[yellow]No contradiction found; nothing to task.[/yellow]")
-        audit.append("no_contradiction", "Info", {})
+
+    finding = scenario.detect(graph)
+    if finding is None:
+        console.print(f"[yellow]No warning picture for {scenario.id}; nothing to task.[/yellow]")
+        audit.append("no_finding", "Info", {"scenario": scenario.id})
         return GateVerdict.REJECTED_FAST
 
-    finding, coa = result
+    coa = scenario.build_coa(graph, finding, timeout_seconds=timeout)
     coa = policy.apply_defaults(coa)
-    console.print(f"[bold]Finding:[/bold] {finding.message}")
-    console.print(
-        f"COA {coa.coa_id[:8]}… tier={coa.tier.name} "
-        f"target={coa.target_coordinates} conf={coa.confidence:.2f}"
-    )
     audit.append(
         "coa_proposed",
         "Medium",
         {
+            "scenario": scenario.id,
             "coa_id": coa.coa_id,
             "tier": coa.tier.value,
+            "intent": coa.intent,
             "confidence": coa.confidence,
             "sources": coa.corroborating_sources,
             "raw_input_digest": coa.raw_input_digest,
+            "picture_summary": finding.picture_summary,
+            "adversarial_hypothesis": finding.adversarial_hypothesis,
         },
     )
 
@@ -83,11 +82,14 @@ async def run_c2_cycle(
     queue: asyncio.Queue[str] = asyncio.Queue()
     prompt_task = asyncio.create_task(
         prompt_operator_decision(
-            message=finding.message,
-            asset_label="Clearbot USV-01",
+            message=finding.picture_summary,
+            asset_label=scenario.asset_label,
             timeout_seconds=timeout,
             queue=queue,
             auto_decision=auto_decision,
+            finding=finding,
+            scenario=scenario,
+            coa=coa,
         )
     )
 
@@ -100,12 +102,13 @@ async def run_c2_cycle(
             "coa_id": coa.coa_id,
             "verdict": verdict.value,
             "token": token.model_dump(mode="json"),
+            "scenario": scenario.id,
         },
     )
     console.print(f"[bold]Gate verdict:[/bold] {verdict.value}")
 
     if use_stub:
-        effector = StubEffector()
+        effector: EffectorProxy = StubEffector()
     else:
         base = clearbot_base_url or os.environ.get("CLEARBOT_BASE_URL", "http://127.0.0.1:8000")
         effector = ClearbotRestAdapter(endpoint=base)
@@ -114,7 +117,7 @@ async def run_c2_cycle(
         receipt = await effector.dispatch(coa)
         policy.interlock.register_active(coa)
         audit.append("dispatch", "High", {"receipt": receipt.model_dump(mode="json")})
-        console.print(f"[green]Dispatched[/green]: {receipt.status} {receipt.message}")
+        console.print(f"[green]Dispatched[/green]: {receipt.status} · {coa.intent}")
         if not use_stub and hasattr(effector, "kinematics"):
             pos = (effector.kinematics.latitude, effector.kinematics.longitude)
             console.print(f"Sim position after path: {pos}")
@@ -129,7 +132,13 @@ async def run_c2_cycle(
 
 
 def cli_main() -> None:
-    parser = argparse.ArgumentParser(description="SDTH Nexus C2 demo cycle")
+    parser = argparse.ArgumentParser(description="SDTH Nexus C2 — defense scenarios")
+    parser.add_argument(
+        "--scenario",
+        default=os.environ.get("SCENARIO", "S1"),
+        choices=list_scenario_ids(),
+        help="Defense scenario id (default S1)",
+    )
     parser.add_argument("--policy", type=Path, default=DEFAULT_POLICY)
     parser.add_argument("--clearbot-url", default=os.environ.get("CLEARBOT_BASE_URL"))
     parser.add_argument("--audit", type=Path, default=None)
@@ -147,6 +156,7 @@ def cli_main() -> None:
 
     verdict = asyncio.run(
         run_c2_cycle(
+            scenario_id=args.scenario,
             policy_path=args.policy,
             clearbot_base_url=args.clearbot_url,
             audit_path=args.audit,
@@ -155,7 +165,12 @@ def cli_main() -> None:
             gate_timeout_sec=args.timeout,
         )
     )
-    raise SystemExit(0 if verdict in {GateVerdict.APPROVED, GateVerdict.TIMED_OUT_FALLBACK, GateVerdict.REJECTED_OPERATOR} else 1)
+    raise SystemExit(
+        0
+        if verdict
+        in {GateVerdict.APPROVED, GateVerdict.TIMED_OUT_FALLBACK, GateVerdict.REJECTED_OPERATOR}
+        else 1
+    )
 
 
 if __name__ == "__main__":

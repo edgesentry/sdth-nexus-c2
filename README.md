@@ -1,50 +1,61 @@
 # sdth-nexus-c2
 
-SDTH 2026 C2 application: **PS 04 One Picture, Many Eyes** (contradicting sensors → COA → latency-bounded HITL → effector).
+SDTH 2026 C2 application: **PS 04 One Picture, Many Eyes** — disagreeing sensors → **warning picture** → latency-bounded HITL → effector.
 
-Phase 1 keeps **NexusGate core** (`core/`) and the **venue app** (`app/`) in one Python repo. Venue words (Clearbot, strait, AIS, …) stay in `app/` only.
+Phase 1 keeps **NexusGate core** (`core/`) and the **venue app** (`app/`) in one Python repo. Venue / defense narrative words stay in `app/` only.
 
 ## Quick start
 
 ```bash
 uv sync
-./scripts/demo.sh
+./scripts/demo.sh                 # default SCENARIO=S1
+SCENARIO=S2 ./scripts/demo.sh
+uv run python -m app.main --scenario S3 --stub --yes
 ```
 
-`demo.sh` starts the Level-1 Clearbot mock on `:8000` and runs one auto-approved C2 cycle.
+## Defense scenarios (app-layer)
 
-Manual:
+| ID | Title | Story |
+|----|-------|--------|
+| **S1** | Sea Approach — Adversarial AIS Spoof | Sea approaches; manipulable AIS vs radar/EO; vendor IDs not shared; ISR USV identify |
+| **S2** | Air Corridor — Attritable RF-Silent Raid | Cheap inbound airframes; no ADS-B; RF silent; EO vs radar mismatch; cue/identify (not kinetic) |
+| **S3** | Shipping Lane SPOF — Pattern Break | Open AIS thins; uncorrelated coastal radar; approach patrol |
+
+Each run prints a **WARNING PICTURE** (threat class, minutes of warning, sources, “if false collapses when…”) before the gate.
+
+## Manual
 
 ```bash
 uv run uvicorn app.mock_server:app --port 8000 &
-uv run python -m app.main --yes          # auto-approve
-uv run python -m app.main                # interactive y/n countdown
-uv run python -m app.main --stub --yes   # no HTTP
+uv run python -m app.main --scenario S1 --yes
+uv run python -m app.main --scenario S2            # interactive y/n
+uv run python -m app.main --scenario S3 --stub --yes
 ```
 
 ## Layout
 
 | Path | Role |
 |------|------|
-| `core/` | Future OSS NexusGate: ontology, COA, interlock, tiered policy, LatencyBoundedGate, OCSF audit, EffectorProxy |
-| `app/` | Scenario, rule-based agent, Rich TUI, Clearbot REST adapter, mock server, kinematics sim, RasPi stub |
-| `config/maritime_defense_policy.yaml` | Geofences / thresholds (app-owned) |
+| `core/` | Future OSS NexusGate (no SDTH/Clearbot/Singapore vocabulary) |
+| `app/scenarios/` | S1–S3 defense scenarios + registry |
+| `app/` | Warning Picture TUI, Clearbot REST, mock server, kinematics, RasPi stub |
+| `app/config/maritime_defense_policy.yaml` | Geofences / thresholds (app-owned) |
 
 ## Effector levels
 
-1. **Mock REST** — `app/mock_server.py` (`POST /api/v1/navigate`, telemetry, emergency_stop)
-2. **2D kinematics** — advances lat/lon toward waypoint after approve
-3. **RasPi GPIO** — `app/adapters/raspi_hardware.py` (no-op without RPi.GPIO)
+1. **Mock REST** — `app/mock_server.py`
+2. **2D kinematics** — lat/lon toward waypoint after approve
+3. **RasPi GPIO** — optional / no-op without hardware
 
 ## Tests
 
 ```bash
-uv run pytest -q
+uv run pytest tests/ -q
 ```
 
-## Limits (this baseline)
+## Limits
 
-- Agent is **deterministic rules**, not LLM
+- Detectors are **deterministic rules**, not LLM
 - No full map UI (Rich TUI only)
 - Dual-key Tier 2 not implemented
-- Core must remain free of venue vocabulary for later `edgesentry/nexusgate` extract
+- Kinetic intercept is **not** claimed (S2 cues identify only)
