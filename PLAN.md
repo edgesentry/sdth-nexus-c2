@@ -1,6 +1,6 @@
 # PLAN — sdth-nexus-c2 (PS 04)
 
-**Status:** Phase 1 venue app (100% Software-Driven C2) · Phase 3 = post-hackathon sovereign PoC · **2026-09-17 Updated**  
+**Status:** Phase 2 venue app (Backend closed loop & Cloudflare Core) · Phase 5 = post-hackathon sovereign PoC · **2026-09-17 Updated**  
 **Challenge:** SDTH 2026 **PS 04 — One Picture, Many Eyes** (From Picture to Tasking)  
 **Product face:** Project NexusGate (core gate) + venue Command and Control (C2) app  
 **Target Reviewers:** DSTA, MINDEF/SAF C4I, EDTH, NUS Defense Tech Venture Lab  
@@ -85,9 +85,10 @@ Printed in TUI and served over API before the gate. Answers: *what is wrong, how
 | `threat_class` | e.g. `attritable_air_incursion` / `sea_approach_deception` / `lane_spof_break` |
 | `warning_minutes_est` | Tactical warning time remaining (e.g. 4.0 min for air raid, 8.0 min for sea) |
 | `mismatch_m` | Spatial disagreement distance between sensor tracks |
-| `confidence` | Rule-composed score |
+| `confidence` | Rule-composed score (0.0 to 1.0) |
 | `picture_summary` | Single coherent operational summary |
 | `adversarial_hypothesis` | "If source X is false..." (PS 04 §2-05 style) |
+| `amber_alert` | Contradiction classification (e.g. `COUNT_AND_BEARING_MISMATCH`) |
 | `source_breakdown` | Discrepant sources grouped by modality and claim |
 
 ### 2.4 Decision Path & Execution
@@ -118,11 +119,11 @@ build_events()  →  SpatialEntityGraph
 
 ## 4. Two-Screen Closed-Loop Architecture & REST API Contract
 
-To support John Teoh's (Johnny's) **BattlePlan Next.js Frontend** and recipient nodes on standard laptops, the backend provides a unified C2 REST server (`app/c2_server.py`):
+To support the **BattlePlan Next.js Command Cockpit** and recipient nodes on standard laptops, the backend provides a unified C2 REST server (`app/c2_server.py`):
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│ Screen 1: Command Cockpit (Johnny Next.js / Console TUI)    │
+│ Screen 1: Command Cockpit (Next.js UI / Console TUI)        │
 │  - GET  /api/ontology/state    (Live tracks & Amber Alerts) │
 │  - POST /api/gate/proposals    (Submit candidate COA)       │
 │  - POST /api/gate/approve      (Operator decision)          │
@@ -146,6 +147,8 @@ To support John Teoh's (Johnny's) **BattlePlan Next.js Frontend** and recipient 
 
 ### 4.1 REST Endpoints
 
+The unified server provides 7 endpoints (5 core operational + 1 audit inspection + 1 test admin reset):
+
 1. `GET /api/ontology/state`
    - Returns live tracks, observations, and discrepancy details (count mismatch, coordinate divergence, amber alerts).
 2. `POST /api/gate/proposals`
@@ -158,6 +161,8 @@ To support John Teoh's (Johnny's) **BattlePlan Next.js Frontend** and recipient 
    - Recipient submits signed acknowledgment with timestamp and hardware/software signature, sealed to `.audit/gate.jsonl`.
 6. `GET /api/audit/trail`
    - Returns current OCSF hash chain records for real-time audit inspection.
+7. `POST /api/admin/reset`
+   - Clears in-memory runtime state for automated tests and repeatable demo rehearsals without wiping disk audit files.
 
 ---
 
@@ -183,30 +188,35 @@ The pitch deck commits to 4 rigorous engineering metrics:
 - [x] OCSF-compliant append-only hash audit logger (`core/audit.py`).
 - [x] Basic S1, S2, S3 scenario stubs.
 
-### Phase 1: MVP Synthetic Scenarios & C2 REST Loop (Active Focus)
+### Phase 1: MVP Synthetic Scenarios & C2 REST Loop (Completed)
 - [x] **S2 Hero Scenario Polish:** Add `intel_text` social media / recon input, count discrepancy (3 vs 1), and low-confidence EO blur (0.42) triggering `COUNT_AND_BEARING_MISMATCH` Amber Alert.
 - [x] **Vendor-Neutral Effector Adapter:** Implement `app/adapters/usv_rest.py` with `EFFECTOR_BASE_URL` (backward-compat shim for Clearbot).
-- [x] **Unified C2 REST Server:** Implement `app/c2_server.py` with the 5 core endpoints supporting Johnny's Next.js UI on Screen 1 and simulated Recipient on Screen 2.
+- [x] **Unified C2 REST Server:** Implement `app/c2_server.py` with the 7 endpoints supporting the Next.js Command UI on Screen 1 and simulated Recipient on Screen 2.
 - [x] **19-Event Temporal Streamer:** Implement `scripts/stream_events.py` for T-60s to T-00s event playback.
 - [x] **Automated Benchmark Suite:** Implement `scripts/benchmark.py` verifying Slide 11 performance metrics.
 
-### Phase 2: Team Integration & Demo Day Polish (48-hour boundary)
-Hackathon-completeable only. Anything that needs field hardware, real AI pipelines, or sovereign buyers → Phase 3.
+### Phase 2: Backend Closed Loop & Cloudflare Core Deployment (Active Focus)
+- [ ] Validate end-to-end backend closed loop via curl / automated scripts without frontend dependency.
+- [ ] Containerize C2 server for optional **Cloudflare Containers** deployment while retaining identical REST contract.
+- [ ] Establish hardened fallback to local `sdth-c2-server` for zero-internet venue reliability.
 
-- [ ] Integrate Johnny's Next.js BattlePlan UI with `app/c2_server.py` (two-screen software handshake).
+### Phase 3: BattlePlan UI Integration on Frozen REST Contract (Planned)
+- [ ] Integrate the Next.js BattlePlan UI with `app/c2_server.py` (two-screen software handshake).
 - [ ] Wire **demo-grade** open feeds (`data.gov.sg` / open air traffic) as optional ingress — synthetic S1–S3 remain the primary story.
 - [ ] (Optional Stretch) Laptop-side RasPi GPIO blink as secondary proof — not required for pitch.
+
+### Phase 4: Pitch-Day Polish & Live Demonstration (Planned)
+Hackathon-completeable only. Anything that needs field hardware, real AI pipelines, or sovereign buyers → Phase 5.
 - [ ] Run rehearsals for 3-minute hackathon pitch & live software demonstration.
+- [ ] Verify 4 commitments on live screen: multimodal contradiction, deterministic gate, Picture→Tasking loop, immutable audit.
 
-**Pitch-point coverage in Phase 2:** multimodal *synthetic* contradiction (1), deterministic gate + audit proof (3, 5), Picture→Tasking two-screen loop (4). Probabilistic AI remains stubbed (`intel_text` / rule detectors).
+### Phase 5: Post-Hackathon → Sovereign PoC (Planned)
+Maps to the 9-month NUS Defence Tech Venture Lab bridge. Owns the pitch points Phase 4 cannot close.
 
-### Phase 3: Post-Hackathon → Sovereign PoC (does not finish in Phase 2)
-Maps to the 9-month NUS Defence Tech Venture Lab bridge. Owns the pitch points Phase 2 cannot close.
-
-| Pitch point | Phase 3 deliverable |
+| Pitch point | Phase 5 deliverable |
 |-------------|---------------------|
 | **1. Multimodal integration** | Live coastal AIS + optical (+ RF when available); multi-vendor association under real latency / spoof pressure |
-| **2. Probabilistic interpretation** | App-layer LLM + CV pipeline (Jovinder): text intel extraction, YOLO/EO blur, hypothesis COAs — still gated by Core |
+| **2. Probabilistic interpretation** | App-layer LLM + CV pipeline: text intel extraction, YOLO/EO blur, hypothesis COAs — still gated by Core |
 | **3. Deterministic gate** | Air-gapped Core hardening; 1,000+ track swarm stress; dual-key Tier-2; sub-50ms under load |
 | **4. Picture→Tasking** | Controlled-water USV / Clearbot field trial; production recipient adapters; optional RasPi forward outpost as primary edge Ack |
 | **5. Sovereign interlock** | DSTA/SAF C4 evaluation sandbox add-on; OCSF + stronger crypto seal (e.g. Ed25519); Agent Governance & Safety Interlock Evaluation SOW |
@@ -220,20 +230,20 @@ Checklist:
 - [ ] **Sovereign Sandbox + SOW:** Deploy as gateway add-on in DSTA/MINDEF testbed; first evaluation PoC contract narrative.
 
 ```text
-Phase 0–1 (hackathon core)     Phase 2 (demo day)           Phase 3 (lab → field → buyer)
+Phase 0–2 (core & backend)     Phase 3–4 (UI & demo day)    Phase 5 (lab → field → buyer)
 Synthetic Many Eyes + Gate  →  Two-screen software loop  →  Live AI + USV + sovereign PoC
 ```
 
 ---
 
-## 7. Success Criteria (Demo Day)
+## 7. Success Criteria (Demo Day — Phase 4)
 
 1. **Slide 04 Live Validation:** Run S2; prove that Civilian Social/Recon (3) vs Radar (1) vs EO/IR (blur) triggers Amber Discrepancy Alert rather than a hallucinated unified picture.
 2. **Two-Screen Handshake:** Command approves tasking on Screen 1; Recipient receives token and presses Ack on Screen 2 (laptop); Ack is sealed in OCSF audit log within 3 seconds.
 3. **Benchmarked Reliability:** Present live execution results from `scripts/benchmark.py` proving <50ms gate latency, 0 unauthorized taskings, and 100% audit integrity.
 4. **Judge Defense:** Confidently answer MINDEF/DSTA: *"We do not build sensors or shooters. We build the deterministic sovereign interlock that governs action when sensors disagree."*
 
-### Phase 3 Success Criteria (Post-Demo)
+### Phase 5 Success Criteria (Post-Demo)
 
 1. **Probabilistic × Deterministic in production path:** LLM/CV proposes; Core never approves uncorroborated kinetic / high-impact tasking.
 2. **Field Picture-to-Ack:** Live or near-live coastal ingress → operator approve → USV/edge Ack under controlled trial.
