@@ -17,7 +17,7 @@ SDTH 2026 **PS 04 — One Picture, Many Eyes**: disagreeing sensors → **Warnin
 - **[Scenarios](scenarios.md)** — S1 sea spoof · S2 air corridor (hero) · S3 lane SPOF
 - **[Demo & benchmarks](demo.md)** — quick start, streamer, Slide 11 metrics
 - **[Roadmap](roadmap.md)** — Phase 0–5
-- **[Plan](plan.md)** — full planning source (`PLAN.md`)
+- **[Plan](plan.md)** — full planning source
 
 ## Quick start
 
