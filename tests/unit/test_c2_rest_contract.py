@@ -125,9 +125,15 @@ def test_frozen_contract_shapes(client: TestClient) -> None:
     _assert_keys(tr, AUDIT_KEYS, label="audit/trail")
     assert tr["count"] >= 1
     for rec in tr["records"]:
-        assert {"class_name", "activity_name", "severity", "time", "metadata", "prev_hash", "hash"} <= set(
-            rec
-        )
+        assert {
+            "class_name",
+            "activity_name",
+            "severity",
+            "time",
+            "metadata",
+            "prev_hash",
+            "hash",
+        } <= set(rec)
 
     reset = client.post("/api/admin/reset")
     assert reset.status_code == 200
