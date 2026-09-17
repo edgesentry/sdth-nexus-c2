@@ -80,6 +80,24 @@ curl -s -X POST localhost:8080/api/recipient/ack -H 'content-type: application/j
 
 `ClearbotRestAdapter` remains a thin alias of `UsvRestAdapter` for older imports.
 
+## 19-event temporal streamer
+
+Play T-60s → T-00s sensor ingress incrementally (PS 04 temporal alignment), not a one-shot `build_events()` dump:
+
+```bash
+uv run python scripts/stream_events.py                  # S2 hero, local ontology
+uv run python scripts/stream_events.py --fast           # no inter-step sleep
+uv run python scripts/stream_events.py --mode print     # JSONL steps
+uv run python scripts/stream_events.py --help
+```
+
+| Steps | Band |
+|-------|------|
+| 01–05 | Early recon / social rumors / sparse radar |
+| 06–10 | Coastal radar lock + optical slew |
+| 11–15 | EO blur + Amber contradiction (S2) |
+| 16–19 | Warning Picture → HITL → tasking/ack cue |
+
 ## Slide 11 benchmarks
 
 Prove gate latency, fail-closed unauthorized rejects, picture-to-ack, and audit integrity:
@@ -104,6 +122,7 @@ Exits non-zero if any metric misses its target (suitable for live demo / CI).
 ```bash
 uv run pytest tests/unit/ -q                        # unit
 uv run pytest tests/integration/ -v -m integration  # S2 + C2 two-screen / live HTTP
+uv run python scripts/stream_events.py --fast       # 19-step temporal playback
 uv run python scripts/benchmark.py                  # Slide 11 proof
 ```
 
