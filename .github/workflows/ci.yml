@@ -65,7 +65,7 @@ jobs:
         run: uv run bandit -r app core -c pyproject.toml -q
 
   test:
-    name: Test
+    name: Unit tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -82,5 +82,26 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked --group dev
 
-      - name: Pytest
-        run: uv run pytest tests/ -q
+      - name: Pytest (unit)
+        run: uv run pytest tests/unit/ -q
+
+  integration:
+    name: Integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.12.15"
+          python-version: "3.13"
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked --group dev
+
+      - name: Pytest (integration)
+        run: uv run pytest tests/integration/ -v -m integration
