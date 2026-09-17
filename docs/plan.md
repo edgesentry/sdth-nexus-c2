@@ -8,12 +8,6 @@
 **Target Reviewers:** DSTA, MINDEF/SAF C4I, EDTH, NUS Defense Tech Venture Lab  
 **Architecture Consensus (2026-09-17 Team Decision):** Purely software-driven digital C2 application running on standard laptops. Physical robotics/hardware excluded from primary hackathon deliverables to guarantee execution within the 48-hour window. Effectors are generic REST/simulated endpoints (`UsvRestAdapter` / simulated recipient nodes).
 
-Commercial & defense strategy references (read-only):
-- `edgesentry-commercial/decks/sdth2026-ps04-nexus-c2/notebooklm-defense-pitch-prompt.md` (Pitch master)
-- `edgesentry-commercial/docs/strategy/sdth2026/theme04-pitch-strategy.md` (Strategy & Shahed scenario)
-- `edgesentry-commercial/docs/strategy/sdth2026/meeting-20260917-sdth-discussion.md` (Team discussion & software consensus)
-- `edgesentry-commercial/docs/products/nexusgate/sdth-app-architecture-and-scope.md` (Two-screen C2 & REST API)
-
 ---
 
 ## 1. Executive Summary & One-Line Closed Loop
@@ -201,6 +195,7 @@ The pitch deck commits to 4 rigorous engineering metrics:
 - [ ] Validate end-to-end backend closed loop via curl / automated scripts without frontend dependency.
 - [ ] Containerize C2 server for optional **Cloudflare Containers** deployment while retaining identical REST contract.
 - [ ] Establish hardened fallback to local `sdth-c2-server` for zero-internet venue reliability.
+- [x] **Pitch-3 Deterministic gate stress:** `scripts/benchmark.py` floods ontology with 100+ tracks and mixed COAs; asserts gate p95 < 50 ms and unauthorized = 0 (issue #23).
 
 ### Phase 3: BattlePlan UI Integration on Frozen REST Contract (Planned)
 - [ ] Integrate the Next.js BattlePlan UI with `app/c2_server.py` (two-screen software handshake).

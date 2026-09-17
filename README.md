@@ -150,6 +150,8 @@ Exits non-zero if any metric misses its target (suitable for live demo / CI).
 | Gate latency (p95) | < 50 ms (100 COA evals) |
 | Interlock fast-reject (p95) | < 5 ms |
 | Unauthorized taskings | 0 (geofence / speed / duplicate / timeout) |
+| Track-flood stress (p95) | < 50 ms under 100+ synthetic tracks (Pitch-3) |
+| Track-flood unauthorized | 0 under flood |
 | Picture-to-Ack roundtrip | < 3.0 s |
 | Audit trace integrity | 100% hash-chain |
 

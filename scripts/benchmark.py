@@ -7,9 +7,11 @@ Metrics (fail = non-zero exit):
   Unauthorized taskings        = 0     (geofence / speed / duplicate / timeout)
   Picture-to-Ack roundtrip   <  3.0 s  (approve → inbox → ack)
   Audit trace integrity      = 100%    (hash-chain walk)
+  Track-flood stress (p95)   < 50 ms   (100+ synthetic tracks; unauthorized=0)
 
 Usage:
   uv run python scripts/benchmark.py
+  uv run python scripts/benchmark.py --tracks 150
   uv run python scripts/benchmark.py --help
 """
 
@@ -26,14 +28,19 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from app import c2_server
+from app.bench_stress import (
+    FORBIDDEN_ZONES,
+    STRESS_PROPOSALS,
+    STRESS_TRACKS,
+    bench_track_flood_stress,
+)
 from core.audit import AuditLogger
 from core.coa import ActionTier, CourseOfAction, GateVerdict
 from core.gate import LatencyBoundedGate
 from core.interlock import DeterministicInterlock
 from core.schema import canonical_json, sha256_hex
 from fastapi.testclient import TestClient
-
-from app import c2_server
 
 # ---------------------------------------------------------------------------
 # Targets (Slide 11)
@@ -47,19 +54,6 @@ GATE_SAMPLES = 100
 
 SAFE_COORDS = (1.2500, 103.8200)
 GEOFENCE_COORDS = (1.2310, 103.8510)  # inside demo_no_go in maritime_defense_policy.yaml
-
-FORBIDDEN_ZONES: list[dict[str, Any]] = [
-    {
-        "name": "demo_no_go",
-        "polygon": [
-            [1.2300, 103.8500],
-            [1.2300, 103.8520],
-            [1.2320, 103.8520],
-            [1.2320, 103.8500],
-            [1.2300, 103.8500],
-        ],
-    }
-]
 
 
 @dataclass
@@ -90,9 +84,7 @@ def _percentile(sorted_vals: list[float], p: float) -> float:
 # ---------------------------------------------------------------------------
 
 
-async def _run_gate_samples(
-    gate: LatencyBoundedGate, n: int
-) -> tuple[list[float], list[float]]:
+async def _run_gate_samples(gate: LatencyBoundedGate, n: int) -> tuple[list[float], list[float]]:
     all_ms: list[float] = []
     reject_ms: list[float] = []
 
@@ -400,10 +392,7 @@ def bench_audit_integrity() -> MetricResult:
             ).raise_for_status()
 
         ok, total, errors = _verify_audit_chain(path)
-        if total and not errors and ok == total:
-            integrity_pct = 100.0
-        else:
-            integrity_pct = 0.0
+        integrity_pct = 100.0 if total and not errors and ok == total else 0.0
 
         return MetricResult(
             name="Audit trace integrity",
@@ -411,8 +400,7 @@ def bench_audit_integrity() -> MetricResult:
             unit="%",
             target="= 100%",
             passed=integrity_pct == 100.0 and total > 0 and not errors,
-            detail=f"records={total} ok_links={ok}"
-            + (f" errors={errors[:3]}" if errors else ""),
+            detail=f"records={total} ok_links={ok}" + (f" errors={errors[:3]}" if errors else ""),
         )
 
 
@@ -424,7 +412,7 @@ def bench_audit_integrity() -> MetricResult:
 def _print_report(results: list[MetricResult]) -> int:
     width = 72
     print("=" * width)
-    print("  NexusGate C2 — Slide 11 Operational Benchmarks")
+    print("  NexusGate C2 — Slide 11 Operational Benchmarks (+ Pitch-3 flood)")
     print("=" * width)
 
     failures = 0
@@ -464,6 +452,8 @@ def main(argv: list[str] | None = None) -> int:
             f"  Unauthorized taskings    = {UNAUTHORIZED_MAX}\n"
             f"  Picture-to-Ack           < {ROUNDTRIP_S:g} s\n"
             "  Audit integrity          = 100%\n"
+            f"  Track-flood stress p95   < {GATE_P95_MS:g} ms (≥100 tracks)\n"
+            f"  Track-flood unauthorized = {UNAUTHORIZED_MAX}\n"
         ),
     )
     parser.add_argument(
@@ -472,11 +462,43 @@ def main(argv: list[str] | None = None) -> int:
         default=GATE_SAMPLES,
         help=f"COA evaluations for gate latency (default {GATE_SAMPLES})",
     )
+    parser.add_argument(
+        "--tracks",
+        type=int,
+        default=STRESS_TRACKS,
+        help=f"Synthetic tracks for Pitch-3 flood stress (default {STRESS_TRACKS}, min 100)",
+    )
+    parser.add_argument(
+        "--stress-proposals",
+        type=int,
+        default=STRESS_PROPOSALS,
+        help=f"COA proposals under track flood (default {STRESS_PROPOSALS})",
+    )
+    parser.add_argument(
+        "--skip-stress",
+        action="store_true",
+        help="Skip Pitch-3 100+ track flood metrics",
+    )
     args = parser.parse_args(argv)
 
     results: list[MetricResult] = []
     results.extend(bench_gate_latency(n=max(2, args.samples)))
     results.append(bench_unauthorized())
+    if not args.skip_stress:
+        for sm in bench_track_flood_stress(
+            n_tracks=max(100, args.tracks),
+            n_proposals=max(4, args.stress_proposals),
+        ):
+            results.append(
+                MetricResult(
+                    name=sm.name,
+                    value=sm.value,
+                    unit=sm.unit,
+                    target=sm.target,
+                    passed=sm.passed,
+                    detail=sm.detail,
+                )
+            )
     results.append(bench_picture_to_ack())
     results.append(bench_audit_integrity())
     return _print_report(results)
