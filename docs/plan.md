@@ -1,5 +1,7 @@
 # PLAN — sdth-nexus-c2 (PS 04)
 
+> Canonical planning source for this repo (MkDocs / GitHub Pages).
+
 **Status:** Phase 2 venue app (Backend closed loop & Cloudflare Core) · Phase 5 = post-hackathon sovereign PoC · **2026-09-17 Updated**  
 **Challenge:** SDTH 2026 **PS 04 — One Picture, Many Eyes** (From Picture to Tasking)  
 **Product face:** Project NexusGate (core gate) + venue Command and Control (C2) app  
