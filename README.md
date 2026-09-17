@@ -80,14 +80,34 @@ curl -s -X POST localhost:8080/api/recipient/ack -H 'content-type: application/j
 
 `ClearbotRestAdapter` remains a thin alias of `UsvRestAdapter` for older imports.
 
+## Slide 11 benchmarks
+
+Prove gate latency, fail-closed unauthorized rejects, picture-to-ack, and audit integrity:
+
+```bash
+uv run python scripts/benchmark.py
+uv run python scripts/benchmark.py --help
+```
+
+Exits non-zero if any metric misses its target (suitable for live demo / CI).
+
+| Metric | Target |
+|--------|--------|
+| Gate latency (p95) | < 50 ms (100 COA evals) |
+| Interlock fast-reject (p95) | < 5 ms |
+| Unauthorized taskings | 0 (geofence / speed / duplicate / timeout) |
+| Picture-to-Ack roundtrip | < 3.0 s |
+| Audit trace integrity | 100% hash-chain |
+
 ## Tests
 
 ```bash
 uv run pytest tests/unit/ -q                        # unit
 uv run pytest tests/integration/ -v -m integration  # S2 + C2 two-screen / live HTTP
+uv run python scripts/benchmark.py                  # Slide 11 proof
 ```
 
-CI runs both jobs (`Unit tests` and `Integration tests`) on every push/PR.
+CI runs unit, integration, and benchmark jobs on every push/PR.
 ## Limits
 
 - Detectors are **deterministic rules**, not LLM
