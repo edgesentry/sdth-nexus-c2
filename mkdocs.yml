@@ -52,7 +52,7 @@ nav:
   - Architecture:
     - Closed loop: architecture/index.md
     - Topology: architecture/topology.md
-  - C2 REST API: api/rest.md
+  - C2 REST API (frozen): api/rest.md
   - Scenarios: scenarios.md
   - Demo & benchmarks: demo.md
   - Roadmap: roadmap.md
