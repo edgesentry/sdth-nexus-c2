@@ -30,6 +30,7 @@ from typing import Any
 
 from app import c2_server
 from app.bench_stress import (
+    FORBIDDEN_ZONES,
     STRESS_PROPOSALS,
     STRESS_TRACKS,
     bench_track_flood_stress,
@@ -53,20 +54,6 @@ GATE_SAMPLES = 100
 
 SAFE_COORDS = (1.2500, 103.8200)
 GEOFENCE_COORDS = (1.2310, 103.8510)  # inside demo_no_go in maritime_defense_policy.yaml
-# Grid origin for flood tracks — spaced beyond associate_radius (2 km)
-
-FORBIDDEN_ZONES: list[dict[str, Any]] = [
-    {
-        "name": "demo_no_go",
-        "polygon": [
-            [1.2300, 103.8500],
-            [1.2300, 103.8520],
-            [1.2320, 103.8520],
-            [1.2320, 103.8500],
-            [1.2300, 103.8500],
-        ],
-    }
-]
 
 
 @dataclass
