@@ -1,0 +1,59 @@
+site_name: sdth-nexus-c2
+site_description: SDTH 2026 PS 04 — NexusGate C2 closed loop (disagreeing sensors → Warning Picture → HITL gate → Ack).
+site_url: https://edgesentry.github.io/sdth-nexus-c2/
+repo_url: https://github.com/edgesentry/sdth-nexus-c2
+repo_name: edgesentry/sdth-nexus-c2
+edit_uri: edit/main/docs/
+
+docs_dir: docs
+
+theme:
+  name: material
+  language: en
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - content.action.edit
+    - content.code.copy
+
+plugins:
+  - search
+
+extra_javascript:
+  - https://unpkg.com/mermaid@10/dist/mermaid.min.js
+
+markdown_extensions:
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - tables
+  - admonition
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Architecture:
+    - Closed loop: architecture/index.md
+    - Topology: architecture/topology.md
+  - C2 REST API: api/rest.md
+  - Scenarios: scenarios.md
+  - Demo & benchmarks: demo.md
+  - Roadmap: roadmap.md
+  - Plan (source): plan.md
