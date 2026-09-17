@@ -33,6 +33,9 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = [
+    "integration: end-to-end / multi-component checks (C2 REST, live servers)",
+]
 
 [tool.ruff]
 target-version = "py313"

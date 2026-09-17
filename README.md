@@ -80,9 +80,11 @@ curl -s -X POST localhost:8080/api/recipient/ack -H 'content-type: application/j
 ## Tests
 
 ```bash
-uv run pytest tests/ -q
+uv run pytest tests/ -q -m "not integration"   # unit
+uv run pytest tests/integration/ -v -m integration  # S2 + C2 two-screen / live HTTP
 ```
 
+CI runs both jobs (`Unit tests` and `Integration tests`) on every push/PR.
 ## Limits
 
 - Detectors are **deterministic rules**, not LLM
