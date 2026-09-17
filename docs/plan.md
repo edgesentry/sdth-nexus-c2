@@ -196,6 +196,7 @@ The pitch deck commits to 4 rigorous engineering metrics:
 - [ ] Containerize C2 server for optional **Cloudflare Containers** deployment while retaining identical REST contract.
 - [ ] Establish hardened fallback to local `sdth-c2-server` for zero-internet venue reliability.
 - [x] **Pitch-3 Deterministic gate stress:** `scripts/benchmark.py` floods ontology with 100+ tracks and mixed COAs; asserts gate p95 < 50 ms and unauthorized = 0 (issue #23).
+- [x] **Pitch-2 Probabilistic interpreter:** `app/llm_interpreter.py` + `POST /api/interpret` — LLM (env) or heuristic fallback → hypotheses + candidate COA; Core gate still disposes (issue #22).
 
 ### Phase 3: BattlePlan UI Integration on Frozen REST Contract (Planned)
 - [ ] Integrate the Next.js BattlePlan UI with `app/c2_server.py` (two-screen software handshake).

@@ -16,7 +16,8 @@ Screen 1 = command · Screen 2 = recipient. No BattlePlan required for Phase 2 d
 | Method | Path | Role |
 |--------|------|------|
 | `GET` | `/api/ontology/state` | Live tracks, observations, amber alert |
-| `POST` | `/api/gate/proposals` | Queue COA (`scenario_id` or raw `coa`) |
+| `POST` | `/api/interpret` | Probabilistic propose: hypotheses + candidate COA (**never seals**) |
+| `POST` | `/api/gate/proposals` | Queue COA (`scenario_id`, raw `coa`, or `interpret:true`) |
 | `POST` | `/api/gate/approve` | Operator y/n → sealed `DecisionToken` |
 | `GET` | `/api/recipient/inbox?unit_id=` | Pending approved taskings |
 | `POST` | `/api/recipient/ack` | Recipient ack sealed to audit chain |
@@ -110,17 +111,72 @@ Cold start: `scenario_id` / `amber_alert` are `null`; `tracks` / `observations` 
 
 ---
 
+## `POST /api/interpret`
+
+Probabilistic app-layer propose (Pitch-2). Returns scored hypotheses + a **candidate** COA.
+**Never seals a `DecisionToken`.** Core gate remains the only authority that can approve.
+
+### Request
+
+```json
+{
+  "scenario_id": "S2",
+  "timeout_seconds": 5.0,
+  "force_heuristic": true
+}
+```
+
+| Field | Notes |
+|-------|--------|
+| `scenario_id` | Required. Loads scenario events → Finding → interpreter |
+| `force_heuristic` | Skip LLM even if `LLM_BASE_URL` is set |
+| `timeout_seconds` | Passed through to candidate COA construction |
+
+Env: `LLM_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL` / `LLM_TIMEOUT_S`. Unset or failed LLM → heuristic fallback.
+
+### Response `200`
+
+```json
+{
+  "status": "INTERPRETED",
+  "source": "heuristic",
+  "model": null,
+  "error": null,
+  "hypotheses": [
+    {
+      "label": "sensor_contradiction",
+      "claim": "Amber COUNT_AND_BEARING_MISMATCH: …",
+      "confidence": 0.8,
+      "supports_threat": true,
+      "modality_hints": ["social", "radar"]
+    }
+  ],
+  "confidence": 0.8,
+  "picture_summary": "…",
+  "adversarial_hypothesis": "…",
+  "candidate_coa": { "...": "CourseOfAction" },
+  "finding": { "...": "Finding" }
+}
+```
+
+Feed `candidate_coa` into `POST /api/gate/proposals` — gate may still `REJECTED_FAST`.
+
+---
+
 ## `POST /api/gate/proposals`
 
 ### Request
 
-Provide **either** `scenario_id` **or** raw `coa` (not neither).
+Provide **either** `scenario_id` **or** raw `coa` (not neither). Optional `interpret:true` runs the
+probabilistic interpreter first, then queues its candidate COA (response may include `hypotheses`).
 
 ```json
 {
   "scenario_id": "S2",
   "unit_id": "CUE-NODE-01",
-  "timeout_seconds": 30
+  "timeout_seconds": 30,
+  "interpret": true,
+  "force_heuristic": true
 }
 ```
 
