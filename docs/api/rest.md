@@ -103,6 +103,11 @@ No body. Returns the live ontology snapshot after the last successful scenario l
 
 Cold start: `scenario_id` / `amber_alert` are `null`; `tracks` / `observations` / `pending_proposals` are empty; `inbox_depth` is `0`.
 
+!!! note "Field naming: `alert` vs `amber_alert`"
+    Ontology envelope (`GET /api/ontology/state` → `amber_alert`) uses the key **`alert`** for the contradiction class
+    (see `app/c2_server.py`). The serialized `Finding` on proposals uses **`amber_alert`** for the same string value
+    (`app/scenarios/base.py`). Phase 3 UI must bind both names — do not assume one schema for both payloads.
+
 ---
 
 ## `POST /api/gate/proposals`
@@ -162,6 +167,25 @@ Defaults: `unit_id=ISR-NODE-01`; `timeout_seconds` falls back to policy default.
     "picture_summary": "…",
     "source_breakdown": {}
   }
+}
+```
+
+**`APPROVED`** (Tier-0 autonomous — inbox already populated; no separate approve call)
+
+```json
+{
+  "status": "APPROVED",
+  "coa": { "coa_id": "<uuid>", "tier": 0, "…": "…" },
+  "token": {
+    "token_id": "<uuid>",
+    "coa_id": "<uuid>",
+    "verdict": "APPROVED",
+    "issued_at": "…",
+    "operator_id": "autonomous",
+    "reason": "tier0_auto",
+    "digest": "<sha256 hex>"
+  },
+  "finding": null
 }
 ```
 
@@ -226,8 +250,25 @@ Default `operator_id`: `"operator"`.
 }
 ```
 
-On approve, a tasking is written to the recipient inbox (`status: PENDING_ACK`).  
-Deny returns `status: "REJECTED_OPERATOR"` with a sealed token and **no** inbox entry.
+On approve, a tasking is written to the recipient inbox (`status: PENDING_ACK`).
+
+**`REJECTED_OPERATOR`** (operator deny — no inbox entry)
+
+```json
+{
+  "status": "REJECTED_OPERATOR",
+  "coa": { "coa_id": "<uuid>", "…": "…" },
+  "token": {
+    "token_id": "<uuid>",
+    "coa_id": "<uuid>",
+    "verdict": "REJECTED_OPERATOR",
+    "issued_at": "…",
+    "operator_id": "operator",
+    "reason": "operator_deny",
+    "digest": "<sha256 hex>"
+  }
+}
+```
 
 ### Errors
 
@@ -389,6 +430,66 @@ Clears in-memory ontology, findings, proposals, inbox, and ack sets. **Does not*
 | `reason` | string \| null | |
 | `digest` | string | SHA-256 seal; empty only before seal |
 
+### `Finding` (proposal `finding`)
+
+| Field | Type | Notes |
+|-------|------|--------|
+| `scenario_id` | string | |
+| `track_id` | string | |
+| `threat_class` | string | |
+| `warning_minutes_est` | number | |
+| `mismatch_m` | number | |
+| `confidence` | number | |
+| `picture_summary` | string | |
+| `adversarial_hypothesis` | string | |
+| `spoof_sources` / `approach_sources` / `other_sources` | string[] | |
+| `message` | string | |
+| `amber_alert` | string \| null | Contradiction class — **not** the ontology key `alert` |
+| `source_breakdown` | object | Modality → claim map |
+
+### Track (`ontology.tracks[]`)
+
+| Field | Type | Notes |
+|-------|------|--------|
+| `track_id` | string | |
+| `latitude` / `longitude` | number | |
+| `speed_mps` | number | |
+| `confidence` | number | |
+| `source_ids` | string[] | |
+| `modalities` | string[] | e.g. `social`, `radar`, `optical` |
+| `updated_at` | ISO-8601 \| null | |
+| `attributes` | object | Opaque |
+
+### Observation (`ontology.observations[]`)
+
+| Field | Type | Notes |
+|-------|------|--------|
+| `observation_id` | string | |
+| `source_id` | string | |
+| `entity_hint` | string | |
+| `latitude` / `longitude` | number | |
+| `altitude_m` | number \| null | |
+| `speed_mps` | number | |
+| `heading_deg` | number \| null | |
+| `confidence` | number | |
+| `observed_at` | ISO-8601 | |
+| `modality` | string | |
+| `attributes` | object | |
+| `raw_digest` | string | |
+
+### AckRecord (`ack` on recipient ack response)
+
+| Field | Type | Notes |
+|-------|------|--------|
+| `ack_id` | string (uuid) | |
+| `coa_id` / `unit_id` | string | |
+| `status` | string | usually `ACKED` |
+| `message` | string | |
+| `telemetry` | object | |
+| `signature` | string | Client-supplied or server-sealed SHA-256 |
+| `token_digest` | string | From the sealed DecisionToken |
+| `acked_at` | ISO-8601 | |
+
 ---
 
 ## Client binding (Phase 3)
@@ -399,3 +500,8 @@ export C2_BASE_URL=http://127.0.0.1:8080   # or Cloudflare HTTPS later
 ```
 
 Paths above are the frozen surface. UI clients must not invent alternate routes for Screen 1 / Screen 2 handshake.
+
+!!! tip "Follow-up (Phase 3): Pydantic response models"
+    Endpoints currently return ad-hoc `dict[str, Any]`, so `/openapi.json` lacks response schemas.
+    Introduce response models (`OntologyStateResponse`, `ApproveResponse`, …) later to auto-validate
+    outgoing payloads and enable TypeScript client generation for BattlePlan.
