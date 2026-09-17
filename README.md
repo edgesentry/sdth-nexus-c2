@@ -4,7 +4,11 @@ SDTH 2026 C2 application: **PS 04 One Picture, Many Eyes** — disagreeing senso
 
 **Docs:** [edgesentry.github.io/sdth-nexus-c2](https://edgesentry.github.io/sdth-nexus-c2/) (MkDocs Material · `mkdocs serve` locally)
 
-Phase 1 keeps **NexusGate core** (`core/`) and the **venue app** (`app/`) in one Python repo. Venue / defense narrative words stay in `app/` only.
+**NexusGate core** (`core/`) and the **venue app** (`app/`) live in one Python repo. Venue / defense narrative words stay in `app/` only.
+
+**Phases:** Phase 1 done · **Phase 2** = backend closed loop (no UI) · Phase 3 = BattlePlan UI · Phase 4 = pitch day · Phase 5 = post-hackathon. See [`PLAN.md`](PLAN.md).
+
+**Topology:** Core runs locally (`sdth-c2-server`) and, in Phase 2, on **Cloudflare Containers** (same REST paths). **Ingress/command and recipient Ack stay on laptops** either way.
 
 ## Quick start
 
@@ -36,11 +40,17 @@ uv run python -m app.main --scenario S3 --stub --yes
 
 ## C2 REST (Two-Screen)
 
-Screen 1 (command) + Screen 2 (recipient) loop for BattlePlan / laptop demos:
+Screen 1 (command laptop: curl / TUI; BattlePlan in Phase 3) + Screen 2 (recipient laptop) against local Core. Point clients at a Cloudflare URL later without changing paths.
 
 ```bash
 uv run sdth-c2-server   # http://127.0.0.1:8080
 ```
+
+Laptop I/O (Phase 2 — no UI):
+
+1. **Screen 1 / command:** start Core, `POST /api/gate/proposals` then `POST /api/gate/approve` (or run `scripts/stream_events.py` / TUI).
+2. **Screen 2 / recipient:** `GET /api/recipient/inbox?unit_id=…` then `POST /api/recipient/ack`.
+3. **Audit check:** `GET /api/audit/trail`.
 
 | Method | Path | Role |
 |--------|------|------|
@@ -63,6 +73,24 @@ curl -s -X POST localhost:8080/api/recipient/ack -H 'content-type: application/j
   -d '{"coa_id":"<id>","unit_id":"CUE-NODE-01"}'
 ```
 
+### Picture→Tasking demo (no UI)
+
+One-shot S2 loop: **Warning Picture → approve → inbox → Ack → audit** (Pitch-4 / issue #24). Prints each hop and asserts `recipient_ack` is sealed in the OCSF hash chain. Local target: approve→ack **< 3 s**.
+
+```bash
+./scripts/picture_to_tasking.sh          # starts local sdth-c2-server, then runs demo
+# or two terminals:
+uv run sdth-c2-server                    # Terminal A (Screen 1+2 share Core)
+uv run python scripts/picture_to_tasking.py   # Terminal B
+```
+
+Point at a remote Core later without changing paths:
+
+```bash
+C2_BASE_URL=https://your-c2.example.com ./scripts/picture_to_tasking.sh
+# aliases: BASE_URL also accepted by the Python client
+```
+
 ## Layout
 
 | Path | Role |
@@ -71,6 +99,7 @@ curl -s -X POST localhost:8080/api/recipient/ack -H 'content-type: application/j
 | `app/scenarios/` | S1–S3 defense scenarios + registry |
 | `app/c2_server.py` | Two-screen C2 REST (ontology / gate / recipient / audit) |
 | `app/adapters/usv_rest.py` | Vendor-neutral USV REST effector (`EFFECTOR_BASE_URL`) |
+| `scripts/picture_to_tasking.py` | UI-less Picture→Tasking demo (`C2_BASE_URL` / `BASE_URL`) |
 | `app/` | Warning Picture TUI, mock server, kinematics, RasPi stub |
 | `app/config/maritime_defense_policy.yaml` | Geofences / thresholds (app-owned) |
 
