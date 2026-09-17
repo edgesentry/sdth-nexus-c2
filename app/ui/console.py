@@ -26,9 +26,19 @@ def render_warning_picture(
     table.add_column("v")
     table.add_row("Scenario", f"{scenario.id} — {scenario.title}")
     table.add_row("Threat class", finding.threat_class)
+    if finding.amber_alert:
+        table.add_row("Amber alert", f"[bold yellow]{finding.amber_alert}[/bold yellow]")
     table.add_row("Warning window", f"~{finding.warning_minutes_est:.0f} minutes")
     table.add_row("Confidence", f"{finding.confidence:.2f}")
     table.add_row("Mismatch", f"{finding.mismatch_m:.0f} m")
+    if finding.source_breakdown:
+        social = finding.source_breakdown.get("social") or {}
+        radar = finding.source_breakdown.get("radar") or {}
+        if social.get("claimed_count") is not None and radar.get("contact_count") is not None:
+            table.add_row(
+                "Count claim",
+                f"social={social['claimed_count']} vs radar={radar['contact_count']}",
+            )
     table.add_row("Approach sources", ", ".join(finding.approach_sources) or "—")
     table.add_row("Manipulable / spoof", ", ".join(finding.spoof_sources) or "—")
     table.add_row("Other", ", ".join(finding.other_sources) or "—")
