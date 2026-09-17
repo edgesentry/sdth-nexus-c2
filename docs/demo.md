@@ -34,6 +34,20 @@ uv run python scripts/stream_events.py --scenario S1       # S1 sea spoof scenar
 uv run python scripts/stream_events.py --fast              # run without sleep delays
 ```
 
+## Demo Path C: UI-less Picture→Tasking Demo (Pitch-4)
+
+Runs a complete one-shot automated loop: **Warning Picture → approve → inbox → Ack → audit** against local or remote Core (`C2_BASE_URL`):
+
+```bash
+./scripts/picture_to_tasking.sh                      # starts local server, runs S2 loop, verifies <3s
+```
+
+Or run manually against an already running server:
+
+```bash
+uv run python scripts/picture_to_tasking.py          # asserts token and signed Ack in OCSF audit
+```
+
 ## Effector levels
 
 1. **Mock REST** — `app/mock_server.py` (`EFFECTOR_BASE_URL`)
