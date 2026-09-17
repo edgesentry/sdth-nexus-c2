@@ -18,7 +18,7 @@ uv run python -m app.main --scenario S3 --stub --yes
 | ID | Title | Story |
 |----|-------|--------|
 | **S1** | Sea Approach — Adversarial AIS Spoof | Sea approaches; manipulable AIS vs radar/EO; vendor IDs not shared; ISR USV identify |
-| **S2** | Air Corridor — Attritable RF-Silent Raid | Cheap inbound airframes; no ADS-B; RF silent; EO vs radar mismatch; cue/identify (not kinetic) |
+| **S2** | Air Corridor — Shahed Swarm Contradiction | Social/recon claims 3; radar sees 1 (~1.2 km N); EO blur 0.42; amber count+bearing; cue/identify |
 | **S3** | Shipping Lane SPOF — Pattern Break | Open AIS thins; uncorrelated coastal radar; approach patrol |
 
 Each run prints a **WARNING PICTURE** (threat class, minutes of warning, sources, “if false collapses when…”) before the gate.

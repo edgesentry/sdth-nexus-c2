@@ -92,5 +92,7 @@ def make_tier1_coa(
             "adversarial_hypothesis": finding.adversarial_hypothesis,
             "finding": finding.message or finding.picture_summary,
             "contact_speed_kt": preferred_tasking_coords(graph, finding)[2],
+            "amber_alert": finding.amber_alert,
+            "source_breakdown": finding.source_breakdown,
         },
     )

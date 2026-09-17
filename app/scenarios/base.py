@@ -26,6 +26,8 @@ class Finding:
     approach_sources: list[str] = field(default_factory=list)
     other_sources: list[str] = field(default_factory=list)
     message: str = ""
+    amber_alert: str | None = None
+    source_breakdown: dict[str, Any] = field(default_factory=dict)
 
     def all_sources(self) -> list[str]:
         return list(dict.fromkeys(self.approach_sources + self.spoof_sources + self.other_sources))
