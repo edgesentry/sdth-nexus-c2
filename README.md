@@ -2,6 +2,8 @@
 
 SDTH 2026 C2 application: **PS 04 One Picture, Many Eyes** — disagreeing sensors → **warning picture** → latency-bounded HITL → effector.
 
+**Docs:** [edgesentry.github.io/sdth-nexus-c2](https://edgesentry.github.io/sdth-nexus-c2/) (MkDocs Material · `mkdocs serve` locally)
+
 Phase 1 keeps **NexusGate core** (`core/`) and the **venue app** (`app/`) in one Python repo. Venue / defense narrative words stay in `app/` only.
 
 ## Quick start

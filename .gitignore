@@ -12,3 +12,4 @@ build/
 .audit/
 *.jsonl
 .DS_Store
+site/
