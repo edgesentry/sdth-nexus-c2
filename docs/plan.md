@@ -192,11 +192,16 @@ The pitch deck commits to 4 rigorous engineering metrics:
 - [x] **Automated Benchmark Suite:** Implement `scripts/benchmark.py` verifying Slide 11 performance metrics.
 
 ### Phase 2: Backend Closed Loop & Cloudflare Core Deployment (Active Focus)
-- [ ] Validate end-to-end backend closed loop via curl / automated scripts without frontend dependency.
-- [ ] Containerize C2 server for optional **Cloudflare Containers** deployment while retaining identical REST contract.
-- [ ] Establish hardened fallback to local `sdth-c2-server` for zero-internet venue reliability.
+
+Phase 2 explicitly delivers thin / demo-fidelity slices of the 4 core pitch pillars (backend closed loop without UI dependencies), while production CV, live field hardware, and full swarm loads remain Phase 5:
+
+- [x] **Pitch-4 Picture→Tasking demo script:** `scripts/picture_to_tasking.py` + `scripts/picture_to_tasking.sh` executes Warning Picture → gate approve → inbox → Ack → audit (<3s local roundtrip) (issue #24).
 - [x] **Pitch-3 Deterministic gate stress:** `scripts/benchmark.py` floods ontology with 100+ tracks and mixed COAs; asserts gate p95 < 50 ms and unauthorized = 0 (issue #23).
 - [x] **Pitch-2 Probabilistic interpreter:** `app/llm_interpreter.py` + `POST /api/interpret` — LLM (env) or heuristic fallback → hypotheses + candidate COA; Core gate still disposes (issue #22).
+- [ ] **Pitch-1 Multimodal demo harness:** Explicit modality-tagged ingress harness + optional open feeds (`data.gov.sg` / open air traffic) through ontology → amber discrepancy (issue #25, #16).
+- [x] Validate end-to-end backend closed loop via curl / automated scripts without frontend dependency (`scripts/picture_to_tasking.sh`).
+- [ ] Containerize C2 server for optional **Cloudflare Containers** deployment while retaining identical REST contract (issue #18).
+- [ ] Establish hardened fallback to local `sdth-c2-server` for zero-internet venue reliability.
 
 ### Phase 3: BattlePlan UI Integration on Frozen REST Contract (Planned)
 - [ ] Integrate the Next.js BattlePlan UI with `app/c2_server.py` (two-screen software handshake).
