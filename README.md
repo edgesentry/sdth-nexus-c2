@@ -27,7 +27,7 @@ Each run prints a **WARNING PICTURE** (threat class, minutes of warning, sources
 
 ```bash
 uv run uvicorn app.mock_server:app --port 8000 &
-uv run python -m app.main --scenario S1 --yes
+EFFECTOR_BASE_URL=http://127.0.0.1:8000 uv run python -m app.main --scenario S1 --yes
 uv run python -m app.main --scenario S2            # interactive y/n
 uv run python -m app.main --scenario S3 --stub --yes
 ```
@@ -68,14 +68,17 @@ curl -s -X POST localhost:8080/api/recipient/ack -H 'content-type: application/j
 | `core/` | Future OSS NexusGate (no SDTH/Clearbot/Singapore vocabulary) |
 | `app/scenarios/` | S1–S3 defense scenarios + registry |
 | `app/c2_server.py` | Two-screen C2 REST (ontology / gate / recipient / audit) |
-| `app/` | Warning Picture TUI, Clearbot REST, mock server, kinematics, RasPi stub |
+| `app/adapters/usv_rest.py` | Vendor-neutral USV REST effector (`EFFECTOR_BASE_URL`) |
+| `app/` | Warning Picture TUI, mock server, kinematics, RasPi stub |
 | `app/config/maritime_defense_policy.yaml` | Geofences / thresholds (app-owned) |
 
 ## Effector levels
 
-1. **Mock REST** — `app/mock_server.py`
+1. **Mock REST** — `app/mock_server.py` (`EFFECTOR_BASE_URL`, default `http://127.0.0.1:8000`; `CLEARBOT_BASE_URL` still accepted)
 2. **2D kinematics** — lat/lon toward waypoint after approve
 3. **RasPi GPIO** — optional / no-op without hardware
+
+`ClearbotRestAdapter` remains a thin alias of `UsvRestAdapter` for older imports.
 
 ## Tests
 

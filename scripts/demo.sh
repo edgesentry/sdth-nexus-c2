@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# Start Clearbot mock + run one auto-approved C2 cycle.
+# Start USV REST mock + run one auto-approved C2 cycle.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-export CLEARBOT_BASE_URL="${CLEARBOT_BASE_URL:-http://127.0.0.1:8000}"
+# Prefer EFFECTOR_BASE_URL; CLEARBOT_BASE_URL remains a compat fallback.
+export EFFECTOR_BASE_URL="${EFFECTOR_BASE_URL:-${CLEARBOT_BASE_URL:-http://127.0.0.1:8000}}"
+export CLEARBOT_BASE_URL="${CLEARBOT_BASE_URL:-$EFFECTOR_BASE_URL}"
 export GATE_TIMEOUT_SEC="${GATE_TIMEOUT_SEC:-5}"
 export SCENARIO="${SCENARIO:-S1}"
 
@@ -16,7 +18,7 @@ cleanup() { kill "$MOCK_PID" 2>/dev/null || true; wait "$MOCK_PID" 2>/dev/null |
 trap cleanup EXIT
 
 for _ in $(seq 1 50); do
-  if curl -sf "$CLEARBOT_BASE_URL/api/v1/telemetry" >/dev/null; then
+  if curl -sf "$EFFECTOR_BASE_URL/api/v1/telemetry" >/dev/null; then
     break
   fi
   sleep 0.1

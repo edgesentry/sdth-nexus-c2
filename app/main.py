@@ -16,8 +16,8 @@ from core.proxy import EffectorProxy
 from core.stub import StubEffector
 from rich.console import Console
 
-from app.adapters.clearbot_rest import ClearbotRestAdapter
 from app.adapters.southbound_sensor import normalize_sensor_event
+from app.adapters.usv_rest import UsvRestAdapter, resolve_effector_base_url
 from app.scenarios.base import get_scenario, list_scenario_ids
 from app.ui.console import prompt_operator_decision
 
@@ -32,6 +32,7 @@ async def run_c2_cycle(
     *,
     scenario_id: str = "S1",
     policy_path: Path = DEFAULT_POLICY,
+    effector_base_url: str | None = None,
     clearbot_base_url: str | None = None,
     audit_path: Path | None = None,
     auto_decision: str | None = None,
@@ -110,8 +111,8 @@ async def run_c2_cycle(
     if use_stub:
         effector: EffectorProxy = StubEffector()
     else:
-        base = clearbot_base_url or os.environ.get("CLEARBOT_BASE_URL", "http://127.0.0.1:8000")
-        effector = ClearbotRestAdapter(endpoint=base)
+        base = resolve_effector_base_url(effector_base_url or clearbot_base_url)
+        effector = UsvRestAdapter(endpoint=base)
 
     if verdict == GateVerdict.APPROVED:
         receipt = await effector.dispatch(coa)
@@ -140,7 +141,16 @@ def cli_main() -> None:
         help="Defense scenario id (default S1)",
     )
     parser.add_argument("--policy", type=Path, default=DEFAULT_POLICY)
-    parser.add_argument("--clearbot-url", default=os.environ.get("CLEARBOT_BASE_URL"))
+    parser.add_argument(
+        "--effector-url",
+        default=None,
+        help="USV REST base URL (env EFFECTOR_BASE_URL, else CLEARBOT_BASE_URL)",
+    )
+    parser.add_argument(
+        "--clearbot-url",
+        default=None,
+        help="Deprecated alias for --effector-url",
+    )
     parser.add_argument("--audit", type=Path, default=None)
     parser.add_argument("--yes", action="store_true", help="Auto-approve HITL")
     parser.add_argument("--no", action="store_true", help="Auto-deny HITL")
@@ -158,7 +168,7 @@ def cli_main() -> None:
         run_c2_cycle(
             scenario_id=args.scenario,
             policy_path=args.policy,
-            clearbot_base_url=args.clearbot_url,
+            effector_base_url=args.effector_url or args.clearbot_url,
             audit_path=args.audit,
             auto_decision=auto,
             use_stub=args.stub,
