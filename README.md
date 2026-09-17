@@ -58,7 +58,8 @@ Laptop I/O (Phase 2 — no UI):
 | Method | Path | Role |
 |--------|------|------|
 | `GET` | `/api/ontology/state` | Live tracks, observations, amber alert |
-| `POST` | `/api/gate/proposals` | Queue COA (`scenario_id` or raw `coa`) |
+| `POST` | `/api/interpret` | Probabilistic propose: hypotheses + candidate COA (no token) |
+| `POST` | `/api/gate/proposals` | Queue COA (`scenario_id`, raw `coa`, or `interpret:true`) |
 | `POST` | `/api/gate/approve` | Operator y/n → sealed `DecisionToken` |
 | `GET` | `/api/recipient/inbox?unit_id=` | Pending approved taskings |
 | `POST` | `/api/recipient/ack` | Recipient ack sealed to audit chain |
@@ -68,8 +69,14 @@ Laptop I/O (Phase 2 — no UI):
 Example handshake:
 
 ```bash
+# Optional Pitch-2: probabilistic propose (never seals tokens)
+curl -s -X POST localhost:8080/api/interpret -H 'content-type: application/json' \
+  -d '{"scenario_id":"S2","force_heuristic":true}'
+
 curl -s -X POST localhost:8080/api/gate/proposals -H 'content-type: application/json' \
   -d '{"scenario_id":"S2","unit_id":"CUE-NODE-01"}'
+# or interpreter → gate in one hop:
+# -d '{"scenario_id":"S2","unit_id":"CUE-NODE-01","interpret":true}'
 curl -s -X POST localhost:8080/api/gate/approve -H 'content-type: application/json' \
   -d '{"coa_id":"<id>","decision":"y"}'
 curl -s 'localhost:8080/api/recipient/inbox?unit_id=CUE-NODE-01'
@@ -77,6 +84,19 @@ curl -s -X POST localhost:8080/api/recipient/ack -H 'content-type: application/j
   -d '{"coa_id":"<id>","unit_id":"CUE-NODE-01"}'
 curl -s localhost:8080/api/audit/trail
 ```
+
+### Probabilistic interpreter (Pitch-2)
+
+**Probabilistic proposes; deterministic disposes.** App-layer LLM (or heuristic fallback) scores hypotheses and emits a candidate COA. Only `LatencyBoundedGate` can approve / seal `DecisionToken`s.
+
+| Env | Role |
+|-----|------|
+| `LLM_BASE_URL` | OpenAI-compatible base (`…/v1`). Unset → heuristic fallback |
+| `LLM_API_KEY` | Bearer token (optional for local endpoints) |
+| `LLM_MODEL` | Model id (default `gpt-4o-mini`) |
+| `LLM_TIMEOUT_S` | HTTP timeout seconds (default `8`) |
+
+Never commit API keys — use env / Wrangler Secrets.
 
 ### Picture→Tasking demo (no UI)
 
@@ -102,7 +122,8 @@ C2_BASE_URL=https://your-c2.example.com ./scripts/picture_to_tasking.sh
 |------|------|
 | `core/` | Future OSS NexusGate (no SDTH/Clearbot/Singapore vocabulary) |
 | `app/scenarios/` | S1–S3 defense scenarios + registry |
-| `app/c2_server.py` | Two-screen C2 REST (ontology / gate / recipient / audit) |
+| `app/c2_server.py` | Two-screen C2 REST (ontology / interpret / gate / recipient / audit) |
+| `app/llm_interpreter.py` | Pitch-2 probabilistic propose (LLM + heuristic fallback) |
 | `app/adapters/usv_rest.py` | Vendor-neutral USV REST effector (`EFFECTOR_BASE_URL`) |
 | `scripts/picture_to_tasking.py` | UI-less Picture→Tasking demo (`C2_BASE_URL` / `BASE_URL`) |
 | `app/` | Warning Picture TUI, mock server, kinematics, RasPi stub |
@@ -167,7 +188,8 @@ uv run python scripts/benchmark.py                  # Slide 11 proof
 CI runs unit, integration, and benchmark jobs on every push/PR.
 ## Limits
 
-- Detectors are **deterministic rules**, not LLM
+- **Probabilistic proposes, deterministic disposes** — app LLM/heuristic may suggest COAs; Core gate alone seals tokens
+- Scenario detectors remain deterministic rules (LLM is optional overlay)
 - No full map UI (Rich TUI only)
 - Dual-key Tier 2 not implemented
 - Kinetic intercept is **not** claimed (S2 cues identify only)

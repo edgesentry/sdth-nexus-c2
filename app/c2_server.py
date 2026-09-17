@@ -20,6 +20,7 @@ from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.adapters.southbound_sensor import normalize_sensor_event
+from app.llm_interpreter import InterpretationResult, interpret
 from app.scenarios.base import Finding, get_scenario
 
 APP_DIR = Path(__file__).resolve().parent
@@ -37,6 +38,17 @@ class ProposalRequest(BaseModel):
     coa: CourseOfAction | None = None
     unit_id: str = "ISR-NODE-01"
     timeout_seconds: float | None = None
+    # When true with scenario_id: run probabilistic interpreter → candidate COA → gate.
+    interpret: bool = False
+    force_heuristic: bool = False
+
+
+class InterpretRequest(BaseModel):
+    """Probabilistic propose only — never seals DecisionTokens."""
+
+    scenario_id: str
+    timeout_seconds: float | None = None
+    force_heuristic: bool = False
 
 
 class ApproveRequest(BaseModel):
@@ -92,7 +104,7 @@ def _finding_dict(finding: Finding | None) -> dict[str, Any] | None:
     return asdict(finding)
 
 
-def _load_scenario(runtime: C2Runtime, scenario_id: str, timeout: float) -> CourseOfAction:
+def _ingest_scenario(runtime: C2Runtime, scenario_id: str) -> Finding:
     scenario = get_scenario(scenario_id)
     runtime.graph = SpatialEntityGraph(associate_radius_m=2_000.0)
     events = scenario.build_events()
@@ -102,8 +114,48 @@ def _load_scenario(runtime: C2Runtime, scenario_id: str, timeout: float) -> Cour
     runtime.finding = finding
     if finding is None:
         raise HTTPException(status_code=404, detail=f"No finding for scenario {scenario_id}")
+    return finding
+
+
+def _load_scenario(runtime: C2Runtime, scenario_id: str, timeout: float) -> CourseOfAction:
+    finding = _ingest_scenario(runtime, scenario_id)
+    scenario = get_scenario(scenario_id)
     coa = scenario.build_coa(runtime.graph, finding, timeout_seconds=timeout)
     return runtime.policy.apply_defaults(coa)
+
+
+def _interpret_scenario(
+    runtime: C2Runtime,
+    scenario_id: str,
+    timeout: float,
+    *,
+    force_heuristic: bool = False,
+) -> InterpretationResult:
+    _ingest_scenario(runtime, scenario_id)
+    assert runtime.finding is not None
+    result = interpret(
+        runtime.graph,
+        runtime.finding,
+        timeout_seconds=timeout,
+        force_heuristic=force_heuristic,
+    )
+    result.candidate_coa = runtime.policy.apply_defaults(result.candidate_coa)
+    return result
+
+
+def _interpretation_response(result: InterpretationResult) -> dict[str, Any]:
+    return {
+        "status": "INTERPRETED",
+        "source": result.source,
+        "model": result.model,
+        "error": result.error,
+        "hypotheses": [h.model_dump() for h in result.hypotheses],
+        "confidence": result.confidence,
+        "picture_summary": result.picture_summary,
+        "adversarial_hypothesis": result.adversarial_hypothesis,
+        "candidate_coa": result.candidate_coa.model_dump(mode="json"),
+        "finding": _finding_dict(get_runtime().finding),
+    }
 
 
 @app.get("/api/ontology/state")
@@ -144,12 +196,54 @@ async def ontology_state() -> dict[str, Any]:
     }
 
 
+@app.post("/api/interpret")
+async def interpret_picture(req: InterpretRequest) -> dict[str, Any]:
+    """App-layer LLM/heuristic propose: hypotheses + candidate COA (no token seal)."""
+    runtime = get_runtime()
+    timeout = req.timeout_seconds or runtime.policy.default_timeout_seconds
+    try:
+        result = _interpret_scenario(
+            runtime,
+            req.scenario_id,
+            timeout,
+            force_heuristic=req.force_heuristic,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    runtime.audit.append(
+        "picture_interpreted",
+        "Low",
+        {
+            "scenario_id": req.scenario_id,
+            "source": result.source,
+            "model": result.model,
+            "error": result.error,
+            "hypothesis_count": len(result.hypotheses),
+            "coa_id": result.candidate_coa.coa_id,
+            "intent": result.candidate_coa.intent,
+        },
+    )
+    return _interpretation_response(result)
+
+
 @app.post("/api/gate/proposals")
 async def gate_proposals(req: ProposalRequest) -> dict[str, Any]:
     runtime = get_runtime()
     timeout = req.timeout_seconds or runtime.policy.default_timeout_seconds
+    interpretation: InterpretationResult | None = None
 
-    if req.scenario_id:
+    if req.scenario_id and req.interpret:
+        try:
+            interpretation = _interpret_scenario(
+                runtime,
+                req.scenario_id,
+                timeout,
+                force_heuristic=req.force_heuristic,
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        coa = interpretation.candidate_coa
+    elif req.scenario_id:
         coa = _load_scenario(runtime, req.scenario_id, timeout)
     elif req.coa is not None:
         coa = runtime.policy.apply_defaults(req.coa)
@@ -224,13 +318,19 @@ async def gate_proposals(req: ProposalRequest) -> dict[str, Any]:
             "intent": coa.intent,
             "unit_id": req.unit_id,
             "finding": _finding_dict(runtime.finding),
+            "interpreter_source": interpretation.source if interpretation else None,
         },
     )
-    return {
+    queued: dict[str, Any] = {
         "status": "QUEUED",
         "coa": coa.model_dump(mode="json"),
         "finding": _finding_dict(runtime.finding),
     }
+    if interpretation is not None:
+        queued["hypotheses"] = [h.model_dump() for h in interpretation.hypotheses]
+        queued["interpreter_source"] = interpretation.source
+        queued["interpreter_error"] = interpretation.error
+    return queued
 
 
 @app.post("/api/gate/approve")

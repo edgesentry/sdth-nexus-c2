@@ -28,6 +28,7 @@ Env:
 from __future__ import annotations
 
 import argparse
+import contextlib
 import os
 import sys
 import time
@@ -113,10 +114,8 @@ def run_demo(
 
     with httpx.Client(base_url=base_url, timeout=timeout_s) as client:
         # Optional reset so re-runs are clean when talking to a sticky Core.
-        try:
+        with contextlib.suppress(httpx.HTTPError):
             client.post("/api/admin/reset")
-        except httpx.HTTPError:
-            pass
 
         _print_hop(1, "Screen 1 — propose COA (Warning Picture)")
         t_picture = time.perf_counter()
