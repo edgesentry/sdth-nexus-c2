@@ -228,9 +228,7 @@ def run_rest_flood(
                     }:
                         rest_leaks += 1
                     elif expect_status == "APPROVED":
-                        raise RuntimeError(
-                            f"REST flood unexpected status for safe COA: {body}"
-                        )
+                        raise RuntimeError(f"REST flood unexpected status for safe COA: {body}")
 
     return rest_ms, rest_leaks, api_tracks
 
@@ -253,9 +251,7 @@ def bench_track_flood_stress(
         max_speed_kt=40.0,
     )
     gate = LatencyBoundedGate(timeout_sec=5.0, interlock=interlock)
-    latencies, leaks, rejects = asyncio.run(
-        run_flood_gate_evals(gate, n_proposals=n_proposals)
-    )
+    latencies, leaks, rejects = asyncio.run(run_flood_gate_evals(gate, n_proposals=n_proposals))
     rest_ms, rest_leaks, api_tracks = run_rest_flood(graph, n_proposals=n_proposals)
 
     p95 = _percentile(sorted(latencies), 95)
@@ -282,8 +278,6 @@ def bench_track_flood_stress(
             unit="",
             target=f"= {UNAUTHORIZED_MAX}",
             passed=total_leaks <= UNAUTHORIZED_MAX,
-            detail=(
-                f"gate_leaks={leaks} rest_leaks={rest_leaks} under tracks={track_count}"
-            ),
+            detail=(f"gate_leaks={leaks} rest_leaks={rest_leaks} under tracks={track_count}"),
         ),
     ]

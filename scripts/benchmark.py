@@ -97,9 +97,7 @@ def _percentile(sorted_vals: list[float], p: float) -> float:
 # ---------------------------------------------------------------------------
 
 
-async def _run_gate_samples(
-    gate: LatencyBoundedGate, n: int
-) -> tuple[list[float], list[float]]:
+async def _run_gate_samples(gate: LatencyBoundedGate, n: int) -> tuple[list[float], list[float]]:
     all_ms: list[float] = []
     reject_ms: list[float] = []
 
@@ -415,8 +413,7 @@ def bench_audit_integrity() -> MetricResult:
             unit="%",
             target="= 100%",
             passed=integrity_pct == 100.0 and total > 0 and not errors,
-            detail=f"records={total} ok_links={ok}"
-            + (f" errors={errors[:3]}" if errors else ""),
+            detail=f"records={total} ok_links={ok}" + (f" errors={errors[:3]}" if errors else ""),
         )
 
 
