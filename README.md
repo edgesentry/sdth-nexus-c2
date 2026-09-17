@@ -80,7 +80,7 @@ curl -s -X POST localhost:8080/api/recipient/ack -H 'content-type: application/j
 ## Tests
 
 ```bash
-uv run pytest tests/ -q -m "not integration"   # unit
+uv run pytest tests/unit/ -q                        # unit
 uv run pytest tests/integration/ -v -m integration  # S2 + C2 two-screen / live HTTP
 ```
 
