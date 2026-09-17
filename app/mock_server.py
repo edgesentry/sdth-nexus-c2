@@ -1,4 +1,4 @@
-"""Level 1: Clearbot Mock REST server (FastAPI)."""
+"""Level 1: Vendor-neutral USV mock REST server (FastAPI)."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ import uvicorn
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-app = FastAPI(title="Clearbot Mock", version="0.1.0")
+app = FastAPI(title="USV REST Mock", version="0.1.0")
 
 _state: dict[str, Any] = {
     "latitude": 1.2300,

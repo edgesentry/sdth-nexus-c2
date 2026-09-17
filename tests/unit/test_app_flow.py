@@ -34,6 +34,62 @@ def test_kinematics_moves_toward_waypoint() -> None:
 
 
 @pytest.mark.asyncio
+async def test_usv_rest_dispatch_and_station_keep(monkeypatch: pytest.MonkeyPatch) -> None:
+    import httpx
+    from app.adapters import usv_rest
+    from app.adapters.usv_rest import UsvRestAdapter
+    from core.coa import ActionTier, CourseOfAction
+
+    transport = httpx.ASGITransport(app=mock_app)
+
+    class _AsgiClient(httpx.AsyncClient):
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            kwargs["transport"] = transport
+            kwargs.setdefault("base_url", "http://testserver")
+            super().__init__(*args, **kwargs)
+
+    monkeypatch.setattr(usv_rest.httpx, "AsyncClient", _AsgiClient)
+
+    adapter = UsvRestAdapter(endpoint="http://testserver")
+    coa = CourseOfAction(
+        coa_id="coa-test-1",
+        intent="ISR_IDENTIFY_CONTACT",
+        tier=ActionTier.TIER_1_HITL,
+        target_coordinates=(1.24, 103.86),
+        timeout_seconds=5.0,
+    )
+    receipt = await adapter.dispatch(coa)
+    assert receipt.status == "DISPATCHED"
+    assert receipt.message == "navigate_accepted"
+    tel = await adapter.telemetry()
+    assert tel["mode"] == "navigating"
+    keep = await adapter.emergency_station_keep()
+    assert keep.status == "STATION_KEEP"
+
+
+def test_resolve_effector_base_url_prefers_effector_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.adapters.usv_rest import resolve_effector_base_url
+
+    monkeypatch.delenv("EFFECTOR_BASE_URL", raising=False)
+    monkeypatch.delenv("CLEARBOT_BASE_URL", raising=False)
+    assert resolve_effector_base_url() == "http://127.0.0.1:8000"
+
+    monkeypatch.setenv("CLEARBOT_BASE_URL", "http://legacy:9000")
+    assert resolve_effector_base_url() == "http://legacy:9000"
+
+    monkeypatch.setenv("EFFECTOR_BASE_URL", "http://effector:8000")
+    assert resolve_effector_base_url() == "http://effector:8000"
+    assert resolve_effector_base_url("http://explicit:1") == "http://explicit:1"
+
+
+def test_clearbot_adapter_is_usv_alias() -> None:
+    from app.adapters.clearbot_rest import ClearbotRestAdapter
+    from app.adapters.usv_rest import UsvRestAdapter
+
+    assert ClearbotRestAdapter is UsvRestAdapter
+
+
+@pytest.mark.asyncio
 async def test_c2_cycle_stub_approve() -> None:
     from app.main import run_c2_cycle
 
