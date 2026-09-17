@@ -17,7 +17,7 @@ Starts the central C2 server connecting Screen 1 (Command Cockpit) and Screen 2 
 uv run sdth-c2-server   # http://127.0.0.1:8080
 ```
 
-Drive the closed loop via curl (see [C2 REST API](api/rest.md)) or the BattlePlan Next.js frontend:
+Drive the closed loop via curl (see [C2 REST API — frozen contract](api/rest.md)) or, in Phase 3, the BattlePlan Next.js frontend:
 1. Submit proposal (`POST /api/gate/proposals`)
 2. Operator approves/denies (`POST /api/gate/approve`)
 3. Recipient retrieves token (`GET /api/recipient/inbox?unit_id=...`)

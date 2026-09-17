@@ -38,9 +38,11 @@ uv run python -m app.main --scenario S2            # interactive y/n
 uv run python -m app.main --scenario S3 --stub --yes
 ```
 
-## C2 REST (Two-Screen)
+## C2 REST (Two-Screen) — frozen contract
 
 Screen 1 (command laptop: curl / TUI; BattlePlan in Phase 3) + Screen 2 (recipient laptop) against local Core. Point clients at a Cloudflare URL later without changing paths.
+
+**Contract freeze (issue #15):** request/response shapes live in [`docs/api/rest.md`](docs/api/rest.md) (also on [GitHub Pages](https://edgesentry.github.io/sdth-nexus-c2/api/rest/)). CI guards required keys via `tests/unit/test_c2_rest_contract.py`.
 
 ```bash
 uv run sdth-c2-server   # http://127.0.0.1:8080
@@ -51,6 +53,7 @@ Laptop I/O (Phase 2 — no UI):
 1. **Screen 1 / command:** start Core, `POST /api/gate/proposals` then `POST /api/gate/approve` (or run `scripts/stream_events.py` / TUI).
 2. **Screen 2 / recipient:** `GET /api/recipient/inbox?unit_id=…` then `POST /api/recipient/ack`.
 3. **Audit check:** `GET /api/audit/trail`.
+4. **Demo reset (optional):** `POST /api/admin/reset` (clears memory; does not wipe `.audit/gate.jsonl`).
 
 | Method | Path | Role |
 |--------|------|------|
@@ -60,6 +63,7 @@ Laptop I/O (Phase 2 — no UI):
 | `GET` | `/api/recipient/inbox?unit_id=` | Pending approved taskings |
 | `POST` | `/api/recipient/ack` | Recipient ack sealed to audit chain |
 | `GET` | `/api/audit/trail` | OCSF-shaped hash-chain records |
+| `POST` | `/api/admin/reset` | Clear in-memory runtime (tests / demos) |
 
 Example handshake:
 
@@ -71,6 +75,7 @@ curl -s -X POST localhost:8080/api/gate/approve -H 'content-type: application/js
 curl -s 'localhost:8080/api/recipient/inbox?unit_id=CUE-NODE-01'
 curl -s -X POST localhost:8080/api/recipient/ack -H 'content-type: application/json' \
   -d '{"coa_id":"<id>","unit_id":"CUE-NODE-01"}'
+curl -s localhost:8080/api/audit/trail
 ```
 
 ### Picture→Tasking demo (no UI)
