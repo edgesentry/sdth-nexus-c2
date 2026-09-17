@@ -58,6 +58,7 @@ uv run python scripts/picture_to_tasking.py          # asserts token and signed 
 
 ```bash
 uv run python scripts/benchmark.py
+uv run python scripts/benchmark.py --tracks 150   # Pitch-3 flood size
 ```
 
 | Metric | Target |
@@ -65,10 +66,12 @@ uv run python scripts/benchmark.py
 | Gate latency (p95) | < 50 ms (100 COA evals) |
 | Interlock fast-reject (p95) | < 5 ms |
 | Unauthorized taskings | 0 |
+| Track-flood stress (gate p95) | < 50 ms under **100+** synthetic tracks |
+| Track-flood unauthorized | 0 (geofence / speed / null under flood) |
 | Picture-to-Ack roundtrip | < 3.0 s |
 | Audit trace integrity | 100% hash-chain |
 
-Exits non-zero if any metric misses its target (CI + live demo).
+Exits non-zero if any metric misses its target (CI + live demo). Pitch-3 flood is on by default (`--skip-stress` to omit).
 
 ## Tests
 
