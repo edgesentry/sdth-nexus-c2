@@ -428,6 +428,8 @@ Defaults: `status=ACKED`, `message=""`, `telemetry={}`.
 
 Appends OCSF activity `recipient_ack` on the hash chain (`GET /api/audit/trail`).
 
+**Optional stretch (issue #20):** GPIO blink is a **Screen 2 client** concern (`RASPI_ACK_BLINK=1` → `scripts/raspi_ack_blink.py` or `picture_to_tasking`), not Core. Cloudflare / local Core leave Ack telemetry unchanged unless the client sends fields in the request body.
+
 ### Errors
 
 | Code | Detail |
