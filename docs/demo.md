@@ -154,7 +154,18 @@ Only `correlation_status == "uncorrelated"` detections become `UNANNOUNCED_DARK_
 
 ### AIS correlate then C2 (live scan)
 
-Without AIS in Sentinel’s DB, every detection stays `uncorrelated`. Ingest AIS for the scan bbox (mock or real scraper), re-run `run_cv`, then push only dark vessels to C2:
+Without AIS in Sentinel’s DB, every detection stays `uncorrelated`. Pick an **AIS source profile**, re-run `run_cv`, then push only dark vessels to C2.
+
+| `--ais-source` | When | What happens |
+|----------------|------|----------------|
+| **`demo`** (default; alias `friends`) | Pitch / venue with network | Sentinel `AISFriendsPlugin` live bbox scrape |
+| **`offline`** (alias `mock`) | CI / airplane | Sentinel `MockAISPlugin` synthetic tracks |
+| **`prod`** (alias `indago`) | Persistent aisstream archive | Indago DuckDB → Sentinel `data.db` bridge (`scripts/indago_ais_bridge.py`), then `run_cv` |
+
+Demo and prod are intentionally different:
+
+- **demo** — live community HTTP API via Sentinel’s scraper registry. Omits historical `pass_time` on ingest (live feeds have no Sep-2026 pings); `run_cv` still correlates spatially.
+- **prod** — Indago aisstream → DuckDB archive (not a Sentinel plugin) written into Sentinel SQLite. Can match the SAR pass window when the archive covers it; otherwise `auto` spatial-fallback + timestamp remap.
 
 ```bash
 # Prerequisites
@@ -163,29 +174,46 @@ Without AIS in Sentinel’s DB, every detection stays `uncorrelated`. Ingest AIS
 #   Real scene (once): python -m sentinel_analysis download \
 #     --bbox 103.80 1.22 103.90 1.30 --days-ago 45 --output-dir static/output
 
+# Demo (recommended for pitch)
 uv run python scripts/sentinel_ais_correlate.py \
   --scan 20260916_224721_162544676155 \
-  --plugin MockAISPlugin \
+  --ais-source demo \
   --ingest-c2 --reset-c2
+
+# Offline / CI
+uv run python scripts/sentinel_ais_correlate.py \
+  --scan 20260916_224721_162544676155 \
+  --ais-source offline --ingest-c2
+
+# Prod (Indago archive; needs ~/.indago/.../singapore.duckdb or INDAGO_AIS_DUCKDB)
+uv run python scripts/sentinel_ais_correlate.py \
+  --scan 20260916_224721_162544676155 \
+  --ais-source prod --ingest-c2 --reset-c2
 ```
 
 | Flag | Role |
 |------|------|
 | `--scan` / `SAR_UPSTREAM_SCAN` | Sentinel scan folder under `static/output/` |
-| `--plugin` | AIS scraper (`MockAISPlugin` offline; or live scraper name from `/api/scrapers`) |
+| `--ais-source` | `demo` \| `offline` \| `prod` (env `AIS_SOURCE`) |
+| `--plugin` | Override Sentinel scraper name (demo/offline only) |
+| `--indago-duckdb` / `INDAGO_AIS_DUCKDB` | Prod DuckDB path |
+| `--sentinel-db` / `SENTINEL_DATABASE_PATH` | Prod target Sentinel `data.db` |
+| `--ais-time-mode` | Prod: `auto` (default) \| `strict` \| `spatial` |
 | `--skip-ais-ingest` | Reuse AIS already in Sentinel DB |
 | `--ais-correlation-distance` | Match radius in meters (default 100) |
 | `--ingest-c2` | `POST /api/ingress/candidate-event` with raw `run_cv` |
 | `--reset-c2` | Clear Core ontology before ingest |
 | `--save-run-cv PATH` | Write raw `run_cv` JSON for inspection |
 
-Manual equivalent:
+If the Indago archive’s time range does not overlap the SAR pass, `auto` falls back to a spatial sample and remaps timestamps to `pass_time` so `run_cv`’s ±2h window still sees them (prints a NOTE). Prefer a fresh aisstream capture for true production association.
+
+Manual equivalent (demo / offline scrapers only):
 
 ```bash
 # 1) AIS for scan bbox + pass time (acquisition datetime)
 curl -s -X POST http://127.0.0.1:5050/api/ingest_ais \
   -H 'content-type: application/json' \
-  -d '{"bbox":[103.8,1.22,103.9,1.3],"plugin":"MockAISPlugin","pass_time":"2026-09-16T22:47:21Z"}'
+  -d '{"bbox":[103.8,1.22,103.9,1.3],"plugin":"AISFriendsPlugin","pass_time":"2026-09-16T22:47:21Z"}'
 
 # 2) CV + correlate
 curl -s -X POST http://127.0.0.1:5050/api/run_cv/<scan_folder> \

@@ -184,10 +184,11 @@ flowchart TD
 3. **AIS correlate on a live scan, then C2** (issue #47):
    ```bash
    # After Copernicus download into static/output/<scan>/
+   # demo = AISFriends (venue); offline = Mock; prod = Indago DuckDB bridge
    uv run python scripts/sentinel_ais_correlate.py \
-     --scan <scan_folder> --plugin MockAISPlugin --ingest-c2 --reset-c2
+     --scan <scan_folder> --ais-source demo --ingest-c2 --reset-c2
    ```
-   Ingests AIS for the scan bbox → `run_cv` with correlation → posts only `uncorrelated` detections to C2. See [Demo Path: Sentinel](../demo.md#demo-path-sentinel-imagery-analysis--c2-issue-47).
+   Ingests AIS for the scan bbox → `run_cv` with correlation → posts only `uncorrelated` detections to C2. Demo vs prod AIS paths: [Demo Path: Sentinel](../demo.md#ais-correlate-then-c2-live-scan).
 4. **Assumed CandidateEvent fixture** (Pitch-1 / #25):
    ```bash
    curl -s -X POST http://127.0.0.1:8080/api/ingress/candidate-event \

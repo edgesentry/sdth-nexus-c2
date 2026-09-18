@@ -4,6 +4,12 @@
 Requires a running Sentinel-Imagery-Analysis sibling on ``SAR_UPSTREAM_URL``
 (default ``http://127.0.0.1:5050``) with a downloaded scan folder.
 
+AIS sources (``--ais-source``):
+
+  demo     Live community feed via Sentinel ``AISFriendsPlugin`` (pitch / venue)
+  offline  Deterministic ``MockAISPlugin`` (CI / no network)
+  prod     Indago DuckDB (aisstream) → Sentinel SQLite bridge, then skip scraper
+
 Typical flow:
 
   # Terminal A — sibling repo with COP_* in .env
@@ -13,24 +19,60 @@ Typical flow:
   uv run sdth-c2-server
   uv run python scripts/sentinel_ais_correlate.py \\
     --scan 20260916_224721_162544676155 \\
+    --ais-source demo \\
     --ingest-c2
-
-Without ``--ingest-c2``, only prints correlation counts (safe dry-run).
 """
 
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import sys
+from pathlib import Path
 from typing import Any
 
 import httpx
 
 DEFAULT_SAR = "http://127.0.0.1:5050"
 DEFAULT_C2 = "http://127.0.0.1:8080"
-DEFAULT_PLUGIN = "MockAISPlugin"
+
+# Profile → Sentinel scraper plugin (prod uses Indago bridge instead).
+AIS_SOURCE_PROFILES: dict[str, dict[str, Any]] = {
+    "demo": {
+        "plugin": "AISFriendsPlugin",
+        "bridge": False,
+        "blurb": "live AISFriends community API (venue / pitch)",
+    },
+    "offline": {
+        "plugin": "MockAISPlugin",
+        "bridge": False,
+        "blurb": "deterministic mock trajectories (CI / airplane mode)",
+    },
+    "prod": {
+        "plugin": None,
+        "bridge": True,
+        "blurb": "Indago DuckDB (aisstream archive) → Sentinel SQLite",
+    },
+}
+# Aliases for muscle memory / docs.
+AIS_SOURCE_ALIASES = {
+    "friends": "demo",
+    "aisfriends": "demo",
+    "mock": "offline",
+    "indago": "prod",
+}
+
+
+def _load_indago_bridge():
+    bridge_path = Path(__file__).resolve().parent / "indago_ais_bridge.py"
+    spec = importlib.util.spec_from_file_location("indago_ais_bridge", bridge_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load {bridge_path}")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
 def _c2_headers() -> dict[str, str]:
@@ -67,6 +109,15 @@ def _bbox_from_scan(scan: dict[str, Any]) -> list[float]:
     return [float(min_lon), float(min_lat), float(max_lon), float(max_lat)]
 
 
+def _resolve_ais_source(raw: str) -> str:
+    key = (raw or "demo").strip().lower()
+    key = AIS_SOURCE_ALIASES.get(key, key)
+    if key not in AIS_SOURCE_PROFILES:
+        allowed = ", ".join(sorted(AIS_SOURCE_PROFILES))
+        raise ValueError(f"unknown --ais-source {raw!r}; use {allowed} (or friends/mock/indago)")
+    return key
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -88,14 +139,46 @@ def main(argv: list[str] | None = None) -> int:
         help="C2 Core base URL (default C2_BASE_URL or :8080)",
     )
     parser.add_argument(
+        "--ais-source",
+        default=os.environ.get("AIS_SOURCE", "demo"),
+        help="AIS profile: demo|offline|prod (aliases: friends|mock|indago). Default demo / AIS_SOURCE",
+    )
+    parser.add_argument(
         "--plugin",
-        default=DEFAULT_PLUGIN,
-        help=f"AIS scraper plugin (default {DEFAULT_PLUGIN})",
+        default="",
+        help="Override Sentinel scraper plugin name (ignores --ais-source plugin mapping)",
     )
     parser.add_argument(
         "--skip-ais-ingest",
         action="store_true",
-        help="Skip POST /api/ingest_ais (use AIS already in Sentinel DB)",
+        help="Skip AIS ingest / Indago bridge (use AIS already in Sentinel DB)",
+    )
+    parser.add_argument(
+        "--indago-duckdb",
+        default=os.environ.get("INDAGO_AIS_DUCKDB", ""),
+        help="Prod: Indago DuckDB path (default INDAGO_AIS_DUCKDB or ~/.indago/.../singapore.duckdb)",
+    )
+    parser.add_argument(
+        "--sentinel-db",
+        default=os.environ.get("SENTINEL_DATABASE_PATH", ""),
+        help="Prod: Sentinel data.db path (default SENTINEL_DATABASE_PATH or sibling data.db)",
+    )
+    parser.add_argument(
+        "--ais-time-mode",
+        default="auto",
+        choices=["auto", "strict", "spatial"],
+        help="Prod: Indago time filter (auto=pass±window then spatial; default auto)",
+    )
+    parser.add_argument(
+        "--ais-window-hours",
+        type=float,
+        default=2.0,
+        help="Prod: hours around pass_time for Indago filter (default 2)",
+    )
+    parser.add_argument(
+        "--ais-remap-time",
+        action="store_true",
+        help="Prod: force-rewrite Indago timestamps to pass_time (archive/demo skew)",
     )
     parser.add_argument(
         "--ais-correlation-distance",
@@ -136,8 +219,16 @@ def main(argv: list[str] | None = None) -> int:
         print("FAIL: provide --scan or SAR_UPSTREAM_SCAN", file=sys.stderr)
         return 2
 
+    try:
+        ais_source = _resolve_ais_source(args.ais_source)
+    except ValueError as exc:
+        print(f"FAIL: {exc}", file=sys.stderr)
+        return 2
+    profile = AIS_SOURCE_PROFILES[ais_source]
+    plugin = (args.plugin or "").strip() or profile["plugin"]
+
     sar = args.sar_url.rstrip("/")
-    timeout = httpx.Timeout(120.0, connect=10.0)
+    timeout = httpx.Timeout(180.0, connect=10.0)
 
     with httpx.Client(timeout=timeout) as client:
         print(f"1) GET {sar}/api/scan/{scan_id}")
@@ -149,24 +240,73 @@ def main(argv: list[str] | None = None) -> int:
         bbox = _bbox_from_scan(scan)
         pass_time = str(scan.get("datetime") or "")
         print(f"   bbox={bbox} pass_time={pass_time or '-'}")
+        print(f"   ais-source={ais_source} ({profile['blurb']})")
 
         if not args.skip_ais_ingest:
-            print(f"2) POST {sar}/api/ingest_ais plugin={args.plugin}")
-            ingest_body: dict[str, Any] = {"bbox": bbox, "plugin": args.plugin}
-            if pass_time:
-                ingest_body["pass_time"] = pass_time
-            try:
-                ingest = _post_json(client, f"{sar}/api/ingest_ais", ingest_body)
-            except httpx.HTTPError as exc:
-                print(f"FAIL: AIS ingest ({exc})", file=sys.stderr)
-                return 1
-            outcome = ingest.get("ingestion_outcome") or ingest.get("status")
-            print(f"   OK outcome={outcome!r}")
-            summary = _get_json(client, f"{sar}/api/ais/summary")
-            print(
-                f"   AIS summary vessels={summary.get('vessel_count')} "
-                f"records={summary.get('record_count')} band={summary.get('freshness_band')}"
-            )
+            if profile["bridge"]:
+                print("2) Indago → Sentinel SQLite bridge (prod)")
+                try:
+                    bridge = _load_indago_bridge()
+                    summary = bridge.bridge_indago_to_sentinel(
+                        bbox,
+                        pass_time=pass_time or None,
+                        duckdb_path=args.indago_duckdb or None,
+                        sentinel_db=args.sentinel_db or None,
+                        time_mode=args.ais_time_mode,
+                        window_hours=args.ais_window_hours,
+                        remap_time=bool(args.ais_remap_time),
+                    )
+                except Exception as exc:
+                    print(f"FAIL: Indago bridge ({exc})", file=sys.stderr)
+                    return 1
+                print(
+                    f"   OK fetched={summary['fetched']} inserted={summary['inserted']} "
+                    f"time={summary['time_mode_used']} remap={summary['remapped_timestamps']}"
+                )
+                if summary["time_mode_used"] == "spatial-fallback":
+                    print(
+                        "   NOTE: Indago archive had no rows in pass±window; "
+                        "used spatial sample and remapped timestamps for correlate"
+                    )
+                if summary["inserted"] == 0:
+                    print("FAIL: Indago bridge inserted 0 rows", file=sys.stderr)
+                    return 1
+                # Refresh Sentinel in-process view if it caches (summary endpoint is fine).
+                try:
+                    summary_ais = _get_json(client, f"{sar}/api/ais/summary")
+                    print(
+                        f"   AIS summary vessels={summary_ais.get('vessel_count')} "
+                        f"records={summary_ais.get('record_count')} "
+                        f"band={summary_ais.get('freshness_band')}"
+                    )
+                except httpx.HTTPError:
+                    pass
+            else:
+                print(f"2) POST {sar}/api/ingest_ais plugin={plugin}")
+                ingest_body: dict[str, Any] = {"bbox": bbox, "plugin": plugin}
+                # Live community feeds only return *current* positions. Binding a
+                # historical SAR pass_time (±5 min) filters them all out → 0 rows.
+                # Demo therefore scrapes "now"; offline Mock can use pass_time.
+                use_pass = ais_source != "demo" and bool(pass_time)
+                if use_pass:
+                    ingest_body["pass_time"] = pass_time
+                elif ais_source == "demo" and pass_time:
+                    print(
+                        "   NOTE: demo omits pass_time on ingest "
+                        "(live AIS vs historical SAR; correlate uses spatial fallback)"
+                    )
+                try:
+                    ingest = _post_json(client, f"{sar}/api/ingest_ais", ingest_body)
+                except httpx.HTTPError as exc:
+                    print(f"FAIL: AIS ingest ({exc})", file=sys.stderr)
+                    return 1
+                outcome = ingest.get("ingestion_outcome") or ingest.get("status")
+                print(f"   OK outcome={outcome!r}")
+                summary = _get_json(client, f"{sar}/api/ais/summary")
+                print(
+                    f"   AIS summary vessels={summary.get('vessel_count')} "
+                    f"records={summary.get('record_count')} band={summary.get('freshness_band')}"
+                )
         else:
             print("2) skip AIS ingest")
 
