@@ -1,6 +1,17 @@
-# LiteLLM
+# LiteLLM & probabilistic interpret
 
-LiteLLM sits in front of vendor APIs. Two different kinds of secrets are involved — **do not mix them**.
+**Probabilistic proposes; deterministic disposes.** App-layer LLM (or heuristic fallback) scores hypotheses and emits a candidate COA via `POST /api/interpret`. Only `LatencyBoundedGate` can approve / seal `DecisionToken`s.
+
+| Env | Role |
+|-----|------|
+| `LLM_BASE_URL` | OpenAI-compatible base (`…/v1`). Unset → heuristic fallback |
+| `LLM_API_KEY` | Bearer for that base (LiteLLM master key, or empty for open local endpoints) |
+| `LLM_MODEL` | Model id / LiteLLM alias (default `gpt-4o-mini`) |
+| `LLM_TIMEOUT_S` | HTTP timeout seconds (default `8`) |
+
+Never commit API keys — use env / Wrangler Secrets. Samples: `.env.example` (C2) and `deploy/litellm/.env.example` (proxy).
+
+LiteLLM is the local OpenAI-compatible front door (`:4000/v1`). CI does **not** start it. Two different kinds of secrets are involved — **do not mix them**.
 
 ```text
 sdth-c2-server

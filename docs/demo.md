@@ -1,5 +1,7 @@
 # Demo & benchmarks
 
+Phase 2 demos use **curl / scripts / two laptops** — no BattlePlan UI. Contract: [C2 REST API](api/rest.md). Topology: [Topology](architecture/topology.md) · [Plan §4.2](plan.md#42-cloudflare-containers-phase-2).
+
 ## Quick start
 
 ```bash
@@ -9,80 +11,158 @@ SCENARIO=S2 ./scripts/demo.sh
 uv run python -m app.main --scenario S3 --stub --yes
 ```
 
-## Demo Path A: Two-Laptop / Two-Terminal I/O (issue #17)
-
-Cold-start rehearsal for Phase 2 **without UI**. Topology: [Topology](architecture/topology.md) · plan §4.2: [Plan §4.2](plan.md#42-cloudflare-containers-phase-2). Full curl copy-paste lives in the repo [README — Laptop I/O runbook](https://github.com/edgesentry/sdth-nexus-c2#laptop-io-runbook-issue-17). Contract shapes: [C2 REST API](api/rest.md).
-
-| Role | Machine | Actions |
-|------|---------|---------|
-| **Core** | Shared host | `uv run sdth-c2-server` **or** Cloudflare `C2_BASE_URL` (+ `C2_API_TOKEN`) |
-| **Screen 1** | Command laptop | Optional ingress → `POST /api/gate/proposals` → `POST /api/gate/approve` |
-| **Screen 2** | Recipient laptop | `GET /api/recipient/inbox` → `POST /api/recipient/ack` |
+### Manual CLI (effector mock)
 
 ```bash
-# Core (once)
-uv run sdth-c2-server   # http://127.0.0.1:8080
+uv run uvicorn app.mock_server:app --port 8000 &
+EFFECTOR_BASE_URL=http://127.0.0.1:8000 uv run python -m app.main --scenario S1 --yes
+uv run python -m app.main --scenario S2            # interactive y/n
+uv run python -m app.main --scenario S3 --stub --yes
+```
 
-# Both laptops / terminals — same Core origin
+---
+
+## Demo Path A: Two-Laptop / Two-Terminal I/O (issue #17)
+
+Cold-start rehearsal for Phase 2 **without UI**. Paths never change — only `C2_BASE_URL` (+ optional `C2_API_TOKEN` on Cloudflare).
+
+| Role | Where | Job |
+|------|-------|-----|
+| **Core** | One host (local or Cloudflare) | `sdth-c2-server` — ontology, gate, inbox, audit |
+| **Screen 1** | Command laptop | Ingress (optional) → propose → approve |
+| **Screen 2** | Recipient laptop | Poll inbox → Ack |
+
+### 0. Cold start — Core
+
+```bash
+uv sync
+uv run sdth-c2-server          # http://127.0.0.1:8080
+# Cloudflare instead:
+#   export C2_BASE_URL=https://sdth-c2-core.<sub>.workers.dev
+#   export C2_API_TOKEN='…'   # Worker Bearer (#38); see deploy.md
+```
+
+Both laptops point at the **same** Core. Local Core ignores `C2_API_TOKEN`. Set once per shell:
+
+```bash
 export C2_BASE_URL="${C2_BASE_URL:-http://127.0.0.1:8080}"
 AUTH=()
 [[ -n "${C2_API_TOKEN:-}" ]] && AUTH=(-H "Authorization: Bearer $C2_API_TOKEN")
+# jq helps pass coa_id between screens; install if missing: brew install jq
 ```
 
-**Screen 1**
+### 1. Screen 1 — command (ingress + gate)
 
 ```bash
+# Optional reset between rehearsals (memory only; does not wipe .audit/gate.jsonl)
+curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/admin/reset"
+
+# Optional ingress (skip for minimal S2 handshake — proposals load the scenario)
+curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/ingress/open-feed" \
+  -H 'content-type: application/json' -d '{"feed":"all","use_fixture":true}'
+# S3 SAR path: POST /api/ingress/candidate-event with tests/fixtures/candidate_event_assumed.json
+
+# Propose (loads S2 Warning Picture + queues COA). Capture coa_id:
 PROP=$(curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/gate/proposals" \
   -H 'content-type: application/json' \
   -d '{"scenario_id":"S2","unit_id":"CUE-NODE-01"}')
+echo "$PROP" | jq '{coa_id: .coa.coa_id, amber: .finding.amber_alert, threat: .finding.threat_class}'
 COA_ID=$(echo "$PROP" | jq -r '.coa.coa_id')
+# Tell Screen 2 the same COA_ID (chat / shared terminal / sticky note).
+
+# Operator approve → sealed DecisionToken
 curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/gate/approve" \
   -H 'content-type: application/json' \
-  -d "{\"coa_id\":\"$COA_ID\",\"decision\":\"y\"}"
-# hand $COA_ID to Screen 2
+  -d "{\"coa_id\":\"$COA_ID\",\"decision\":\"y\",\"operator_id\":\"screen1\"}"
 ```
 
-**Screen 2**
+Optional Pitch-2 overlay on Screen 1 (never seals tokens by itself):
 
 ```bash
-curl -s "${AUTH[@]}" "$C2_BASE_URL/api/recipient/inbox?unit_id=CUE-NODE-01" | jq .
-curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/recipient/ack" \
-  -H 'content-type: application/json' \
-  -d "{\"coa_id\":\"$COA_ID\",\"unit_id\":\"CUE-NODE-01\"}"
-curl -s "${AUTH[@]}" "$C2_BASE_URL/api/audit/trail" | jq 'length'
+curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/interpret" \
+  -H 'content-type: application/json' -d '{"scenario_id":"S2","force_heuristic":true}'
+# or one-hop: proposals with "interpret":true (LiteLLM if Core has LLM_BASE_URL)
 ```
 
-Cloudflare uses the **same paths** — only swap `C2_BASE_URL` / `C2_API_TOKEN` ([deploy.md](deploy.md)). Phase 3 will drive the same hops from BattlePlan instead of curl.
+### 2. Screen 2 — recipient (inbox + ack)
+
+```bash
+export C2_BASE_URL="${C2_BASE_URL:-http://127.0.0.1:8080}"   # same Core as Screen 1
+AUTH=()
+[[ -n "${C2_API_TOKEN:-}" ]] && AUTH=(-H "Authorization: Bearer $C2_API_TOKEN")
+COA_ID='…'   # from Screen 1
+UNIT_ID=CUE-NODE-01
+
+curl -s "${AUTH[@]}" "$C2_BASE_URL/api/recipient/inbox?unit_id=$UNIT_ID" | jq .
+curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/recipient/ack" \
+  -H 'content-type: application/json' \
+  -d "{\"coa_id\":\"$COA_ID\",\"unit_id\":\"$UNIT_ID\",\"message\":\"screen2 ack\"}"
+```
+
+### 3. Either screen — audit seal
+
+```bash
+curl -s "${AUTH[@]}" "$C2_BASE_URL/api/audit/trail" \
+  | jq --arg id "$COA_ID" \
+    '.records[] | select(.activity_name=="recipient_ack" and .metadata.coa_id==$id) | {activity_name, time}'
+```
+
+Expect a `recipient_ack` for that `coa_id` within **< 3 s** of approve on a local Core.
+
+**One-shot shortcut** (same hops, automated): `./scripts/picture_to_tasking.sh` — fine for CI; use Screen 1/2 curl above for the live two-laptop rehearsal.
+
+Endpoint table: [C2 REST API](api/rest.md).
+
+---
 
 ## Demo Path B: 19-Event Temporal Streamer
 
-Demonstrates temporal alignment (PS 04 §2-03) and amber contradiction flagging across a 19-step timeline (T-60s to T-00s) directly in the terminal:
+Play T-60s → T-00s sensor ingress incrementally (PS 04 temporal alignment), not a one-shot `build_events()` dump:
 
 ```bash
-uv run python scripts/stream_events.py                     # default S2 hero scenario
-uv run python scripts/stream_events.py --scenario S1       # S1 sea spoof scenario
-uv run python scripts/stream_events.py --fast              # run without sleep delays
+uv run python scripts/stream_events.py                  # S2 hero, local ontology
+uv run python scripts/stream_events.py --scenario S1
+uv run python scripts/stream_events.py --fast           # no inter-step sleep
+uv run python scripts/stream_events.py --mode print     # JSONL steps
+uv run python scripts/stream_events.py --help
 ```
+
+| Steps | Band |
+|-------|------|
+| 01–05 | Early recon / social rumors / sparse radar |
+| 06–10 | Coastal radar lock + optical slew |
+| 11–15 | EO blur + Amber contradiction (S2) |
+| 16–19 | Warning Picture → HITL → tasking/ack cue |
+
+---
 
 ## Demo Path C: UI-less Picture→Tasking Demo (Pitch-4)
 
-Runs a complete one-shot automated loop: **Warning Picture → approve → inbox → Ack → audit** against local or remote Core (`C2_BASE_URL`):
+One-shot S2 loop: **Warning Picture → approve → inbox → Ack → audit**. Prints each hop and asserts `recipient_ack` is sealed in the OCSF hash chain. Local target: approve→ack **< 3 s**.
 
 ```bash
-./scripts/picture_to_tasking.sh                      # starts local server, runs S2 loop, verifies <3s
-C2_BASE_URL=https://sdth-c2-core.<subdomain>.workers.dev ./scripts/picture_to_tasking.sh
+./scripts/picture_to_tasking.sh          # starts local sdth-c2-server, then runs demo
+# or two terminals:
+uv run sdth-c2-server                    # Terminal A
+uv run python scripts/picture_to_tasking.py   # Terminal B
+
+C2_BASE_URL=https://sdth-c2-core.<YOUR_SUBDOMAIN>.workers.dev C2_API_TOKEN='…' \
+  ./scripts/picture_to_tasking.sh
+# Cloudflare down:
+uv run sdth-c2-server && unset C2_BASE_URL C2_API_TOKEN && ./scripts/picture_to_tasking.sh
+
+INTERPRET=1 ./scripts/picture_to_tasking.sh   # interpreter overlay (LiteLLM if Core has LLM_BASE_URL)
 ```
 
-Or run manually against an already running server:
+`BASE_URL` is accepted as an alias of `C2_BASE_URL` by the Python client.
 
-```bash
-uv run python scripts/picture_to_tasking.py          # asserts token and signed Ack in OCSF audit
-INTERPRET=1 ./scripts/picture_to_tasking.sh          # interpreter overlay (LiteLLM if Core has LLM_BASE_URL)
-```
+---
 
 ## Demo Path D: Live LLM via LiteLLM
 
 **Probabilistic proposes; deterministic disposes.** Stands up LiteLLM as the OpenAI-compatible front door and proves `POST /api/interpret` returns `source: "llm"`. CI stays LLM-free (heuristic fallback when `LLM_BASE_URL` is unset or LiteLLM is down).
+
+Keys, aliases, and master-key rules: **[LiteLLM](litellm.md)**.
 
 ```bash
 cp deploy/litellm/.env.example deploy/litellm/.env   # set GEMINI_API_KEY for live smoke
@@ -94,20 +174,7 @@ uv run --group litellm litellm --config deploy/litellm/config.yaml --port 4000
 ./scripts/litellm_interpret_smoke.sh                 # S2 → source == "llm" via gemini-3.8-flash
 ```
 
-| Env (C2) | Value |
-|----------|--------|
-| `LLM_BASE_URL` | `http://127.0.0.1:4000/v1` |
-| `LLM_API_KEY` | LiteLLM master key (`LITELLM_MASTER_KEY`, sample `sk-litellm-local`) — **not** a Gemini/OpenAI key; see [LiteLLM keys](litellm.md) |
-| `LLM_MODEL` | `gemini-3.8-flash` (live smoke). Also `gpt-4o-mini`, `claude-haiku`, `fireworks-glm`, or `nexus-interpreter` |
-
-| Provider | Alias | Key |
-|----------|--------|-----|
-| Google Gemini | `gemini-3.8-flash` | `GEMINI_API_KEY` |
-| OpenAI | `gpt-4o-mini` | `OPENAI_API_KEY` |
-| Anthropic | `claude-haiku` | `ANTHROPIC_API_KEY` |
-| Fireworks AI | `fireworks-glm` | `FIREWORKS_AI_API_KEY` |
-
-Never commit keys. What `LITELLM_MASTER_KEY` is, and how it differs from vendor keys: [LiteLLM keys](litellm.md). Agent Router / Envoy AI Gateway remains Phase 5.
+---
 
 ## Demo Path E: Cloudflare Containers Core (Pitch-day HTTPS)
 
@@ -119,42 +186,59 @@ cd deploy/cloudflare && npm install && cp .dev.vars.example .dev.vars && npx wra
 C2_BASE_URL=http://127.0.0.1:8787 C2_API_TOKEN=dev-shared-c2-token ./scripts/picture_to_tasking.sh
 
 # after `npx wrangler deploy` (+ C2_API_TOKEN secret):
-C2_BASE_URL=https://sdth-c2-core.<YOUR_SUBDOMAIN>.workers.dev C2_API_TOKEN='…' ./scripts/picture_to_tasking.sh
+C2_BASE_URL=https://sdth-c2-core.<YOUR_SUBDOMAIN>.workers.dev C2_API_TOKEN='…' \
+  ./scripts/picture_to_tasking.sh
 ```
 
 Cloudflare down → `uv run sdth-c2-server` (do not set `C2_BASE_URL` / `C2_API_TOKEN`). Auth: [deploy.md](deploy.md#shared-bearer-auth-issue-38).
 
+---
+
 ## Effector levels
 
-1. **Mock REST** — `app/mock_server.py` (`EFFECTOR_BASE_URL`)
+1. **Mock REST** — `app/mock_server.py` (`EFFECTOR_BASE_URL`, default `http://127.0.0.1:8000`; `CLEARBOT_BASE_URL` still accepted)
 2. **2D kinematics** — lat/lon toward waypoint after approve
 3. **RasPi GPIO** — optional / no-op without hardware
 
+`ClearbotRestAdapter` remains a thin alias of `UsvRestAdapter` for older imports.
+
+---
+
 ## Slide 11 benchmarks
+
+Prove gate latency, fail-closed unauthorized rejects, picture-to-ack, and audit integrity:
 
 ```bash
 uv run python scripts/benchmark.py
 uv run python scripts/benchmark.py --tracks 150   # Pitch-3 flood size
+uv run python scripts/benchmark.py --help
 ```
 
 | Metric | Target |
 |--------|--------|
 | Gate latency (p95) | < 50 ms (100 COA evals) |
 | Interlock fast-reject (p95) | < 5 ms |
-| Unauthorized taskings | 0 |
+| Unauthorized taskings | 0 (geofence / speed / duplicate / timeout) |
 | Track-flood stress (gate p95) | < 50 ms under **100+** synthetic tracks |
-| Track-flood unauthorized | 0 (geofence / speed / null under flood) |
+| Track-flood unauthorized | 0 under flood |
 | Picture-to-Ack roundtrip | < 3.0 s |
 | Audit trace integrity | 100% hash-chain |
 
 Exits non-zero if any metric misses its target (CI + live demo). Pitch-3 flood is on by default (`--skip-stress` to omit).
 
+---
+
 ## Tests
 
 ```bash
-uv run pytest tests/unit/ -q
-uv run pytest tests/integration/ -v -m integration
+uv run pytest tests/unit/ -q                        # unit
+uv run pytest tests/integration/ -v -m integration  # S2 + C2 two-screen / live HTTP
+uv run python scripts/stream_events.py --fast       # 19-step temporal playback
+uv run python scripts/benchmark.py                  # Slide 11 proof
+./scripts/litellm_interpret_smoke.sh                # live LiteLLM (optional; not in CI)
 ```
+
+CI runs unit, integration, and benchmark jobs on every push/PR.
 
 ## Local docs preview
 
