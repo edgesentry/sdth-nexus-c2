@@ -21,6 +21,7 @@ Usage:
 
 Env:
   C2_BASE_URL / BASE_URL  Core origin (default http://127.0.0.1:8080)
+  C2_API_TOKEN            Optional Bearer for Cloudflare Worker front door (#38)
   UNIT_ID                 Recipient unit (default CUE-NODE-01)
   SCENARIO                Scenario id (default S2)
 
@@ -52,6 +53,14 @@ def _base_url(cli: str | None) -> str:
         or os.environ.get("BASE_URL", "").strip()
         or DEFAULT_BASE
     ).rstrip("/")
+
+
+def _client_headers() -> dict[str, str]:
+    """Bearer for Cloudflare Worker auth; empty for local sdth-c2-server."""
+    token = os.environ.get("C2_API_TOKEN", "").strip()
+    if token:
+        return {"Authorization": f"Bearer {token}"}
+    return {}
 
 
 def _print_hop(step: int, title: str, detail: str = "") -> None:
@@ -114,10 +123,11 @@ def run_demo(
     print(f"  Core URL   : {base_url}")
     print(f"  Scenario   : {scenario_id}")
     print(f"  Unit       : {unit_id}")
+    print(f"  Auth       : {'Bearer C2_API_TOKEN' if _client_headers() else 'none (local)'}")
     print(f"  Roundtrip  : < {ROUNDTRIP_TARGET_S:g} s (local target)")
     print("=" * 60)
 
-    with httpx.Client(base_url=base_url, timeout=timeout_s) as client:
+    with httpx.Client(base_url=base_url, timeout=timeout_s, headers=_client_headers()) as client:
         # Optional reset so re-runs are clean when talking to a sticky Core.
         with contextlib.suppress(httpx.HTTPError):
             client.post("/api/admin/reset")

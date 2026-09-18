@@ -56,8 +56,12 @@ jobs:
           command: deploy
           # Pin to lockfile wrangler so local + CI stay aligned.
           wranglerVersion: "4.134.0"
+          # Only sync when GitHub secret is set — empty would wipe the Worker secret.
+          secrets: ${{ secrets.C2_API_TOKEN != '' && 'C2_API_TOKEN' || '' }}
+        env:
+          C2_API_TOKEN: ${{ secrets.C2_API_TOKEN }}
 
-      - name: Smoke /health
+      - name: Smoke /health (public)
         env:
           C2_BASE_URL: ${{ steps.deploy.outputs.deployment-url }}
         run: |
@@ -67,14 +71,31 @@ jobs:
             exit 1
           fi
           echo "C2_BASE_URL=${C2_BASE_URL}"
-          # Container cold start can take a few seconds after first rollout.
           for _ in $(seq 1 60); do
             if curl -sf "${C2_BASE_URL}/health" >/dev/null; then
               curl -sf "${C2_BASE_URL}/health"
               echo
-              exit 0
+              break
             fi
             sleep 2
           done
-          echo "FAIL: ${C2_BASE_URL}/health did not become ready" >&2
-          exit 1
+          curl -sf "${C2_BASE_URL}/health" >/dev/null
+
+      - name: Smoke Bearer gate
+        env:
+          C2_BASE_URL: ${{ steps.deploy.outputs.deployment-url }}
+          C2_API_TOKEN: ${{ secrets.C2_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${C2_API_TOKEN}" ]]; then
+            echo "NOTE: secrets.C2_API_TOKEN unset — skip /api Bearer smoke (set it to enforce gate)"
+            exit 0
+          fi
+          code=$(curl -s -o /dev/null -w "%{http_code}" "${C2_BASE_URL}/api/ontology/state")
+          if [[ "${code}" != "401" ]]; then
+            echo "FAIL: expected 401 without Bearer, got ${code}" >&2
+            exit 1
+          fi
+          curl -sf -H "Authorization: Bearer ${C2_API_TOKEN}" \
+            "${C2_BASE_URL}/api/ontology/state" >/dev/null
+          echo "PASS: anonymous /api → 401; Bearer /api → 200"

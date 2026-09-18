@@ -31,12 +31,12 @@ if [[ "${START_LOCAL}" -eq 1 ]]; then
   uv run sdth-c2-server &
   SERVER_PID=$!
   for _ in $(seq 1 50); do
-    if curl -sf "${C2_BASE_URL}/api/ontology/state" >/dev/null; then
+    if curl -sf "${C2_BASE_URL}/health" >/dev/null; then
       break
     fi
     sleep 0.1
   done
-  if ! curl -sf "${C2_BASE_URL}/api/ontology/state" >/dev/null; then
+  if ! curl -sf "${C2_BASE_URL}/health" >/dev/null; then
     echo "FAIL: local sdth-c2-server did not become ready at ${C2_BASE_URL}" >&2
     exit 2
   fi

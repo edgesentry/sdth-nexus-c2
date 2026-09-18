@@ -47,6 +47,10 @@ def test_worker_routes_demo_singleton() -> None:
     assert "/api/admin/audit/snapshot" in src
     assert "/health" in src
     assert "satisfies ExportedHandler<Env>" in src
+    assert "authorizeRequest" in src
+    assert "C2_API_TOKEN" in src
+    assert "pathRequiresBearer" in src
+    assert "Unauthorized" in src
 
 
 def test_docs_and_mkdocs_cover_cloudflare_deploy() -> None:
@@ -63,12 +67,20 @@ def test_docs_and_mkdocs_cover_cloudflare_deploy() -> None:
     assert "uv run sdth-c2-server" in deploy
     assert "CLOUDFLARE_API_TOKEN" in deploy
     assert "deploy-cloudflare.yml" in deploy
+    assert "C2_API_TOKEN" in deploy
+    assert "Bearer" in deploy
     workflow = (ROOT / ".github" / "workflows" / "deploy-cloudflare.yml").read_text()
     assert "branches: [main]" in workflow
     assert "cloudflare/wrangler-action@" in workflow
     assert "workingDirectory: deploy/cloudflare" in workflow
     assert "command: deploy" in workflow
+    assert "Smoke Bearer gate" in workflow
     assert "containers:write" not in workflow  # documented in deploy.md, not in YAML secrets
+    root_env = (ROOT / ".env.example").read_text()
+    assert "C2_API_TOKEN" in root_env
+    p2t = (ROOT / "scripts" / "picture_to_tasking.py").read_text()
+    assert "_client_headers" in p2t
+    assert "Authorization" in p2t
 
 
 def _strip_jsonc(raw: str) -> str:

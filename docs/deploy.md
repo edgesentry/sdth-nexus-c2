@@ -22,6 +22,37 @@ Laptop Screen 2  ──HTTPS──►     │
 
 Paths do not change. Point clients with `C2_BASE_URL`.
 
+## Shared Bearer auth (issue #38)
+
+Public `workers.dev` is gated by a **team-shared** Bearer token at the Worker front door (not per-user).
+
+| Path | Auth |
+|------|------|
+| `GET /health` | Public (CI smoke / readiness) |
+| `OPTIONS *` | Public (CORS preflight) |
+| `/api/*` | `Authorization: Bearer <C2_API_TOKEN>` when the Worker secret is set |
+
+```bash
+# Laptop / UI / scripts against Cloudflare
+export C2_BASE_URL=https://sdth-c2-core.egdesentry.workers.dev
+export C2_API_TOKEN='…'   # same shared secret as Wrangler / GitHub
+curl -s -H "Authorization: Bearer $C2_API_TOKEN" "$C2_BASE_URL/api/ontology/state"
+C2_BASE_URL=… C2_API_TOKEN=… ./scripts/picture_to_tasking.sh
+```
+
+Local `uv run sdth-c2-server` ignores `C2_API_TOKEN` (no Worker). Leave the env unset for CI.
+
+### Set the Worker secret
+
+```bash
+cd deploy/cloudflare
+npx wrangler secret put C2_API_TOKEN   # paste shared demo token
+```
+
+Also add the **same value** as GitHub Actions secret `C2_API_TOKEN` so deploys re-sync it and the workflow can smoke `401` without Bearer / `200` with Bearer.
+
+If `C2_API_TOKEN` is unset on the Worker, `/api` stays open (local `wrangler dev` without `.dev.vars`). Production must set the secret.
+
 ## Prerequisites
 
 - Docker Desktop (or another Docker-compatible engine) running — required for image build
@@ -37,7 +68,7 @@ From `deploy/cloudflare/`:
 ```bash
 cd deploy/cloudflare
 npm install
-cp .dev.vars.example .dev.vars   # optional LLM overlay
+cp .dev.vars.example .dev.vars   # set C2_API_TOKEN (+ optional LLM)
 npx wrangler types
 npx wrangler dev                 # http://127.0.0.1:8787
 ```
@@ -46,9 +77,9 @@ In another terminal, from the repo root:
 
 ```bash
 curl -s http://127.0.0.1:8787/health
+export C2_API_TOKEN=dev-shared-c2-token   # match .dev.vars
 C2_BASE_URL=http://127.0.0.1:8787 ./scripts/picture_to_tasking.sh
 ```
-
 First request after sleep pays a 2–3s container cold start. Subsequent handshake hops use the warm singleton.
 
 ## Deploy (GitHub Actions → Cloudflare)
@@ -66,6 +97,7 @@ First request after sleep pays a 2–3s container cold start. Subsequent handsha
 |--------|--------|
 | `CLOUDFLARE_API_TOKEN` | Token from step 1 |
 | `CLOUDFLARE_ACCOUNT_ID` | Account ID (dashboard sidebar / `wrangler whoami`) |
+| `C2_API_TOKEN` | Shared C2 Bearer (issue #38); synced to Worker on deploy |
 
 3. (Optional) Create GitHub Environment **`cloudflare`** (Settings → Environments) so deploys show a URL and can require reviewers.
 
@@ -100,10 +132,11 @@ Laptop handshake against the deployed Core:
 
 ```bash
 export C2_BASE_URL=https://sdth-c2-core.<YOUR_SUBDOMAIN>.workers.dev
+export C2_API_TOKEN='…'   # wrangler secret / GitHub secret
 curl -s "$C2_BASE_URL/health"
+curl -s -H "Authorization: Bearer $C2_API_TOKEN" "$C2_BASE_URL/api/ontology/state"
 ./scripts/picture_to_tasking.sh
 ```
-
 ## Fallback (zero-internet / Cloudflare down)
 
 ```bash
