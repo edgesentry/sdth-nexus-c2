@@ -57,6 +57,7 @@ Synthetic multi-vendor observations without shared track IDs:
 
 | Modality | Used in | Characteristics | Role in Contradiction |
 |----------|---------|-----------------|-----------------------|
+| **Space-based SAR Anomaly Ingress** | **S3** | Macro scene-difference anomaly evidence (all-weather radar satellite diff over sea lanes) | Flags unannounced vessel clusters or dark ships (AIS-silent) where optical sensors are blind |
 | **Social Media OSINT / Text Intel** | **S2** | Unstructured text summary (Instagram/Telegram/Recon) | Exaggerated social reports ("20 drones incoming") filtered down to 3 Shahed-136 drones heading to Objective Bravo at T+4 min |
 | **Coastal / Gap-Filler Radar** | S1–S3 | 2D/3D kinematic contacts | Disagrees in count (sees 1 contact) or bearing (+1,200m north) |
 | **EO / Optical Camera** | S1, S2 | Visual bearings, YOLO bounding box | Obscured blur, low confidence (0.42), unable to verify independently |
@@ -67,9 +68,9 @@ Synthetic multi-vendor observations without shared track IDs:
 ### 2.2 19-Event Temporal Progression (Slide 09)
 
 To demo temporal alignment (PS 04 §2-03) and avoid static toy data, the scenario engine supports **19-step temporal playback** (`scripts/stream_events.py`):
-1. **Events 01–05 (T-60s to T-45s):** Early reconnaissance chatter, social media rumors, and sparse radar blips.
+1. **Events 01–05 (T-60s to T-45s):** Early reconnaissance chatter, social media rumors, sparse radar blips, or macro space-based SAR difference alerts.
 2. **Events 06–10 (T-40s to T-25s):** Coastal radar locks high-speed inbound track; optical cameras slew to cue area.
-3. **Events 11–15 (T-20s to T-10s):** EO/IR detects low-confidence blur; Corroboration Engine flags **Amber Contradiction Alert** (Social/Recon reports 3, Radar sees 1 at divergent bearing).
+3. **Events 11–15 (T-20s to T-10s):** EO/IR detects low-confidence blur; Corroboration Engine flags **Amber Contradiction Alert** (Social/Recon reports 3, Radar sees 1 at divergent bearing; or SAR sees vessel cluster while AIS is silent).
 4. **Events 16–19 (T-05s to T-00s):** Operator console displays Warning Picture; countdown triggers; operator authorizes investigation tasking; recipient confirms ack.
 
 ### 2.3 Intermediate Output — Warning Picture (`Finding`)
@@ -109,7 +110,7 @@ build_events()  →  SpatialEntityGraph
 |----|-------|-------------|-------------------|--------------------|
 | **S1** | **Sea Approach — Adversarial AIS Spoof** | Slide 01, 06 | Manipulable stationary AIS vs ~20 kt radar/EO approach (~850m mismatch) | Mismatch ≥500m → `ISR_IDENTIFY_CONTACT` → Generic Coastal ISR USV |
 | **S2** | **Air Corridor — Shahed Swarm Contradiction** | **Slide 04 (Hero)** | **Civilian social media / recon reports 3 drones; radar sees 1 contact 1,200m north; EO/IR shows blur (0.42 conf); RF silent; no ADS-B** | Count & bearing contradiction → Amber Alert → `CUE_AND_IDENTIFY` (Non-kinetic investigation) |
-| **S3** | **Shipping Lane SPOF — Pattern Break** | Slide 02, 06 | Thin open AIS density (<0.40) while coastal radar spots uncorrelated inbound | Mismatch ≥2,000m → `APPROACH_PATROL` → Pattern verification patrol |
+| **S3** | **Shipping Lane & Coastal Anomaly — SAR Difference vs AIS** | Slide 02, 06 | Space-based SAR scene difference flags unannounced cluster while coastal AIS is silent/thin (<0.40) | Mismatch / Dark Cluster → `APPROACH_PATROL` → Tactical patrol & USV interceptor dispatch |
 
 ---
 
