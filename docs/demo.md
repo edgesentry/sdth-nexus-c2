@@ -261,7 +261,7 @@ uv run python scripts/benchmark.py                  # Slide 11 proof
 ./scripts/litellm_interpret_smoke.sh                # live LiteLLM (optional; not in CI)
 ```
 
-CI runs unit, integration, and benchmark jobs on every push/PR.
+CI runs unit, integration, benchmark, and streamer (`--fast`) jobs on every push/PR.
 
 ## Local docs preview
 
