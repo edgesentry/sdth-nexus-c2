@@ -105,8 +105,7 @@ def _detect(graph: SpatialEntityGraph) -> Finding | None:
 
         primary = track_sar[0]
         min_ais_d = min(
-            haversine_m(primary.latitude, primary.longitude, a.latitude, a.longitude)
-            for a in ais
+            haversine_m(primary.latitude, primary.longitude, a.latitude, a.longitude) for a in ais
         )
         if min_ais_d < 2_000.0:
             continue
@@ -117,8 +116,7 @@ def _detect(graph: SpatialEntityGraph) -> Finding | None:
         nearby_radar = [
             o
             for o in radar
-            if haversine_m(primary.latitude, primary.longitude, o.latitude, o.longitude)
-            <= 1_500.0
+            if haversine_m(primary.latitude, primary.longitude, o.latitude, o.longitude) <= 1_500.0
         ]
         approach = list(
             dict.fromkeys([o.source_id for o in track_sar + track_radar + nearby_radar])
