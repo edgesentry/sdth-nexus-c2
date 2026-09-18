@@ -67,6 +67,14 @@ class CandidateEventIngressRequest(BaseModel):
     use_fixture: bool = False
 
 
+class OpenFeedIngressRequest(BaseModel):
+    """Optional demo-grade open AIS / open air ingress (issue #16)."""
+
+    feed: str = Field(description="ais | air | all (or comma list)")
+    payload: dict[str, Any] | None = None
+    use_fixture: bool = False
+
+
 class ApproveRequest(BaseModel):
     coa_id: str
     decision: str = Field(description="y/yes/approve or n/no/deny")
@@ -252,6 +260,69 @@ async def ingress_candidate_event(req: CandidateEventIngressRequest) -> dict[str
         "status": "INGESTED",
         "observation": obs.model_dump(mode="json"),
         "track_id": track.track_id,
+    }
+
+
+@app.post("/api/ingress/open-feed")
+async def ingress_open_feed(req: OpenFeedIngressRequest) -> dict[str, Any]:
+    """Ingest optional open AIS / open air snapshots. Never seals tokens; S1-S3 stay primary."""
+    from app.adapters.open_feed import (
+        open_feed_to_observations,
+        parse_open_feed_selection,
+    )
+
+    runtime = get_runtime()
+    try:
+        feeds = parse_open_feed_selection(req.feed)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if not feeds:
+        raise HTTPException(status_code=400, detail="feed must be ais, air, or all")
+
+    if req.payload is not None and len(feeds) != 1:
+        raise HTTPException(
+            status_code=400,
+            detail="payload requires a single feed (ais or air); use use_fixture for all",
+        )
+    if not req.use_fixture and req.payload is None:
+        raise HTTPException(status_code=400, detail="Provide payload or use_fixture=true")
+
+    ingested: list[dict[str, Any]] = []
+    for feed in feeds:
+        try:
+            observations = open_feed_to_observations(
+                feed,
+                req.payload,
+                use_fixture=req.use_fixture,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        for obs in observations:
+            track = runtime.graph.ingest(obs)
+            runtime.audit.append(
+                "open_feed_ingested",
+                "Info",
+                {
+                    "feed": feed,
+                    "observation_id": obs.observation_id,
+                    "source_id": obs.source_id,
+                    "modality": obs.modality,
+                    "track_id": track.track_id,
+                },
+            )
+            ingested.append(
+                {
+                    "feed": feed,
+                    "observation": obs.model_dump(mode="json"),
+                    "track_id": track.track_id,
+                }
+            )
+
+    return {
+        "status": "INGESTED",
+        "feeds": list(feeds),
+        "count": len(ingested),
+        "items": ingested,
     }
 
 

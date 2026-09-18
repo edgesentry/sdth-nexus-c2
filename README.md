@@ -71,6 +71,7 @@ Laptop I/O (Phase 2 — no UI):
 | `GET` | `/api/ontology/state` | Live tracks, observations, amber alert |
 | `POST` | `/api/interpret` | Probabilistic propose: hypotheses + candidate COA (no token) |
 | `POST` | `/api/ingress/candidate-event` | Upstream macro SAR CandidateEvent → `space_sar` Observation |
+| `POST` | `/api/ingress/open-feed` | Optional open AIS / open air fixture or payload → Observations |
 | `POST` | `/api/gate/proposals` | Queue COA (`scenario_id`, raw `coa`, or `interpret:true`) |
 | `POST` | `/api/gate/approve` | Operator y/n → sealed `DecisionToken` |
 | `GET` | `/api/recipient/inbox?unit_id=` | Pending approved taskings |
@@ -149,6 +150,23 @@ INTERPRET=1 ./scripts/picture_to_tasking.sh
 
 LiteLLM down / no key → existing heuristic demo still works. What the master key is: [`docs/litellm.md`](docs/litellm.md). Agent Router / Envoy is Phase 5.
 
+### Optional open feeds (issue #16)
+
+Synthetic S1–S3 remain the primary demo. Opt in to **demo-grade** open AIS (data.gov.sg-shaped) and/or open air (ADS-B-style) fixtures — no live coastal poll in Phase 2.
+
+```bash
+# CLI (additive on top of --scenario)
+uv run python -m app.main --scenario S2 --stub --yes --open-feed ais,air
+# or: OPEN_FEED=all uv run python -m app.main --scenario S2 --stub --yes
+
+# REST (does not replace scenario ingest)
+curl -s -X POST localhost:8080/api/ingress/open-feed \
+  -H 'content-type: application/json' \
+  -d '{"feed":"all","use_fixture":true}'
+```
+
+Fixtures: `tests/fixtures/open_ais_datagovsg.json`, `tests/fixtures/open_air_traffic.json`. Live Singapore coastal harness is Phase 5.
+
 ### Picture→Tasking demo (no UI)
 
 One-shot S2 loop: **Warning Picture → approve → inbox → Ack → audit** (Pitch-4 / issue #24). Prints each hop and asserts `recipient_ack` is sealed in the OCSF hash chain. Local target: approve→ack **< 3 s**.
@@ -182,6 +200,7 @@ uv run sdth-c2-server && unset C2_BASE_URL C2_API_TOKEN && ./scripts/picture_to_
 | `Dockerfile` | C2 Core image (`uv` / FastAPI) used by Cloudflare Containers |
 | `app/adapters/usv_rest.py` | Vendor-neutral USV REST effector (`EFFECTOR_BASE_URL`) |
 | `app/adapters/sar_candidate_event.py` | Assumed CandidateEvent → `space_sar` Observation (Pitch-1) |
+| `app/adapters/open_feed.py` | Optional open AIS / open air → Observation (issue #16) |
 | `scripts/picture_to_tasking.py` | UI-less Picture→Tasking demo (`C2_BASE_URL` / `BASE_URL`; `--interpret`) |
 | `scripts/litellm_interpret_smoke.py` | Live S2 `/api/interpret` smoke (`source == "llm"`) |
 | `app/` | Warning Picture TUI, mock server, kinematics, RasPi stub |

@@ -1,0 +1,29 @@
+{
+  "feed": "open_ais",
+  "source": "data.gov.sg/demo",
+  "schema_version": "0.1.0",
+  "retrieved_at": "2026-09-18T14:00:00Z",
+  "note": "Demo-grade snapshot shaped like open vessel traffic (not a live poll).",
+  "vessels": [
+    {
+      "mmsi": "563012345",
+      "name": "DEMO CARGO A",
+      "latitude": 1.264,
+      "longitude": 103.820,
+      "speed_kt": 8.5,
+      "heading_deg": 210,
+      "ship_type": "cargo",
+      "timestamp": "2026-09-18T13:58:00Z"
+    },
+    {
+      "mmsi": "563098765",
+      "name": "DEMO TUG B",
+      "latitude": 1.248,
+      "longitude": 103.805,
+      "speed_kt": 4.2,
+      "heading_deg": 95,
+      "ship_type": "tug",
+      "timestamp": "2026-09-18T13:59:00Z"
+    }
+  ]
+}

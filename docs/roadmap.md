@@ -13,7 +13,7 @@
 
 | Point | Phase 2 thin | Phase 5 raise |
 |-------|--------------|---------------|
-| Multimodal | Synthetic + open feeds (incl. space SAR anomaly diff) | Live coastal + sovereign satellite harness |
+| Multimodal | Synthetic + open feeds (incl. space SAR anomaly diff; optional AIS/air fixtures #16) | Live coastal + sovereign satellite harness |
 | Probabilistic | Backend LLM → hypotheses + COA (still gated); LiteLLM live path (#32, done) | Production CV + hardened LLM; Agent Router egress |
 | Deterministic gate | Stress 100+ tracks; p95 / unauthorized=0 | Air-gap, dual-key Tier-2 |
 | Picture→Tasking | curl / script / two-laptop (S2 air + S3 maritime) | Field USV & live interceptor cueing |

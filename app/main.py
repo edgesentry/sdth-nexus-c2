@@ -16,6 +16,11 @@ from core.proxy import EffectorProxy
 from core.stub import StubEffector
 from rich.console import Console
 
+from app.adapters.open_feed import (
+    FeedKind,
+    observations_from_open_feeds,
+    parse_open_feed_selection,
+)
 from app.adapters.southbound_sensor import normalize_sensor_event
 from app.adapters.usv_rest import UsvRestAdapter, resolve_effector_base_url
 from app.scenarios.base import get_scenario, list_scenario_ids
@@ -38,6 +43,7 @@ async def run_c2_cycle(
     auto_decision: str | None = None,
     use_stub: bool = False,
     gate_timeout_sec: float | None = None,
+    open_feeds: list[FeedKind] | None = None,
 ) -> GateVerdict:
     scenario = get_scenario(scenario_id)
     policy = TieredPolicy.from_yaml(policy_path)
@@ -54,6 +60,20 @@ async def run_c2_cycle(
         "Info",
         {"count": len(observations), "scenario": scenario.id},
     )
+
+    # Optional open AIS / open air fixtures (issue #16); synthetic S1-S3 stay primary.
+    extra = observations_from_open_feeds(open_feeds)
+    if extra:
+        graph.ingest_many(extra)
+        audit.append(
+            "open_feed_ingested",
+            "Info",
+            {
+                "count": len(extra),
+                "feeds": list(open_feeds or []),
+                "modalities": sorted({o.modality for o in extra}),
+            },
+        )
 
     finding = scenario.detect(graph)
     if finding is None:
@@ -156,6 +176,15 @@ def cli_main() -> None:
     parser.add_argument("--no", action="store_true", help="Auto-deny HITL")
     parser.add_argument("--stub", action="store_true", help="Use StubEffector (no HTTP)")
     parser.add_argument("--timeout", type=float, default=None)
+    parser.add_argument(
+        "--open-feed",
+        default=None,
+        metavar="FEEDS",
+        help=(
+            "Optional open feeds: ais, air, ais,air, or all "
+            "(default: env OPEN_FEED; unset keeps synthetic-only)"
+        ),
+    )
     args = parser.parse_args()
 
     auto = None
@@ -163,6 +192,15 @@ def cli_main() -> None:
         auto = "y"
     elif args.no:
         auto = "n"
+
+    try:
+        open_feeds = (
+            parse_open_feed_selection(args.open_feed)
+            if args.open_feed is not None
+            else parse_open_feed_selection(os.environ.get("OPEN_FEED"))
+        )
+    except ValueError as exc:
+        raise SystemExit(f"Invalid --open-feed / OPEN_FEED: {exc}") from exc
 
     verdict = asyncio.run(
         run_c2_cycle(
@@ -173,6 +211,7 @@ def cli_main() -> None:
             auto_decision=auto,
             use_stub=args.stub,
             gate_timeout_sec=args.timeout,
+            open_feeds=open_feeds or None,
         )
     )
     raise SystemExit(

@@ -18,6 +18,7 @@ Screen 1 = command · Screen 2 = recipient. No BattlePlan required for Phase 2 d
 | `GET` | `/api/ontology/state` | Live tracks, observations, amber alert |
 | `POST` | `/api/interpret` | Probabilistic propose: hypotheses + candidate COA (**never seals**) |
 | `POST` | `/api/ingress/candidate-event` | Upstream assumed CandidateEvent → `space_sar` Observation |
+| `POST` | `/api/ingress/open-feed` | Optional open AIS / open air → Observations (fixture or payload) |
 | `POST` | `/api/gate/proposals` | Queue COA (`scenario_id`, raw `coa`, or `interpret:true`) |
 | `POST` | `/api/gate/approve` | Operator y/n → sealed `DecisionToken` |
 | `GET` | `/api/recipient/inbox?unit_id=` | Pending approved taskings |
@@ -687,3 +688,35 @@ curl -s -X POST localhost:8080/api/ingress/candidate-event \
 ```
 
 Response `200`: `{ "status": "INGESTED", "observation": {...}, "track_id": "..." }` — never seals a DecisionToken.
+
+### `POST /api/ingress/open-feed`
+
+Optional demo-grade open AIS (data.gov.sg-shaped) or open air (ADS-B-style) ingress. Synthetic S1–S3 remain primary; this path is additive. Never seals a DecisionToken.
+
+```bash
+curl -s -X POST localhost:8080/api/ingress/open-feed \
+  -H 'content-type: application/json' \
+  -d '{"feed":"all","use_fixture":true}'
+```
+
+| Field | Role |
+|-------|------|
+| `feed` | `ais`, `air`, `all`, or comma list |
+| `use_fixture` | Load `tests/fixtures/open_ais_datagovsg.json` / `open_air_traffic.json` |
+| `payload` | Raw snapshot for a **single** feed (`ais` or `air`) |
+
+Response `200`: `{ "status": "INGESTED", "feeds": [...], "count": N, "items": [{ "feed", "observation", "track_id" }, ...] }`.
+
+| Open AIS field | Observation |
+|----------------|-------------|
+| `vessels[].mmsi` | `source_id` / `observation_id` |
+| `vessels[].latitude/longitude` | position |
+| `vessels[].speed_kt` | speed (via southbound) |
+| — | `modality=ais`, `attributes.ingress=open_feed` |
+
+| Open air field | Observation |
+|----------------|-------------|
+| `aircraft[].icao24` | `source_id` / `observation_id` |
+| `aircraft[].callsign` | `entity_hint` |
+| `aircraft[].velocity_kt` | speed |
+| — | `modality=adsb`, `attributes.ingress=open_feed` |

@@ -1,0 +1,29 @@
+{
+  "feed": "open_air",
+  "source": "opensky/demo",
+  "schema_version": "0.1.0",
+  "retrieved_at": "2026-09-18T14:00:00Z",
+  "note": "Demo-grade open air / ADS-B-style snapshot (not a live poll).",
+  "aircraft": [
+    {
+      "icao24": "c0ffee",
+      "callsign": "SIA123",
+      "latitude": 1.350,
+      "longitude": 103.990,
+      "velocity_kt": 280.0,
+      "heading_deg": 45.0,
+      "altitude_m": 3500.0,
+      "timestamp": "2026-09-18T13:59:30Z"
+    },
+    {
+      "icao24": "abad1d",
+      "callsign": "TGW456",
+      "latitude": 1.280,
+      "longitude": 103.860,
+      "velocity_kt": 210.0,
+      "heading_deg": 310.0,
+      "altitude_m": 2200.0,
+      "timestamp": "2026-09-18T13:59:45Z"
+    }
+  ]
+}
