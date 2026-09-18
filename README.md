@@ -59,12 +59,93 @@ cd deploy/cloudflare && npm install && npx wrangler dev
 C2_BASE_URL=http://127.0.0.1:8787 C2_API_TOKEN=dev-shared-c2-token ./scripts/picture_to_tasking.sh
 ```
 
-Laptop I/O (Phase 2 — no UI):
+### Laptop I/O runbook (issue #17)
 
-1. **Screen 1 / command:** start Core, `POST /api/gate/proposals` then `POST /api/gate/approve` (or run `scripts/stream_events.py` / TUI).
-2. **Screen 2 / recipient:** `GET /api/recipient/inbox?unit_id=…` then `POST /api/recipient/ack`.
-3. **Audit check:** `GET /api/audit/trail`.
-4. **Demo reset (optional):** `POST /api/admin/reset` (clears memory; does not wipe `.audit/gate.jsonl`).
+Phase 2 demos use **two laptops** (or two terminals) and **no UI**. Topology: [docs/architecture/topology.md](docs/architecture/topology.md) · plan §4.2: [docs/plan.md](docs/plan.md#42-cloudflare-containers-phase-2). Paths never change — only `C2_BASE_URL` (+ optional `C2_API_TOKEN` on Cloudflare).
+
+| Role | Where | Job |
+|------|-------|-----|
+| **Core** | One host (local or Cloudflare) | `sdth-c2-server` — ontology, gate, inbox, audit |
+| **Screen 1** | Command laptop | Ingress (optional) → propose → approve |
+| **Screen 2** | Recipient laptop | Poll inbox → Ack |
+
+**0. Cold start — Core (any one machine)**
+
+```bash
+uv sync
+uv run sdth-c2-server          # http://127.0.0.1:8080
+# Cloudflare instead: export C2_BASE_URL=https://sdth-c2-core.<sub>.workers.dev
+#                     export C2_API_TOKEN='…'   # Worker Bearer (#38); see docs/deploy.md
+```
+
+Both laptops point at the **same** Core. Local Core ignores `C2_API_TOKEN`. Set once per shell:
+
+```bash
+export C2_BASE_URL="${C2_BASE_URL:-http://127.0.0.1:8080}"
+AUTH=()
+[[ -n "${C2_API_TOKEN:-}" ]] && AUTH=(-H "Authorization: Bearer $C2_API_TOKEN")
+# jq helps pass coa_id between screens; install if missing: brew install jq
+```
+
+**1. Screen 1 — command (ingress + gate)**
+
+```bash
+# Optional reset between rehearsals (memory only; does not wipe .audit/gate.jsonl)
+curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/admin/reset"
+
+# Optional ingress (skip for minimal S2 handshake — proposals load the scenario)
+curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/ingress/open-feed" \
+  -H 'content-type: application/json' -d '{"feed":"all","use_fixture":true}'
+# S3 SAR path: POST /api/ingress/candidate-event with tests/fixtures/candidate_event_assumed.json
+
+# Propose (loads S2 Warning Picture + queues COA). Capture coa_id:
+PROP=$(curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/gate/proposals" \
+  -H 'content-type: application/json' \
+  -d '{"scenario_id":"S2","unit_id":"CUE-NODE-01"}')
+echo "$PROP" | jq '{coa_id: .coa.coa_id, amber: .finding.amber_alert, threat: .finding.threat_class}'
+COA_ID=$(echo "$PROP" | jq -r '.coa.coa_id')
+# Tell Screen 2 the same COA_ID (chat / shared terminal / sticky note).
+
+# Operator approve → sealed DecisionToken
+curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/gate/approve" \
+  -H 'content-type: application/json' \
+  -d "{\"coa_id\":\"$COA_ID\",\"decision\":\"y\",\"operator_id\":\"screen1\"}"
+```
+
+Optional Pitch-2 overlay on Screen 1 (never seals tokens by itself):
+
+```bash
+curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/interpret" \
+  -H 'content-type: application/json' -d '{"scenario_id":"S2","force_heuristic":true}'
+# or one-hop: proposals with "interpret":true (LiteLLM if Core has LLM_BASE_URL)
+```
+
+**2. Screen 2 — recipient (inbox + ack)**
+
+```bash
+export C2_BASE_URL="${C2_BASE_URL:-http://127.0.0.1:8080}"   # same Core as Screen 1
+AUTH=()
+[[ -n "${C2_API_TOKEN:-}" ]] && AUTH=(-H "Authorization: Bearer $C2_API_TOKEN")
+COA_ID='…'   # from Screen 1
+UNIT_ID=CUE-NODE-01
+
+curl -s "${AUTH[@]}" "$C2_BASE_URL/api/recipient/inbox?unit_id=$UNIT_ID" | jq .
+curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/recipient/ack" \
+  -H 'content-type: application/json' \
+  -d "{\"coa_id\":\"$COA_ID\",\"unit_id\":\"$UNIT_ID\",\"message\":\"screen2 ack\"}"
+```
+
+**3. Either screen — audit seal**
+
+```bash
+curl -s "${AUTH[@]}" "$C2_BASE_URL/api/audit/trail" \
+  | jq --arg id "$COA_ID" \
+    '.records[] | select(.activity_name=="recipient_ack" and .metadata.coa_id==$id) | {activity_name, time}'
+```
+
+Expect a `recipient_ack` (or equivalent sealed meta) for that `coa_id` within **< 3 s** of approve on a local Core.
+
+**One-shot shortcut** (same hops, automated): `./scripts/picture_to_tasking.sh` — still fine for CI; use the Screen 1/2 curl path above for the live two-laptop rehearsal.
 
 | Method | Path | Role |
 |--------|------|------|
@@ -78,25 +159,6 @@ Laptop I/O (Phase 2 — no UI):
 | `POST` | `/api/recipient/ack` | Recipient ack sealed to audit chain |
 | `GET` | `/api/audit/trail` | OCSF-shaped hash-chain records |
 | `POST` | `/api/admin/reset` | Clear in-memory runtime (tests / demos) |
-
-Example handshake:
-
-```bash
-# Optional Pitch-2: probabilistic propose (never seals tokens)
-curl -s -X POST localhost:8080/api/interpret -H 'content-type: application/json' \
-  -d '{"scenario_id":"S2","force_heuristic":true}'
-
-curl -s -X POST localhost:8080/api/gate/proposals -H 'content-type: application/json' \
-  -d '{"scenario_id":"S2","unit_id":"CUE-NODE-01"}'
-# or interpreter → gate in one hop:
-# -d '{"scenario_id":"S2","unit_id":"CUE-NODE-01","interpret":true}'
-curl -s -X POST localhost:8080/api/gate/approve -H 'content-type: application/json' \
-  -d '{"coa_id":"<id>","decision":"y"}'
-curl -s 'localhost:8080/api/recipient/inbox?unit_id=CUE-NODE-01'
-curl -s -X POST localhost:8080/api/recipient/ack -H 'content-type: application/json' \
-  -d '{"coa_id":"<id>","unit_id":"CUE-NODE-01"}'
-curl -s localhost:8080/api/audit/trail
-```
 
 ### Probabilistic interpreter (Pitch-2)
 

@@ -30,6 +30,8 @@ Operational (not frozen handshake): `GET /health`, `PUT /api/admin/audit/snapsho
 
 ## Handshake (curl)
 
+Two-laptop / two-terminal cold start (Screen 1 propose+approve, Screen 2 inbox+ack): [Demo Path A](../demo.md#demo-path-a-two-laptop--two-terminal-io-issue-17). Compact single-shell form:
+
 ```bash
 uv run sdth-c2-server
 
@@ -50,7 +52,7 @@ curl -s -X POST localhost:8080/api/recipient/ack \
 curl -s localhost:8080/api/audit/trail
 ```
 
-One-shot helper: `./scripts/picture_to_tasking.sh` (see [Demo](../demo.md)).
+One-shot helper: `./scripts/picture_to_tasking.sh` (see [Demo](../demo.md)). Cloudflare: same paths via `C2_BASE_URL` + Bearer ([deploy.md](../deploy.md)).
 
 ---
 

@@ -9,20 +9,50 @@ SCENARIO=S2 ./scripts/demo.sh
 uv run python -m app.main --scenario S3 --stub --yes
 ```
 
-## Demo Path A: Two-Screen C2 REST Closed Loop
+## Demo Path A: Two-Laptop / Two-Terminal I/O (issue #17)
 
-Starts the central C2 server connecting Screen 1 (Command Cockpit) and Screen 2 (Field Recipient):
+Cold-start rehearsal for Phase 2 **without UI**. Topology: [Topology](architecture/topology.md) · plan §4.2: [Plan §4.2](plan.md#42-cloudflare-containers-phase-2). Full curl copy-paste lives in the repo [README — Laptop I/O runbook](https://github.com/edgesentry/sdth-nexus-c2#laptop-io-runbook-issue-17). Contract shapes: [C2 REST API](api/rest.md).
+
+| Role | Machine | Actions |
+|------|---------|---------|
+| **Core** | Shared host | `uv run sdth-c2-server` **or** Cloudflare `C2_BASE_URL` (+ `C2_API_TOKEN`) |
+| **Screen 1** | Command laptop | Optional ingress → `POST /api/gate/proposals` → `POST /api/gate/approve` |
+| **Screen 2** | Recipient laptop | `GET /api/recipient/inbox` → `POST /api/recipient/ack` |
 
 ```bash
+# Core (once)
 uv run sdth-c2-server   # http://127.0.0.1:8080
+
+# Both laptops / terminals — same Core origin
+export C2_BASE_URL="${C2_BASE_URL:-http://127.0.0.1:8080}"
+AUTH=()
+[[ -n "${C2_API_TOKEN:-}" ]] && AUTH=(-H "Authorization: Bearer $C2_API_TOKEN")
 ```
 
-Drive the closed loop via curl (see [C2 REST API — frozen contract](api/rest.md)) or, in Phase 3, the BattlePlan Next.js frontend:
-1. Submit proposal (`POST /api/gate/proposals`)
-2. Operator approves/denies (`POST /api/gate/approve`)
-3. Recipient retrieves token (`GET /api/recipient/inbox?unit_id=...`)
-4. Recipient sends signed Ack (`POST /api/recipient/ack`)
-5. Verify OCSF audit log (`GET /api/audit/trail`)
+**Screen 1**
+
+```bash
+PROP=$(curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/gate/proposals" \
+  -H 'content-type: application/json' \
+  -d '{"scenario_id":"S2","unit_id":"CUE-NODE-01"}')
+COA_ID=$(echo "$PROP" | jq -r '.coa.coa_id')
+curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/gate/approve" \
+  -H 'content-type: application/json' \
+  -d "{\"coa_id\":\"$COA_ID\",\"decision\":\"y\"}"
+# hand $COA_ID to Screen 2
+```
+
+**Screen 2**
+
+```bash
+curl -s "${AUTH[@]}" "$C2_BASE_URL/api/recipient/inbox?unit_id=CUE-NODE-01" | jq .
+curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/recipient/ack" \
+  -H 'content-type: application/json' \
+  -d "{\"coa_id\":\"$COA_ID\",\"unit_id\":\"CUE-NODE-01\"}"
+curl -s "${AUTH[@]}" "$C2_BASE_URL/api/audit/trail" | jq 'length'
+```
+
+Cloudflare uses the **same paths** — only swap `C2_BASE_URL` / `C2_API_TOKEN` ([deploy.md](deploy.md)). Phase 3 will drive the same hops from BattlePlan instead of curl.
 
 ## Demo Path B: 19-Event Temporal Streamer
 
