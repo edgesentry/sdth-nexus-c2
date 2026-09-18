@@ -13,17 +13,18 @@
 
 | Point | Phase 2 thin | Phase 5 raise |
 |-------|--------------|---------------|
-| Multimodal | Synthetic + optional open feeds | Live coastal harness |
+| Multimodal | Synthetic + open feeds (incl. space SAR anomaly diff) | Live coastal + sovereign satellite harness |
 | Probabilistic | Backend LLM → hypotheses + COA (still gated) | Production CV + hardened LLM |
 | Deterministic gate | Stress 100+ tracks; p95 / unauthorized=0 | Air-gap, dual-key Tier-2 |
-| Picture→Tasking | curl / script / two-laptop | Field USV |
-| Sovereign interlock | OCSF chain + Cloudflare Containers deploy | DSTA sandbox + stronger seal |
+| Picture→Tasking | curl / script / two-laptop (S2 air + S3 maritime) | Field USV & live interceptor cueing |
+| Sovereign interlock | OCSF chain + Cloudflare Containers deploy | Sovereign sandbox + stronger seal |
 
 ## Demo-day success (Phase 4)
 
 1. S2 amber contradiction (social 3 vs radar 1 vs EO blur) — no hallucinated fuse
-2. Two-screen handshake; Ack sealed within 3 s
-3. Live `scripts/benchmark.py` numbers
-4. Judge line: sensors/shooters are not the product — the sovereign interlock is
+2. S3 maritime contradiction: space-based SAR anomaly difference (unannounced vessel cluster) cross-checked against thin AIS → verified patrol tasking
+3. Two-screen handshake; Ack sealed within 3 s
+4. Live `scripts/benchmark.py` numbers
+5. Judge line: sensors and effectors are not the product — the sovereign decision gate and interlock is (bridging upstream intelligence into actionable tasking)
 
 Full checklist: [Plan](plan.md).
