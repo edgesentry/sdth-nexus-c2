@@ -14,6 +14,8 @@ Space-based SAR provides all-weather, day-and-night macro sea surveillance. Howe
 
 To resolve this, the C2 architecture integrates an upstream **SAR × AIS Correlation Engine** ([`Sentinel-Imagery-Analysis`](https://github.com/StrixGoldhorn/Sentinel-Imagery-Analysis)) feeding structured, verified evidence packages into the NexusGate deterministic gating engine.
 
+**Phase 2 tracking:** implement the venue ingress wire-up in issue [#47](https://github.com/edgesentry/sdth-nexus-c2/issues/47) (fixture + Pattern A/B; GLINT fail-safe). Production multi-constellation / GPU CV remains Phase 5 (§3).
+
 ---
 
 ## 2. Immediate Hackathon Architecture (Venue-Ready & Zero-Risk)
