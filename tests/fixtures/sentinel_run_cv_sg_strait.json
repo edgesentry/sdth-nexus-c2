@@ -1,0 +1,94 @@
+{
+  "status": "success",
+  "scan_id": "sg_strait_s1_20260918",
+  "land_masked": true,
+  "coastal_buffer": 81,
+  "ais_correlation_distance": 100.0,
+  "uncorrelated_count": 2,
+  "correlated_count": 1,
+  "inside_box_count": 1,
+  "outside_box_count": 0,
+  "width": 1024,
+  "height": 1024,
+  "timestamp": "2026-09-18T14:28:00Z",
+  "evidence_image_uri": "tests/fixtures/sentinel_chip.jpg",
+  "detections": [
+    {
+      "index": 0,
+      "x": 410,
+      "y": 380,
+      "width": 48,
+      "height": 22,
+      "center_x": 434.0,
+      "center_y": 391.0,
+      "confidence": 0.91,
+      "angle": -18.5,
+      "length": 78.2,
+      "beam": 14.6,
+      "lat": 1.2542,
+      "lng": 103.8124,
+      "geo_bbox": {
+        "min_lat": 1.2536,
+        "max_lat": 1.2548,
+        "min_lon": 103.8116,
+        "max_lon": 103.8132
+      },
+      "correlation_status": "uncorrelated",
+      "is_correlated": false,
+      "correlated_ais": null
+    },
+    {
+      "index": 1,
+      "x": 520,
+      "y": 450,
+      "width": 36,
+      "height": 18,
+      "center_x": 538.0,
+      "center_y": 459.0,
+      "confidence": 0.84,
+      "angle": 42.0,
+      "length": 52.0,
+      "beam": 11.2,
+      "lat": 1.2531,
+      "lng": 103.8140,
+      "geo_bbox": {
+        "min_lat": 1.2526,
+        "max_lat": 1.2536,
+        "min_lon": 103.8134,
+        "max_lon": 103.8146
+      },
+      "correlation_status": "uncorrelated",
+      "is_correlated": false,
+      "correlated_ais": null
+    },
+    {
+      "index": 2,
+      "x": 200,
+      "y": 700,
+      "width": 40,
+      "height": 16,
+      "center_x": 220.0,
+      "center_y": 708.0,
+      "confidence": 0.88,
+      "angle": 5.0,
+      "length": 95.0,
+      "beam": 16.0,
+      "lat": 1.2480,
+      "lng": 103.8050,
+      "geo_bbox": {
+        "min_lat": 1.2475,
+        "max_lat": 1.2485,
+        "min_lon": 103.8044,
+        "max_lon": 103.8056
+      },
+      "correlation_status": "inside_box",
+      "is_correlated": true,
+      "correlated_ais": {
+        "mmsi": "563000111",
+        "vessel_name": "COOP TANKER",
+        "match_type": "inside_box",
+        "distance_to_box_meters": 0.0
+      }
+    }
+  ]
+}

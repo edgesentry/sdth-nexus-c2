@@ -679,19 +679,34 @@ When ingested (either via upstream REST pull, optional `POST /api/ingress/candid
 
 ### `POST /api/ingress/candidate-event`
 
-Push an assumed CandidateEvent (or load the offline fixture):
+Push an assumed CandidateEvent, load the Pitch-1 offline fixture, or ingest **Sentinel-Imagery-Analysis** dark vessels (issue #47):
 
 ```bash
+# Pitch-1 assumed CandidateEvent fixture
 curl -s -X POST localhost:8080/api/ingress/candidate-event \
   -H 'content-type: application/json' \
   -d '{"use_fixture":true}'
+
+# Singapore Strait Sentinel run_cv fixture (uncorrelated only)
+curl -s -X POST localhost:8080/api/ingress/candidate-event \
+  -H 'content-type: application/json' \
+  -d '{"use_sentinel_fixture":true}'
+
+# Pattern B: pull sibling upstream (default http://127.0.0.1:5050); fixture if down
+curl -s -X POST localhost:8080/api/ingress/candidate-event \
+  -H 'content-type: application/json' \
+  -d '{"pull_upstream":true}'
 ```
 
-```json
-{ "event": { "...CandidateEvent v1.3.0..." } }
-```
+| Field | Role |
+|-------|------|
+| `event` | Assumed CandidateEvent v1.3.0 object |
+| `use_fixture` | Load `tests/fixtures/candidate_event_assumed.json` |
+| `use_sentinel_fixture` | Map `tests/fixtures/sentinel_run_cv_sg_strait.json` → dark vessels |
+| `pull_upstream` | `POST {SAR_UPSTREAM_URL}/api/run_cv/{SAR_UPSTREAM_SCAN}`; on failure use sentinel fixture |
+| `run_cv` | Raw Sentinel `run_cv` JSON body (push) |
 
-Response `200`: `{ "status": "INGESTED", "observation": {...}, "track_id": "..." }` — never seals a DecisionToken.
+Response `200`: `{ "status": "INGESTED", "observation": {...}, "observations": [...], "track_id": "...", "track_ids": [...], "count": N, "source": "fixture|upstream|run_cv|event" }` — never seals a DecisionToken.
 
 ### `POST /api/ingress/open-feed`
 

@@ -61,10 +61,17 @@ class InterpretRequest(BaseModel):
 
 
 class CandidateEventIngressRequest(BaseModel):
-    """Upstream macro intelligence push (assumed CandidateEvent v1.3.0)."""
+    """Upstream macro intelligence push (assumed CandidateEvent v1.3.0).
+
+    Sentinel-Imagery-Analysis (issue #47): ``use_sentinel_fixture``, ``pull_upstream``,
+    or raw ``run_cv`` body. Assumed fixture / ``event`` remain for Pitch-1 (#25).
+    """
 
     event: dict[str, Any] | None = None
     use_fixture: bool = False
+    use_sentinel_fixture: bool = False
+    pull_upstream: bool = False
+    run_cv: dict[str, Any] | None = None
 
 
 class OpenFeedIngressRequest(BaseModel):
@@ -228,38 +235,78 @@ async def ontology_state() -> dict[str, Any]:
 
 @app.post("/api/ingress/candidate-event")
 async def ingress_candidate_event(req: CandidateEventIngressRequest) -> dict[str, Any]:
-    """Ingest assumed CandidateEvent → Observation (modality=space_sar). Never seals tokens."""
+    """Ingest CandidateEvent / Sentinel run_cv → Observation (modality=space_sar).
+
+    Never seals tokens. Sentinel paths (issue #47) fall back to the Singapore Strait
+    fixture when ``pull_upstream`` cannot reach the sibling upstream.
+    """
     from app.adapters.sar_candidate_event import load_assumed_fixture
+    from app.adapters.sentinel_imagery import resolve_sentinel_events
 
     runtime = get_runtime()
-    if req.use_fixture:
-        payload = load_assumed_fixture()
-    elif req.event is not None:
-        payload = req.event
-    else:
-        raise HTTPException(status_code=400, detail="Provide event or use_fixture=true")
+    sentinel_source: str | None = None
+    events: list[Any]
 
+    if req.run_cv is not None or req.pull_upstream or req.use_sentinel_fixture:
+        try:
+            mapped, sentinel_source = resolve_sentinel_events(
+                run_cv=req.run_cv,
+                pull_upstream=req.pull_upstream,
+                use_fixture=req.use_sentinel_fixture or req.pull_upstream,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if not mapped:
+            raise HTTPException(
+                status_code=400,
+                detail="No uncorrelated (dark vessel) detections to ingest",
+            )
+        events = mapped
+    elif req.use_fixture:
+        events = [load_assumed_fixture()]
+    elif req.event is not None:
+        events = [req.event]
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Provide event, use_fixture=true, use_sentinel_fixture=true, "
+                "pull_upstream=true, or run_cv={...}"
+            ),
+        )
+
+    observations: list[dict[str, Any]] = []
+    track_ids: list[str] = []
     try:
-        obs = candidate_event_to_observation(payload)
+        for payload in events:
+            obs = candidate_event_to_observation(payload)
+            track = runtime.graph.ingest(obs)
+            runtime.audit.append(
+                "candidate_event_ingested",
+                "Info",
+                {
+                    "observation_id": obs.observation_id,
+                    "source_id": obs.source_id,
+                    "modality": obs.modality,
+                    "track_id": track.track_id,
+                    "event_type": obs.entity_hint,
+                    "ingress_source": sentinel_source or "candidate_event",
+                },
+            )
+            observations.append(obs.model_dump(mode="json"))
+            track_ids.append(track.track_id)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    track = runtime.graph.ingest(obs)
-    runtime.audit.append(
-        "candidate_event_ingested",
-        "Info",
-        {
-            "observation_id": obs.observation_id,
-            "source_id": obs.source_id,
-            "modality": obs.modality,
-            "track_id": track.track_id,
-            "event_type": obs.entity_hint,
-        },
-    )
+    first = observations[0]
     return {
         "status": "INGESTED",
-        "observation": obs.model_dump(mode="json"),
-        "track_id": track.track_id,
+        "observation": first,
+        "observations": observations,
+        "track_id": track_ids[0],
+        "track_ids": track_ids,
+        "count": len(observations),
+        "source": sentinel_source or ("fixture" if req.use_fixture else "event"),
     }
 
 

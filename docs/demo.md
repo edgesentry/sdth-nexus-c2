@@ -60,7 +60,12 @@ curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/admin/reset"
 # Optional ingress (skip for minimal S2 handshake — proposals load the scenario)
 curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/ingress/open-feed" \
   -H 'content-type: application/json' -d '{"feed":"all","use_fixture":true}'
-# S3 SAR path: POST /api/ingress/candidate-event with tests/fixtures/candidate_event_assumed.json
+# S3 SAR path (Pitch-1 assumed fixture):
+curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/ingress/candidate-event" \
+  -H 'content-type: application/json' -d '{"use_fixture":true}'
+# S3 SAR path (Sentinel Singapore Strait fixture — issue #47):
+curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/ingress/candidate-event" \
+  -H 'content-type: application/json' -d '{"use_sentinel_fixture":true}'
 
 # Propose (loads S2 Warning Picture + queues COA). Capture coa_id:
 PROP=$(curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/gate/proposals" \
@@ -115,6 +120,37 @@ Expect a `recipient_ack` for that `coa_id` within **< 3 s** of approve on a loca
 **One-shot shortcut** (same hops, automated): `./scripts/picture_to_tasking.sh` — fine for CI; use Screen 1/2 curl above for the live two-laptop rehearsal.
 
 Endpoint table: [C2 REST API](api/rest.md).
+
+---
+
+## Demo Path: Sentinel-Imagery-Analysis → C2 (issue #47)
+
+In-house SAR × AIS dark-vessel ingress. Architecture: [SAR Pipeline](architecture/sar_pipeline.md). Upstream is a **sibling checkout** (`~/work/Sentinel-Imagery-Analysis`) — not a submodule.
+
+**Pattern A (CI / venue primary)** — recorded Singapore Strait `run_cv` fixture:
+
+```bash
+uv run sdth-c2-server
+uv run python scripts/sentinel_ingress_smoke.py
+# or:
+curl -s -X POST http://127.0.0.1:8080/api/ingress/candidate-event \
+  -H 'content-type: application/json' -d '{"use_sentinel_fixture":true}'
+```
+
+**Pattern B** — local upstream on `:5050`, C2 on `:8080`; unreachable upstream falls back to the same fixture:
+
+```bash
+# Terminal A (sibling repo)
+cd ~/work/Sentinel-Imagery-Analysis && python app.py   # PORT=5050
+
+# Terminal B
+export SAR_UPSTREAM_URL=http://127.0.0.1:5050
+export SAR_UPSTREAM_SCAN=<your_scan_folder>
+uv run sdth-c2-server
+uv run python scripts/sentinel_ingress_smoke.py --pull
+```
+
+Only `correlation_status == "uncorrelated"` detections become `UNANNOUNCED_DARK_VESSEL` with `ais_absent=true`.
 
 ---
 
@@ -258,6 +294,7 @@ uv run pytest tests/unit/ -q                        # unit
 uv run pytest tests/integration/ -v -m integration  # S2 + C2 two-screen / live HTTP
 uv run python scripts/stream_events.py --fast       # 19-step temporal playback
 uv run python scripts/benchmark.py                  # Slide 11 proof
+uv run python scripts/sentinel_ingress_smoke.py     # Sentinel fixture ingress (#47)
 ./scripts/litellm_interpret_smoke.sh                # live LiteLLM (optional; not in CI)
 ```
 

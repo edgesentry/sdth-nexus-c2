@@ -14,7 +14,7 @@ Space-based SAR provides all-weather, day-and-night macro sea surveillance. Howe
 
 To resolve this, the C2 architecture integrates an upstream **SAR × AIS Correlation Engine** ([`Sentinel-Imagery-Analysis`](https://github.com/StrixGoldhorn/Sentinel-Imagery-Analysis)) feeding structured, verified evidence packages into the NexusGate deterministic gating engine.
 
-**Phase 2 tracking:** implement the venue ingress wire-up in issue [#47](https://github.com/edgesentry/sdth-nexus-c2/issues/47) (fixture + Pattern A/B; GLINT fail-safe). Production multi-constellation / GPU CV remains Phase 5 (§3).
+**Phase 2 (issue [#47](https://github.com/edgesentry/sdth-nexus-c2/issues/47)):** fixture-first ingress via `app/adapters/sentinel_imagery.py` + `POST /api/ingress/candidate-event` (`use_sentinel_fixture` / `pull_upstream` / `run_cv`). Sibling upstream at `http://127.0.0.1:5050` — not a git submodule. Production multi-constellation / GPU CV remains Phase 5 (§3).
 
 ---
 
@@ -91,7 +91,7 @@ To balance processing depth and live reliability, three deployment patterns are 
 | Deployment Pattern | Architecture | Strengths | Operational Role |
 |---|---|---|---|
 | **Pattern A: Hybrid Cloudflare (Recommended)** | Heavy CV pre-executed on real Sentinel-1 pass over Singapore Strait. Extracted `CandidateEvent` metadata and optimized radar chips (50–200 KB) hosted via Cloudflare (R2 / Containers). | Sub-100ms response time; cloud URL access; impervious to venue Wi-Fi congestion. | **Primary live demo path** |
-| **Pattern B: Local Distributed (Zero-Internet)** | An upstream workstation runs `Sentinel-Imagery-Analysis` on port 5000; C2 runs on port 8080. Local LAN or localhost REST communication. | Zero reliance on external internet; demonstrates real multi-machine networking. | **Hardened offline fallback** |
+| **Pattern B: Local Distributed (Zero-Internet)** | An upstream workstation runs `Sentinel-Imagery-Analysis` on port **5050**; C2 runs on port 8080. Local LAN or localhost REST (`pull_upstream` / `SAR_UPSTREAM_URL`). | Zero reliance on external internet; demonstrates real multi-machine networking. | **Hardened offline fallback** |
 | **Pattern C: Full Cloudflare Container** | Entire Python / OpenCV / Flask stack containerized and deployed to Cloudflare Containers. | 100% unified cloud footprint, but requires bundling cached scenes to prevent large image download timeouts. | Optional technical stretch |
 
 ---
@@ -166,20 +166,32 @@ flowchart TD
 
 ## 4. Verification & Testing Strategy
 
-1. **Standalone Ingress Smoke**:
+1. **Sentinel fixture ingress (issue #47 / Pattern A)**:
    ```bash
-   # Push Singapore Strait SAR candidate event fixture into C2 Core
+   curl -s -X POST http://127.0.0.1:8080/api/ingress/candidate-event \
+     -H 'content-type: application/json' \
+     -d '{"use_sentinel_fixture":true}'
+   # or: uv run python scripts/sentinel_ingress_smoke.py
+   ```
+2. **Pattern B pull with fixture fail-safe** (upstream optional on `:5050`):
+   ```bash
+   # Sibling checkout: ~/work/Sentinel-Imagery-Analysis → python app.py (PORT=5050)
+   curl -s -X POST http://127.0.0.1:8080/api/ingress/candidate-event \
+     -H 'content-type: application/json' \
+     -d '{"pull_upstream":true}'
+   # Unreachable upstream → Singapore Strait fixture (GLINT fail-safe)
+   ```
+3. **Assumed CandidateEvent fixture** (Pitch-1 / #25):
+   ```bash
    curl -s -X POST http://127.0.0.1:8080/api/ingress/candidate-event \
      -H 'content-type: application/json' \
      -d '{"use_fixture":true}'
    ```
-2. **Scenario S3 End-to-End Verification**:
+4. **Scenario S3 End-to-End Verification**:
    ```bash
-   # Execute S3 maritime contradiction scenario with SAR evidence
    uv run python -m app.main --scenario S3 --stub --yes
    ```
-3. **Picture-to-Tasking Closed-Loop Latency**:
+5. **Picture-to-Tasking Closed-Loop Latency**:
    ```bash
-   # Verify sub-3.0s roundtrip from SAR Warning Picture to signed Recipient Ack
    ./scripts/picture_to_tasking.sh
    ```
