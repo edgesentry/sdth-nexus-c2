@@ -199,7 +199,7 @@ Phase 2 explicitly delivers thin / demo-fidelity slices of the 4 core pitch pill
 - [x] **Pitch-4 Picture→Tasking demo script:** `scripts/picture_to_tasking.py` + `scripts/picture_to_tasking.sh` executes Warning Picture → gate approve → inbox → Ack → audit (<3s local roundtrip) (issue #24).
 - [x] **Pitch-3 Deterministic gate stress:** `scripts/benchmark.py` floods ontology with 100+ tracks and mixed COAs; asserts gate p95 < 50 ms and unauthorized = 0 (issue #23).
 - [x] **Pitch-2 Probabilistic interpreter:** `app/llm_interpreter.py` + `POST /api/interpret` — LLM (env) or heuristic fallback → hypotheses + candidate COA; Core gate still disposes (issue #22).
-- [ ] **Pitch-1 Multimodal demo harness:** Explicit modality-tagged ingress harness + optional open feeds (`data.gov.sg` / open air traffic) through ontology → amber discrepancy (issue #25, #16).
+- [ ] **Pitch-1 Multimodal demo harness & SAR CandidateEvent adapter:** Explicit modality-tagged ingress harness + assumed `CandidateEvent` (v1.3.0 schema) adapter (`app/adapters/sar_candidate_event.py`), backed by `tests/fixtures/candidate_event_assumed.json` for non-blocking stand-alone execution (see [REST API](../api/rest.md#upstream-ingress-contract-assumed-candidateevent-specification)) (issue #25, #16).
 - [x] Validate end-to-end backend closed loop via curl / automated scripts without frontend dependency (`scripts/picture_to_tasking.sh`).
 - [ ] Containerize C2 server for optional **Cloudflare Containers** deployment while retaining identical REST contract (issue #18).
 - [ ] Establish hardened fallback to local `sdth-c2-server` for zero-internet venue reliability.
