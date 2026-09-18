@@ -12,7 +12,7 @@ Space-based SAR provides all-weather, day-and-night macro sea surveillance. Howe
 1. **The Ingestion & Metrology Gap**: Raw radar scenes are gigabytes in size and contain sea clutter, wave crests, and coastal noise. Converting pixels into discrete, physical kinematic records (length, beam, heading) without false alarms requires disciplined preprocessing.
 2. **The Decision & Verification Gap**: Presenting radar blips to an operator without cross-correlating against cooperative AIS feeds creates visual confusion. Operators must see **why** a contact is anomalous (e.g., radar return present, AIS absent, coastal CCTV corroboration pending) before authorizing an interceptor or patrol USV.
 
-To resolve this, the C2 architecture integrates an upstream **SAR × AIS Correlation Engine** (`Sentinel-Imagery-Analysis`, led by Geospatial Analytics Lead Swee Gaeng Tan) feeding structured, verified evidence packages into the NexusGate deterministic gating engine.
+To resolve this, the C2 architecture integrates an upstream **SAR × AIS Correlation Engine** ([`Sentinel-Imagery-Analysis`](https://github.com/StrixGoldhorn/Sentinel-Imagery-Analysis)) feeding structured, verified evidence packages into the NexusGate deterministic gating engine.
 
 ---
 
@@ -22,7 +22,7 @@ For the 48-hour hackathon and live demonstration, the upstream pipeline operates
 
 ```mermaid
 flowchart TD
-    subgraph UpstreamSAR ["Upstream SAR & AIS Pipeline (Swee Gaeng / SIA)"]
+    subgraph UpstreamSAR ["Upstream SAR & AIS Pipeline (Sentinel-Imagery-Analysis)"]
         S1["ESA Copernicus Sentinel-1 SAR (Singapore Strait)"] --> PRE["Pass Predictor & Sync AIS Scraper"]
         AIS["MarineTraffic / Local AIS Snapshot"] --> PRE
         PRE --> CV["Classical CV Engine: Land-Mask (DEM) + Adaptive Threshold"]
@@ -89,7 +89,7 @@ To balance processing depth and live reliability, three deployment patterns are 
 | Deployment Pattern | Architecture | Strengths | Operational Role |
 |---|---|---|---|
 | **Pattern A: Hybrid Cloudflare (Recommended)** | Heavy CV pre-executed on real Sentinel-1 pass over Singapore Strait. Extracted `CandidateEvent` metadata and optimized radar chips (50–200 KB) hosted via Cloudflare (R2 / Containers). | Sub-100ms response time; cloud URL access; impervious to venue Wi-Fi congestion. | **Primary live demo path** |
-| **Pattern B: Local Distributed (Zero-Internet)** | Swee Gaeng's machine runs `Sentinel-Imagery-Analysis` on port 5000; C2 runs on port 8080. Local LAN or localhost REST communication. | Zero reliance on external internet; demonstrates real multi-machine networking. | **Hardened offline fallback** |
+| **Pattern B: Local Distributed (Zero-Internet)** | An upstream workstation runs `Sentinel-Imagery-Analysis` on port 5000; C2 runs on port 8080. Local LAN or localhost REST communication. | Zero reliance on external internet; demonstrates real multi-machine networking. | **Hardened offline fallback** |
 | **Pattern C: Full Cloudflare Container** | Entire Python / OpenCV / Flask stack containerized and deployed to Cloudflare Containers. | 100% unified cloud footprint, but requires bundling cached scenes to prevent large image download timeouts. | Optional technical stretch |
 
 ---
