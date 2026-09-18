@@ -11,12 +11,13 @@ LiteLLM (:4000/v1)                       ← locked by LITELLM_MASTER_KEY
         │
         ├── Gemini     GEMINI_API_KEY
         ├── OpenAI     OPENAI_API_KEY
-        └── Anthropic  ANTHROPIC_API_KEY
+        ├── Anthropic  ANTHROPIC_API_KEY
+        └── Fireworks  FIREWORKS_AI_API_KEY
 ```
 
 ## `LITELLM_MASTER_KEY` — proxy lock
 
-**What it is:** the password for *our* LiteLLM process, not a Google / OpenAI / Anthropic key.
+**What it is:** the password for *our* LiteLLM process, not a Google / OpenAI / Anthropic / Fireworks key.
 
 LiteLLM’s `general_settings.master_key` (see `deploy/litellm/config.yaml`) requires every `/v1/chat/completions` call to send:
 
@@ -46,7 +47,7 @@ LLM_MODEL=gemini-3.8-flash
 ```
 
 !!! warning "Not a vendor key"
-    Setting `LITELLM_MASTER_KEY` (or `LLM_API_KEY`) to `GEMINI_API_KEY` / `OPENAI_API_KEY` will not call Gemini or OpenAI. The proxy will either reject the client or, if they happen to match, still needs the *vendor* env vars to reach the model.
+    Setting `LITELLM_MASTER_KEY` (or `LLM_API_KEY`) to `GEMINI_API_KEY` / `OPENAI_API_KEY` / `FIREWORKS_AI_API_KEY` will not call those vendors. The proxy will either reject the client or, if they happen to match, still needs the *vendor* env vars to reach the model.
 
 ## Vendor keys — upstream billing
 
@@ -57,12 +58,15 @@ These are sent **by LiteLLM to the model provider**. C2 never holds them.
 | `GEMINI_API_KEY` | Google AI Studio | `gemini-3.8-flash` (live smoke / tests) |
 | `OPENAI_API_KEY` | OpenAI | `gpt-4o-mini` |
 | `ANTHROPIC_API_KEY` | Anthropic | `claude-haiku` |
+| `FIREWORKS_AI_API_KEY` | Fireworks AI | `fireworks-glm` (`fireworks_ai/glm-5p2`; any `fireworks_ai/<slug>` works) |
 
-`nexus-interpreter` tries Gemini first, then OpenAI, then Anthropic, then local Ollama. Live smoke pins `gemini-3.8-flash` so a missing Gemini key does **not** silently fall through to another vendor.
+To use another Fireworks serverless slug (`kimi-k3`, `deepseek-v4-pro`, `qwen3p8-max`, …), change `litellm_params.model` to `fireworks_ai/<slug>` in `deploy/litellm/config.yaml` and restart Compose. The C2 env stays `LLM_MODEL=fireworks-glm` if you keep the same alias, or set `LLM_MODEL` to a new alias you add.
+
+`nexus-interpreter` tries Gemini first, then OpenAI, then Anthropic, then Fireworks, then local Ollama. Live smoke pins `gemini-3.8-flash` so a missing Gemini key does **not** silently fall through to another vendor.
 
 ## Why a master key at all?
 
-1. **C2 talks to one URL.** Screen 1 does not need Google/OpenAI/Anthropic SDKs or keys.
+1. **C2 talks to one URL.** Screen 1 does not need Google/OpenAI/Anthropic/Fireworks SDKs or keys.
 2. **Model swap without code changes.** Change `LLM_MODEL` (or LiteLLM `config.yaml`); the Bearer token stays the proxy lock.
 3. **Stop casual localhost clients.** Anyone who can hit `:4000` still needs the master key before they can spend vendor quota.
 

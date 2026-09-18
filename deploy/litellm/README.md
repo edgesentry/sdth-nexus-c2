@@ -6,7 +6,7 @@ OpenAI-compatible proxy for `POST /api/interpret`. **Probabilistic proposes; det
 sdth-c2-server  ──LLM_BASE_URL──►  LiteLLM (:4000/v1)
                                         │
                                         ├── Google Gemini 3.8 Flash  (live smoke / tests)
-                                        ├── OpenAI / Anthropic
+                                        ├── OpenAI / Anthropic / Fireworks
                                         └── Ollama / vLLM (offline demo)
 ```
 
@@ -24,7 +24,8 @@ docker compose -f deploy/litellm/docker-compose.yml up -d
 | Google Gemini | `gemini-3.8-flash` | `GEMINI_API_KEY` |
 | OpenAI | `gpt-4o-mini` | `OPENAI_API_KEY` |
 | Anthropic | `claude-haiku` | `ANTHROPIC_API_KEY` |
-| Venue alias | `nexus-interpreter` | Gemini → OpenAI → Anthropic → Ollama |
+| Fireworks AI | `fireworks-glm` | `FIREWORKS_AI_API_KEY` |
+| Venue alias | `nexus-interpreter` | Gemini → OpenAI → Anthropic → Fireworks → Ollama |
 
 Live smoke pins `gemini-3.8-flash` (no silent vendor swap). Venue / zero-internet: `ollama pull llama3.1 && ollama serve`.
 

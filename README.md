@@ -107,7 +107,7 @@ Never commit API keys — use env / Wrangler Secrets. Sample: `.env.example` (C2
 sdth-c2-server  ──LLM_BASE_URL──►  LiteLLM (:4000/v1)
                                         │
                                         ├── Google Gemini 3.8 Flash  (live smoke / tests)
-                                        ├── OpenAI / Anthropic
+                                        ├── OpenAI / Anthropic / Fireworks
                                         └── Ollama / vLLM (offline venue)
 ```
 
@@ -125,7 +125,8 @@ INTERPRET=1 ./scripts/picture_to_tasking.sh
 | **Google Gemini** | `gemini-3.8-flash` (live smoke default) | `GEMINI_API_KEY` |
 | OpenAI | `gpt-4o-mini` | `OPENAI_API_KEY` |
 | Anthropic | `claude-haiku` | `ANTHROPIC_API_KEY` |
-| Venue alias | `nexus-interpreter` (Gemini → OpenAI → Anthropic → Ollama) | whichever backend is configured |
+| Fireworks AI | `fireworks-glm` | `FIREWORKS_AI_API_KEY` |
+| Venue alias | `nexus-interpreter` (Gemini → OpenAI → Anthropic → Fireworks → Ollama) | whichever backend is configured |
 
 | Env | Role |
 |-----|------|

@@ -145,7 +145,7 @@ uv run sdth-c2-server
 ./scripts/litellm_interpret_smoke.sh          # asserts source == "llm" (Gemini 3.8 Flash)
 ```
 
-OpenAI (`gpt-4o-mini` / `OPENAI_API_KEY`), Anthropic (`claude-haiku` / `ANTHROPIC_API_KEY`), and Google Gemini (`gemini-3.8-flash` / `GEMINI_API_KEY`) are all LiteLLM **upstream** backends. `LLM_API_KEY` is the proxy lock (`LITELLM_MASTER_KEY`) — see [LiteLLM keys](../litellm.md). Live smoke pins Gemini.
+OpenAI (`gpt-4o-mini` / `OPENAI_API_KEY`), Anthropic (`claude-haiku` / `ANTHROPIC_API_KEY`), Google Gemini (`gemini-3.8-flash` / `GEMINI_API_KEY`), and Fireworks (`fireworks-glm` / `FIREWORKS_AI_API_KEY`) are LiteLLM **upstream** backends. `LLM_API_KEY` is the proxy lock (`LITELLM_MASTER_KEY`) — see [LiteLLM keys](../litellm.md). Live smoke pins Gemini.
 
 **Probabilistic proposes; deterministic disposes** — this endpoint never seals a `DecisionToken`. See [Demo Path D](../demo.md#demo-path-d-live-llm-via-litellm).
 
