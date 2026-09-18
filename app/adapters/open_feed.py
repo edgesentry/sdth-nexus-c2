@@ -45,9 +45,7 @@ def parse_open_feed_selection(raw: str | None) -> list[FeedKind]:
         elif token in {"air", "open_air", "adsb", "ads-b"}:
             kind = "air"
         else:
-            raise ValueError(
-                f"Unknown open feed '{token}' (expected ais, air, or all)"
-            )
+            raise ValueError(f"Unknown open feed '{token}' (expected ais, air, or all)")
         if kind not in out:
             out.append(kind)
     return out
@@ -95,9 +93,7 @@ def open_ais_to_events(payload: dict[str, Any]) -> list[dict[str, Any]]:
             lat = float(raw["latitude"])
             lon = float(raw["longitude"])
         except (KeyError, TypeError, ValueError) as exc:
-            raise ValueError(
-                f"vessels[{idx}] requires numeric latitude/longitude"
-            ) from exc
+            raise ValueError(f"vessels[{idx}] requires numeric latitude/longitude") from exc
 
         mmsi = str(raw.get("mmsi") or raw.get("id") or f"vessel-{idx}")
         name = str(raw.get("name") or mmsi)
@@ -140,9 +136,7 @@ def open_air_to_events(payload: dict[str, Any]) -> list[dict[str, Any]]:
             lat = float(raw["latitude"])
             lon = float(raw["longitude"])
         except (KeyError, TypeError, ValueError) as exc:
-            raise ValueError(
-                f"aircraft[{idx}] requires numeric latitude/longitude"
-            ) from exc
+            raise ValueError(f"aircraft[{idx}] requires numeric latitude/longitude") from exc
 
         icao = str(raw.get("icao24") or raw.get("id") or f"ac-{idx}")
         callsign = str(raw.get("callsign") or icao).strip() or icao
