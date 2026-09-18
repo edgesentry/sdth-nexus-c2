@@ -63,7 +63,7 @@ docker compose -f deploy/litellm/docker-compose.yml up -d
 | Env (C2) | Value |
 |----------|--------|
 | `LLM_BASE_URL` | `http://127.0.0.1:4000/v1` |
-| `LLM_API_KEY` | LiteLLM master key (`LITELLM_MASTER_KEY`, sample `sk-litellm-local`) |
+| `LLM_API_KEY` | LiteLLM master key (`LITELLM_MASTER_KEY`, sample `sk-litellm-local`) — **not** a Gemini/OpenAI key; see [LiteLLM keys](litellm.md) |
 | `LLM_MODEL` | `gemini-3.8-flash` (live smoke). Also `gpt-4o-mini`, `claude-haiku`, or `nexus-interpreter` |
 
 | Provider | Alias | Key |
@@ -72,7 +72,7 @@ docker compose -f deploy/litellm/docker-compose.yml up -d
 | OpenAI | `gpt-4o-mini` | `OPENAI_API_KEY` |
 | Anthropic | `claude-haiku` | `ANTHROPIC_API_KEY` |
 
-Never commit keys. Agent Router / Envoy AI Gateway remains Phase 5.
+Never commit keys. What `LITELLM_MASTER_KEY` is, and how it differs from `GEMINI_API_KEY` / `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`: [LiteLLM keys](litellm.md). Agent Router / Envoy AI Gateway remains Phase 5.
 
 ## Effector levels
 

@@ -28,4 +28,6 @@ docker compose -f deploy/litellm/docker-compose.yml up -d
 
 Live smoke pins `gemini-3.8-flash` (no silent vendor swap). Venue / zero-internet: `ollama pull llama3.1 && ollama serve`.
 
+`LITELLM_MASTER_KEY` is the proxy lock (copied to C2 as `LLM_API_KEY`). It is **not** `GEMINI_API_KEY`. Full write-up: [LiteLLM keys](../../docs/litellm.md).
+
 See [Demo Path D](../../docs/demo.md#demo-path-d-live-llm-via-litellm).

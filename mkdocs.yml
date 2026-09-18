@@ -53,6 +53,7 @@ nav:
     - Closed loop: architecture/index.md
     - Topology: architecture/topology.md
   - C2 REST API (frozen): api/rest.md
+  - LiteLLM keys: litellm.md
   - Scenarios: scenarios.md
   - Demo & benchmarks: demo.md
   - Roadmap: roadmap.md

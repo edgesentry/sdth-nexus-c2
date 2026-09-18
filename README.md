@@ -130,10 +130,10 @@ INTERPRET=1 ./scripts/picture_to_tasking.sh
 | Env | Role |
 |-----|------|
 | `LLM_BASE_URL` | `http://127.0.0.1:4000/v1` |
-| `LLM_API_KEY` | LiteLLM master key (`LITELLM_MASTER_KEY`) |
+| `LLM_API_KEY` | Same string as `LITELLM_MASTER_KEY` (proxy lock, **not** a vendor key) |
 | `LLM_MODEL` | `gemini-3.8-flash` for tests; `nexus-interpreter` for venue fallbacks |
 
-LiteLLM down / no key → existing heuristic demo still works. Agent Router / Envoy is Phase 5.
+LiteLLM down / no key → existing heuristic demo still works. What the master key is: [`docs/litellm.md`](docs/litellm.md). Agent Router / Envoy is Phase 5.
 
 ### Picture→Tasking demo (no UI)
 
