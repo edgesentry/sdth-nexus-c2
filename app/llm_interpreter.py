@@ -411,10 +411,11 @@ def interpret(
 
     try:
         return llm_interpret(graph, finding, timeout_seconds=timeout_seconds)
-    except Exception as exc:
+    except Exception:
         # Broad catch: demo must not hard-depend on a live LLM endpoint.
         fallback = heuristic_interpret(graph, finding, timeout_seconds=timeout_seconds)
-        fallback.error = f"llm_failed:{type(exc).__name__}:{exc}"
+        # Do not expose raw exception details to API callers.
+        fallback.error = "llm_failed"
         fallback.candidate_coa.metadata = {
             **fallback.candidate_coa.metadata,
             "llm_error": fallback.error,
