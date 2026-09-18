@@ -1,0 +1,62 @@
+# LiteLLM OpenAI-compatible front door for Pitch-2 live interpret.
+# C2 talks to this proxy only — never to a vendor SDK directly.
+#
+#   LLM_BASE_URL=http://127.0.0.1:4000/v1
+#   LLM_API_KEY=<LITELLM_MASTER_KEY>
+#   LLM_MODEL=gemini-3.8-flash          # live smoke / tests
+#   LLM_MODEL=nexus-interpreter         # venue alias (Gemini → OpenAI → Anthropic → Fireworks → Ollama)
+#
+# Probabilistic proposes; deterministic Core gate still disposes.
+
+model_list:
+  # Live smoke / tests — pin Gemini 3.8 Flash (Google AI Studio).
+  - model_name: gemini-3.8-flash
+    litellm_params:
+      model: gemini/gemini-3.8-flash
+      api_key: os.environ/GEMINI_API_KEY
+
+  # Venue alias: Gemini first, then the other cloud vendors, then local Ollama.
+  - model_name: nexus-interpreter
+    litellm_params:
+      model: gemini/gemini-3.8-flash
+      api_key: os.environ/GEMINI_API_KEY
+
+  - model_name: gpt-4o-mini
+    litellm_params:
+      model: openai/gpt-4o-mini
+      api_key: os.environ/OPENAI_API_KEY
+
+  - model_name: claude-haiku
+    litellm_params:
+      model: anthropic/claude-3-5-haiku-latest
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  # Fireworks AI serverless (any fireworks_ai/<slug> works; glm-5p2 is the LiteLLM sample).
+  - model_name: fireworks-glm
+    litellm_params:
+      model: fireworks_ai/glm-5p2
+      api_key: os.environ/FIREWORKS_AI_API_KEY
+
+  # Offline / venue fallback (host Ollama). Requires: ollama pull llama3.1
+  - model_name: ollama-llama3
+    litellm_params:
+      model: ollama/llama3.1
+      api_base: os.environ/OLLAMA_API_BASE
+
+  # Optional local OpenAI-compatible server (vLLM / llama.cpp / etc.)
+  - model_name: vllm-local
+    litellm_params:
+      model: openai/local-model
+      api_base: os.environ/VLLM_API_BASE
+      api_key: os.environ/VLLM_API_KEY
+
+litellm_settings:
+  # Drop vendor-unsupported params (e.g. response_format on Ollama).
+  drop_params: true
+
+router_settings:
+  fallbacks:
+    - nexus-interpreter: [gpt-4o-mini, claude-haiku, fireworks-glm, ollama-llama3]
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY

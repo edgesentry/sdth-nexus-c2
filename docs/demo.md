@@ -46,7 +46,37 @@ Or run manually against an already running server:
 
 ```bash
 uv run python scripts/picture_to_tasking.py          # asserts token and signed Ack in OCSF audit
+INTERPRET=1 ./scripts/picture_to_tasking.sh          # interpreter overlay (LiteLLM if Core has LLM_BASE_URL)
 ```
+
+## Demo Path D: Live LLM via LiteLLM
+
+**Probabilistic proposes; deterministic disposes.** Stands up LiteLLM as the OpenAI-compatible front door and proves `POST /api/interpret` returns `source: "llm"`. CI stays LLM-free (heuristic fallback when `LLM_BASE_URL` is unset or LiteLLM is down).
+
+```bash
+cp deploy/litellm/.env.example deploy/litellm/.env   # set GEMINI_API_KEY for live smoke
+cp .env.example .env
+uv sync --group litellm
+set -a && source deploy/litellm/.env && set +a
+uv run --group litellm litellm --config deploy/litellm/config.yaml --port 4000
+# other terminal:
+./scripts/litellm_interpret_smoke.sh                 # S2 → source == "llm" via gemini-3.8-flash
+```
+
+| Env (C2) | Value |
+|----------|--------|
+| `LLM_BASE_URL` | `http://127.0.0.1:4000/v1` |
+| `LLM_API_KEY` | LiteLLM master key (`LITELLM_MASTER_KEY`, sample `sk-litellm-local`) — **not** a Gemini/OpenAI key; see [LiteLLM keys](litellm.md) |
+| `LLM_MODEL` | `gemini-3.8-flash` (live smoke). Also `gpt-4o-mini`, `claude-haiku`, `fireworks-glm`, or `nexus-interpreter` |
+
+| Provider | Alias | Key |
+|----------|--------|-----|
+| Google Gemini | `gemini-3.8-flash` | `GEMINI_API_KEY` |
+| OpenAI | `gpt-4o-mini` | `OPENAI_API_KEY` |
+| Anthropic | `claude-haiku` | `ANTHROPIC_API_KEY` |
+| Fireworks AI | `fireworks-glm` | `FIREWORKS_AI_API_KEY` |
+
+Never commit keys. What `LITELLM_MASTER_KEY` is, and how it differs from vendor keys: [LiteLLM keys](litellm.md). Agent Router / Envoy AI Gateway remains Phase 5.
 
 ## Effector levels
 

@@ -135,6 +135,23 @@ Probabilistic app-layer propose (Pitch-2). Returns scored hypotheses + a **candi
 
 Env: `LLM_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL` / `LLM_TIMEOUT_S`. Unset or failed LLM → heuristic fallback.
 
+Live path (issue #32): point C2 at LiteLLM (`deploy/litellm/`):
+
+```bash
+set -a && source deploy/litellm/.env && set +a
+uv run --group litellm litellm --config deploy/litellm/config.yaml --port 4000
+# other terminal:
+export LLM_BASE_URL=http://127.0.0.1:4000/v1
+export LLM_API_KEY=sk-litellm-local          # must equal LITELLM_MASTER_KEY (proxy lock, not Gemini)
+export LLM_MODEL=gemini-3.8-flash
+uv run sdth-c2-server
+./scripts/litellm_interpret_smoke.sh          # asserts source == "llm" (Gemini 3.8 Flash)
+```
+
+OpenAI (`gpt-4o-mini` / `OPENAI_API_KEY`), Anthropic (`claude-haiku` / `ANTHROPIC_API_KEY`), Google Gemini (`gemini-3.8-flash` / `GEMINI_API_KEY`), and Fireworks (`fireworks-glm` / `FIREWORKS_AI_API_KEY`) are LiteLLM **upstream** backends. `LLM_API_KEY` is the proxy lock (`LITELLM_MASTER_KEY`) — see [LiteLLM keys](../litellm.md). Live smoke pins Gemini.
+
+**Probabilistic proposes; deterministic disposes** — this endpoint never seals a `DecisionToken`. See [Demo Path D](../demo.md#demo-path-d-live-llm-via-litellm).
+
 ### Response `200`
 
 ```json

@@ -46,6 +46,12 @@ EXTRA_ARGS=()
 if [[ "${START_LOCAL}" -eq 1 ]]; then
   EXTRA_ARGS+=(--require-roundtrip)
 fi
+if [[ "${INTERPRET:-}" == "1" || "${INTERPRET:-}" == "true" ]]; then
+  EXTRA_ARGS+=(--interpret)
+fi
+if [[ "${FORCE_HEURISTIC:-}" == "1" || "${FORCE_HEURISTIC:-}" == "true" ]]; then
+  EXTRA_ARGS+=(--force-heuristic)
+fi
 
 uv run python scripts/picture_to_tasking.py "${EXTRA_ARGS[@]}" "$@"
 echo "Picture→Tasking demo complete (base=${C2_BASE_URL} scenario=${SCENARIO})."
