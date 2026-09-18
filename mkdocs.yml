@@ -54,7 +54,7 @@ nav:
     - Topology: architecture/topology.md
   - C2 REST API (frozen): api/rest.md
   - Cloudflare Containers: deploy.md
-  - LiteLLM & interpret: litellm.md
+  - LiteLLM: litellm.md
   - Scenarios: scenarios.md
   - Demo & benchmarks: demo.md
   - Roadmap: roadmap.md
