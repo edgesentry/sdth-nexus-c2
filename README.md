@@ -97,7 +97,35 @@ curl -s localhost:8080/api/audit/trail
 | `LLM_MODEL` | Model id (default `gpt-4o-mini`) |
 | `LLM_TIMEOUT_S` | HTTP timeout seconds (default `8`) |
 
-Never commit API keys — use env / Wrangler Secrets.
+Never commit API keys — use env / Wrangler Secrets. Sample: `.env.example` (C2) and `deploy/litellm/.env.example` (proxy).
+
+### Live LLM via LiteLLM (Pitch-2 follow-on)
+
+**Probabilistic proposes; deterministic disposes.** LiteLLM is the local OpenAI-compatible front door (`:4000/v1`). CI does **not** start it — unset `LLM_BASE_URL` keeps the heuristic path green.
+
+```text
+sdth-c2-server  ──LLM_BASE_URL──►  LiteLLM (:4000/v1)
+                                        │
+                                        ├── OpenAI / Anthropic
+                                        └── Ollama / vLLM (offline venue)
+```
+
+```bash
+cp deploy/litellm/.env.example deploy/litellm/.env   # set OPENAI_API_KEY (or run Ollama)
+cp .env.example .env                                 # C2 → LiteLLM mapping
+docker compose -f deploy/litellm/docker-compose.yml up -d
+./scripts/litellm_interpret_smoke.sh                 # S2 → source == "llm"
+# closed loop with interpreter overlay:
+INTERPRET=1 ./scripts/picture_to_tasking.sh
+```
+
+| Env | Role |
+|-----|------|
+| `LLM_BASE_URL` | `http://127.0.0.1:4000/v1` |
+| `LLM_API_KEY` | LiteLLM master key (`LITELLM_MASTER_KEY`) |
+| `LLM_MODEL` | LiteLLM alias (`nexus-interpreter` → gpt-4o-mini, fallback `ollama-llama3`) |
+
+LiteLLM down / no key → existing heuristic demo still works. Agent Router / Envoy is Phase 5.
 
 ### Picture→Tasking demo (no UI)
 
@@ -125,9 +153,11 @@ C2_BASE_URL=https://your-c2.example.com ./scripts/picture_to_tasking.sh
 | `app/scenarios/` | S1–S3 defense scenarios + registry |
 | `app/c2_server.py` | Two-screen C2 REST (ontology / interpret / gate / recipient / audit) |
 | `app/llm_interpreter.py` | Pitch-2 probabilistic propose (LLM + heuristic fallback) |
+| `deploy/litellm/` | LiteLLM OpenAI-compatible front door (Compose + config) |
 | `app/adapters/usv_rest.py` | Vendor-neutral USV REST effector (`EFFECTOR_BASE_URL`) |
 | `app/adapters/sar_candidate_event.py` | Assumed CandidateEvent → `space_sar` Observation (Pitch-1) |
-| `scripts/picture_to_tasking.py` | UI-less Picture→Tasking demo (`C2_BASE_URL` / `BASE_URL`) |
+| `scripts/picture_to_tasking.py` | UI-less Picture→Tasking demo (`C2_BASE_URL` / `BASE_URL`; `--interpret`) |
+| `scripts/litellm_interpret_smoke.py` | Live S2 `/api/interpret` smoke (`source == "llm"`) |
 | `app/` | Warning Picture TUI, mock server, kinematics, RasPi stub |
 | `app/config/maritime_defense_policy.yaml` | Geofences / thresholds (app-owned) |
 
@@ -185,9 +215,11 @@ uv run pytest tests/unit/ -q                        # unit
 uv run pytest tests/integration/ -v -m integration  # S2 + C2 two-screen / live HTTP
 uv run python scripts/stream_events.py --fast       # 19-step temporal playback
 uv run python scripts/benchmark.py                  # Slide 11 proof
+./scripts/litellm_interpret_smoke.sh                # live LiteLLM (optional; not in CI)
 ```
 
 CI runs unit, integration, and benchmark jobs on every push/PR.
+
 ## Limits
 
 - **Probabilistic proposes, deterministic disposes** — app LLM/heuristic may suggest COAs; Core gate alone seals tokens

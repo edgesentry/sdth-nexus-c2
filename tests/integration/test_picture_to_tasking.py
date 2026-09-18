@@ -74,3 +74,19 @@ def test_picture_to_tasking_demo_script(live_c2: str) -> None:
         require_roundtrip=True,
     )
     assert code == 0
+
+
+def test_picture_to_tasking_interpret_heuristic(live_c2: str) -> None:
+    """--interpret against Core without LiteLLM still closes the loop via heuristic."""
+    demo = _load_demo()
+    code = demo.run_demo(
+        base_url=live_c2,
+        scenario_id="S2",
+        unit_id="CUE-NODE-01",
+        operator_id="ci",
+        timeout_s=5.0,
+        require_roundtrip=True,
+        interpret=True,
+        force_heuristic=True,
+    )
+    assert code == 0

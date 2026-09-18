@@ -46,7 +46,27 @@ Or run manually against an already running server:
 
 ```bash
 uv run python scripts/picture_to_tasking.py          # asserts token and signed Ack in OCSF audit
+INTERPRET=1 ./scripts/picture_to_tasking.sh          # interpreter overlay (LiteLLM if Core has LLM_BASE_URL)
 ```
+
+## Demo Path D: Live LLM via LiteLLM
+
+**Probabilistic proposes; deterministic disposes.** Stands up LiteLLM as the OpenAI-compatible front door and proves `POST /api/interpret` returns `source: "llm"`. CI stays LLM-free (heuristic fallback when `LLM_BASE_URL` is unset or LiteLLM is down).
+
+```bash
+cp deploy/litellm/.env.example deploy/litellm/.env   # set OPENAI_API_KEY, or run `ollama serve`
+cp .env.example .env
+docker compose -f deploy/litellm/docker-compose.yml up -d
+./scripts/litellm_interpret_smoke.sh                 # S2 → source == "llm", non-empty hypotheses
+```
+
+| Env (C2) | Value |
+|----------|--------|
+| `LLM_BASE_URL` | `http://127.0.0.1:4000/v1` |
+| `LLM_API_KEY` | LiteLLM master key (`LITELLM_MASTER_KEY`, sample `sk-litellm-local`) |
+| `LLM_MODEL` | `nexus-interpreter` (gpt-4o-mini, falls back to `ollama-llama3`) |
+
+Never commit keys. Agent Router / Envoy AI Gateway remains Phase 5.
 
 ## Effector levels
 

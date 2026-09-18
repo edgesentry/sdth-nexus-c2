@@ -23,7 +23,10 @@ Env:
   C2_BASE_URL / BASE_URL  Core origin (default http://127.0.0.1:8080)
   UNIT_ID                 Recipient unit (default CUE-NODE-01)
   SCENARIO                Scenario id (default S2)
-"""
+
+Optional live LLM (issue #32): pass --interpret so proposals use POST interpret:true.
+Core must be started with LLM_BASE_URL pointing at LiteLLM; otherwise heuristic is used.
+Probabilistic proposes; the gate still disposes (never skip HITL)."""
 
 from __future__ import annotations
 
@@ -103,6 +106,8 @@ def run_demo(
     operator_id: str,
     timeout_s: float,
     require_roundtrip: bool,
+    interpret: bool = False,
+    force_heuristic: bool = False,
 ) -> int:
     print("=" * 60)
     print("NexusGate — Picture→Tasking demo (no UI)")
@@ -119,10 +124,12 @@ def run_demo(
 
         _print_hop(1, "Screen 1 — propose COA (Warning Picture)")
         t_picture = time.perf_counter()
-        proposed = client.post(
-            "/api/gate/proposals",
-            json={"scenario_id": scenario_id, "unit_id": unit_id},
-        )
+        proposal: dict[str, Any] = {"scenario_id": scenario_id, "unit_id": unit_id}
+        if interpret:
+            proposal["interpret"] = True
+            if force_heuristic:
+                proposal["force_heuristic"] = True
+        proposed = client.post("/api/gate/proposals", json=proposal)
         proposed.raise_for_status()
         body = proposed.json()
         status = body.get("status")
@@ -133,6 +140,11 @@ def run_demo(
         coa_id = coa["coa_id"]
         finding = body.get("finding")
         print(f"  status={status}  coa_id={coa_id}  intent={coa.get('intent')}")
+        if interpret:
+            src = body.get("interpreter_source")
+            err = body.get("interpreter_error")
+            n_hyp = len(body.get("hypotheses") or [])
+            print(f"  interpret  : source={src} hypotheses={n_hyp} error={err}")
         _print_warning_picture(finding)
 
         _print_hop(2, "Screen 1 — operator approve")
@@ -238,6 +250,16 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help=f"Exit non-zero if approve→ack >= {ROUNDTRIP_TARGET_S:g}s",
     )
+    parser.add_argument(
+        "--interpret",
+        action="store_true",
+        help="Queue via interpret:true (live LiteLLM if Core has LLM_BASE_URL)",
+    )
+    parser.add_argument(
+        "--force-heuristic",
+        action="store_true",
+        help="With --interpret, skip LLM even if LiteLLM is configured",
+    )
     args = parser.parse_args(argv)
     base = _base_url(args.base_url)
     try:
@@ -248,6 +270,8 @@ def main(argv: list[str] | None = None) -> int:
             operator_id=args.operator_id,
             timeout_s=args.timeout,
             require_roundtrip=args.require_roundtrip,
+            interpret=args.interpret,
+            force_heuristic=args.force_heuristic,
         )
     except httpx.ConnectError as exc:
         print(f"FAIL: cannot reach Core at {base}: {exc}", file=sys.stderr)
