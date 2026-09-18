@@ -40,6 +40,7 @@ Runs a complete one-shot automated loop: **Warning Picture → approve → inbox
 
 ```bash
 ./scripts/picture_to_tasking.sh                      # starts local server, runs S2 loop, verifies <3s
+C2_BASE_URL=https://sdth-c2-core.<subdomain>.workers.dev ./scripts/picture_to_tasking.sh
 ```
 
 Or run manually against an already running server:
@@ -77,6 +78,21 @@ uv run --group litellm litellm --config deploy/litellm/config.yaml --port 4000
 | Fireworks AI | `fireworks-glm` | `FIREWORKS_AI_API_KEY` |
 
 Never commit keys. What `LITELLM_MASTER_KEY` is, and how it differs from vendor keys: [LiteLLM keys](litellm.md). Agent Router / Envoy AI Gateway remains Phase 5.
+
+## Demo Path E: Cloudflare Containers Core (Pitch-day HTTPS)
+
+Same handshake over a Worker → container singleton (`getByName("demo")`). Runbook: [Cloudflare Containers](deploy.md).
+
+```bash
+cd deploy/cloudflare && npm install && npx wrangler dev    # http://127.0.0.1:8787
+# other terminal:
+C2_BASE_URL=http://127.0.0.1:8787 ./scripts/picture_to_tasking.sh
+
+# after `npx wrangler deploy`:
+C2_BASE_URL=https://sdth-c2-core.<YOUR_SUBDOMAIN>.workers.dev ./scripts/picture_to_tasking.sh
+```
+
+Cloudflare down → `uv run sdth-c2-server` (do not set `C2_BASE_URL`).
 
 ## Effector levels
 

@@ -14,6 +14,7 @@ SDTH 2026 **PS 04 — One Picture, Many Eyes**: disagreeing sensors → **Warnin
 - **[Architecture](architecture/index.md)** — Picture→Tasking closed loop
 - **[Topology](architecture/topology.md)** — laptop I/O + local / Cloudflare Core
 - **[C2 REST API](api/rest.md)** — Screen 1 / Screen 2 **frozen** contract (curl / TUI / Phase 3)
+- **[Cloudflare Containers](deploy.md)** — Worker + container Core, `C2_BASE_URL`, local fallback
 - **[LiteLLM](litellm.md)** — Python proxy, `LITELLM_MASTER_KEY` vs vendor keys
 - **[Scenarios](scenarios.md)** — S1 sea spoof · S2 air corridor (hero) · S3 SAR vs AIS
 - **[Demo & benchmarks](demo.md)** — quick start, streamer, Slide 11 metrics, live LiteLLM

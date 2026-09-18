@@ -1,0 +1,6 @@
+# Local wrangler dev secrets (never commit the real file).
+# LLM overlay is optional — omit LLM_BASE_URL for heuristic interpret.
+
+# LLM_BASE_URL=https://your-public-openai-compatible.example/v1
+# LLM_API_KEY=sk-...
+LLM_MODEL=gemini-3.8-flash

@@ -1,0 +1,41 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sdth-c2-core",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-18",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "upload_source_maps": true,
+  // Optional LLM overlay. Secrets: `npx wrangler secret put LLM_API_KEY`
+  // and `npx wrangler secret put LLM_BASE_URL` (public OpenAI-compatible URL).
+  // Unset LLM_BASE_URL → heuristic interpreter (CI / pitch-day fallback).
+  "vars": {
+    "LLM_MODEL": "gemini-3.8-flash"
+  },
+  "containers": [
+    {
+      "class_name": "C2Container",
+      "image": "../../Dockerfile",
+      "image_build_context": "../..",
+      "instance_type": "basic",
+      "max_instances": 1
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "C2_CONTAINER",
+        "class_name": "C2Container"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["C2Container"]
+    }
+  ]
+}

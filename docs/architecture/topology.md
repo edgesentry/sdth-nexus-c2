@@ -27,3 +27,20 @@ Same REST contract over HTTPS. Recommended stack:
 | Fallback | Local `sdth-c2-server` | Pitch-day / CI |
 
 Point clients with `C2_BASE_URL` / `BASE_URL` — paths do not change.
+
+## Deploy (issue #18)
+
+Worker front door → container singleton `getByName("demo")`. Audit jsonl is snapshotted into Durable Object SQLite because container disk resets on sleep.
+
+```bash
+cd deploy/cloudflare
+npm install
+npx wrangler dev                 # http://127.0.0.1:8787
+npx wrangler deploy              # prints https://sdth-c2-core.<subdomain>.workers.dev
+```
+
+```bash
+C2_BASE_URL=https://sdth-c2-core.<subdomain>.workers.dev ./scripts/picture_to_tasking.sh
+```
+
+Cloudflare down or venue Wi-Fi dead: `uv run sdth-c2-server` (CI default). Full runbook: [Cloudflare Containers](../deploy.md).

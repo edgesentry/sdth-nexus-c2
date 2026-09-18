@@ -8,7 +8,7 @@ SDTH 2026 C2 application: **PS 04 One Picture, Many Eyes** — disagreeing senso
 
 **Phases:** Phase 1 done · **Phase 2** = backend closed loop (no UI) · Phase 3 = BattlePlan UI · Phase 4 = pitch day · Phase 5 = post-hackathon. See [`docs/plan.md`](docs/plan.md).
 
-**Topology:** Core runs locally (`sdth-c2-server`) and, in Phase 2, on **Cloudflare Containers** (same REST paths). **Ingress/command and recipient Ack stay on laptops** either way.
+**Topology:** Core runs locally (`sdth-c2-server`) or on **Cloudflare Containers** (same REST paths). **Ingress/command and recipient Ack stay on laptops** either way. Cloudflare down → `uv run sdth-c2-server`. Runbook: [`docs/deploy.md`](docs/deploy.md).
 
 ## Quick start
 
@@ -40,12 +40,22 @@ uv run python -m app.main --scenario S3 --stub --yes
 
 ## C2 REST (Two-Screen) — frozen contract
 
-Screen 1 (command laptop: curl / TUI; BattlePlan in Phase 3) + Screen 2 (recipient laptop) against local Core. Point clients at a Cloudflare URL later without changing paths.
+Screen 1 (command laptop: curl / TUI; BattlePlan in Phase 3) + Screen 2 (recipient laptop) against local **or Cloudflare** Core. Paths do not change — only `C2_BASE_URL`.
 
 **Contract freeze (issue #15):** request/response shapes live in [`docs/api/rest.md`](docs/api/rest.md) (also on [GitHub Pages](https://edgesentry.github.io/sdth-nexus-c2/api/rest/)). CI guards required keys via `tests/unit/test_c2_rest_contract.py`.
 
 ```bash
-uv run sdth-c2-server   # http://127.0.0.1:8080
+uv run sdth-c2-server   # http://127.0.0.1:8080  (pitch-day / CI fallback)
+```
+
+Cloudflare Containers (optional public Core): merge to `main` runs [Deploy Cloudflare](.github/workflows/deploy-cloudflare.yml) (`wrangler deploy` + `/health` smoke). Requires repo secrets `CLOUDFLARE_API_TOKEN` (needs **`containers:write`**) and `CLOUDFLARE_ACCOUNT_ID` — see [`docs/deploy.md`](docs/deploy.md).
+
+```bash
+export C2_BASE_URL=https://sdth-c2-core.<YOUR_SUBDOMAIN>.workers.dev
+./scripts/picture_to_tasking.sh
+# local front door:
+cd deploy/cloudflare && npm install && npx wrangler dev
+C2_BASE_URL=http://127.0.0.1:8787 ./scripts/picture_to_tasking.sh
 ```
 
 Laptop I/O (Phase 2 — no UI):
@@ -152,8 +162,10 @@ uv run python scripts/picture_to_tasking.py   # Terminal B
 Point at a remote Core later without changing paths:
 
 ```bash
-C2_BASE_URL=https://your-c2.example.com ./scripts/picture_to_tasking.sh
+C2_BASE_URL=https://sdth-c2-core.<YOUR_SUBDOMAIN>.workers.dev ./scripts/picture_to_tasking.sh
 # aliases: BASE_URL also accepted by the Python client
+# Cloudflare down:
+uv run sdth-c2-server && unset C2_BASE_URL && ./scripts/picture_to_tasking.sh
 ```
 
 ## Layout
@@ -165,6 +177,8 @@ C2_BASE_URL=https://your-c2.example.com ./scripts/picture_to_tasking.sh
 | `app/c2_server.py` | Two-screen C2 REST (ontology / interpret / gate / recipient / audit) |
 | `app/llm_interpreter.py` | Pitch-2 probabilistic propose (LLM + heuristic fallback) |
 | `deploy/litellm/` | LiteLLM OpenAI-compatible front door (`config.yaml` + Python `uv --group litellm`) |
+| `deploy/cloudflare/` | Worker front door + wrangler for Cloudflare Containers (`sdth-c2-core`) |
+| `Dockerfile` | C2 Core image (`uv` / FastAPI) used by Cloudflare Containers |
 | `app/adapters/usv_rest.py` | Vendor-neutral USV REST effector (`EFFECTOR_BASE_URL`) |
 | `app/adapters/sar_candidate_event.py` | Assumed CandidateEvent → `space_sar` Observation (Pitch-1) |
 | `scripts/picture_to_tasking.py` | UI-less Picture→Tasking demo (`C2_BASE_URL` / `BASE_URL`; `--interpret`) |

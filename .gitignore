@@ -13,3 +13,6 @@ build/
 *.jsonl
 .DS_Store
 site/
+node_modules/
+.wrangler/
+.dev.vars

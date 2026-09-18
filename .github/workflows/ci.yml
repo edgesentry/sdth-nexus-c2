@@ -126,3 +126,28 @@ jobs:
 
       - name: Run operational benchmarks
         run: uv run python scripts/benchmark.py
+
+  container:
+    name: C2 container image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build image
+        run: docker build -t sdth-c2-core:ci .
+
+      - name: Smoke /health
+        run: |
+          docker run -d --name c2 -p 127.0.0.1:8080:8080 sdth-c2-core:ci
+          for _ in $(seq 1 40); do
+            if curl -sf http://127.0.0.1:8080/health >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:8080/health
+          curl -sf http://127.0.0.1:8080/api/ontology/state >/dev/null
+          docker stop c2
+

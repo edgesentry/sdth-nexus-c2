@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 from dataclasses import asdict
 from pathlib import Path
@@ -27,7 +26,16 @@ from app.scenarios.base import Finding, get_scenario
 APP_DIR = Path(__file__).resolve().parent
 ROOT = APP_DIR.parent
 DEFAULT_POLICY = APP_DIR / "config" / "maritime_defense_policy.yaml"
-DEFAULT_AUDIT = ROOT / ".audit" / "gate.jsonl"
+
+
+def _default_audit_path() -> Path:
+    override = os.environ.get("AUDIT_PATH")
+    if override:
+        return Path(override)
+    return ROOT / ".audit" / "gate.jsonl"
+
+
+DEFAULT_AUDIT = _default_audit_path()
 
 app = FastAPI(title="NexusGate C2 Server", version="0.1.0")
 
@@ -72,6 +80,12 @@ class AckRequest(BaseModel):
     status: str = "ACKED"
     message: str = ""
     telemetry: dict[str, Any] = Field(default_factory=dict)
+
+
+class AuditSnapshotRequest(BaseModel):
+    """Replace on-disk OCSF jsonl (Cloudflare container hydrate; not a frozen client path)."""
+
+    records: list[dict[str, Any]]
 
 
 class C2Runtime:
@@ -489,18 +503,25 @@ async def recipient_ack(req: AckRequest) -> dict[str, Any]:
     return {"status": "ACKED", "ack": ack_record, "audit_hash": sealed["hash"]}
 
 
+@app.get("/health")
+async def health() -> dict[str, str]:
+    """Readiness probe. Not part of the frozen C2 contract."""
+    return {"status": "ok"}
+
+
 @app.get("/api/audit/trail")
 async def audit_trail() -> dict[str, Any]:
     runtime = get_runtime()
-    path = runtime.audit.path
-    records: list[dict[str, Any]] = []
-    if path.exists():
-        with path.open(encoding="utf-8") as fh:
-            for line in fh:
-                line = line.strip()
-                if line:
-                    records.append(json.loads(line))
-    return {"count": len(records), "path": str(path), "records": records}
+    records = runtime.audit.records()
+    return {"count": len(records), "path": str(runtime.audit.path), "records": records}
+
+
+@app.put("/api/admin/audit/snapshot")
+async def admin_audit_snapshot(req: AuditSnapshotRequest) -> dict[str, Any]:
+    """Hydrate jsonl after ephemeral container disk reset. Does not mint tokens."""
+    runtime = get_runtime()
+    runtime.audit.replace_records(req.records)
+    return {"status": "restored", "count": len(req.records)}
 
 
 @app.post("/api/admin/reset")
