@@ -7,7 +7,7 @@ Env:
   LLM_BASE_URL   — OpenAI-compatible base. Unset → heuristic.
                    Live path: LiteLLM at http://127.0.0.1:4000/v1 (deploy/litellm/).
   LLM_API_KEY    — Bearer token (LiteLLM master key, or empty for open local endpoints).
-  LLM_MODEL      — Model id / LiteLLM alias (default: gpt-4o-mini; demo alias: nexus-interpreter).
+  LLM_MODEL      — Model id / LiteLLM alias (default: gpt-4o-mini; live smoke: gemini-3.8-flash).
   LLM_TIMEOUT_S  — HTTP timeout seconds (default: 8).
 """
 

@@ -6,7 +6,7 @@ Does **not** require Docker itself — point C2 at an already-running LiteLLM:
 
   LLM_BASE_URL=http://127.0.0.1:4000/v1
   LLM_API_KEY=<LITELLM_MASTER_KEY>
-  LLM_MODEL=nexus-interpreter
+  LLM_MODEL=gemini-3.8-flash
   uv run sdth-c2-server
 
   uv run python scripts/litellm_interpret_smoke.py
@@ -86,7 +86,7 @@ def run_smoke(
                 "Start local Core with LiteLLM env:\n"
                 "  LLM_BASE_URL=http://127.0.0.1:4000/v1 \\\n"
                 "  LLM_API_KEY=sk-litellm-local \\\n"
-                "  LLM_MODEL=nexus-interpreter \\\n"
+                "  LLM_MODEL=gemini-3.8-flash \\\n"
                 "  uv run sdth-c2-server\n"
                 "Or run ./scripts/litellm_interpret_smoke.sh",
                 file=sys.stderr,

@@ -17,12 +17,12 @@ export C2_BASE_URL="${C2_BASE_URL:-http://${C2_HOST}:${C2_PORT}}"
 export SCENARIO="${SCENARIO:-S2}"
 export LLM_BASE_URL="${LLM_BASE_URL:-${LITELLM_URL}/v1}"
 export LLM_API_KEY="${LLM_API_KEY:-${LITELLM_MASTER_KEY:-sk-litellm-local}}"
-export LLM_MODEL="${LLM_MODEL:-nexus-interpreter}"
+export LLM_MODEL="${LLM_MODEL:-gemini-3.8-flash}"
 export LLM_TIMEOUT_S="${LLM_TIMEOUT_S:-30}"
 
 if [[ ! -f "${COMPOSE_DIR}/.env" && -f "${COMPOSE_DIR}/.env.example" ]]; then
   cp "${COMPOSE_DIR}/.env.example" "${COMPOSE_DIR}/.env"
-  echo "NOTE: copied deploy/litellm/.env.example → .env (set OPENAI_API_KEY or run Ollama)"
+  echo "NOTE: copied deploy/litellm/.env.example → .env (set GEMINI_API_KEY for live smoke, or OPENAI/ANTHROPIC/Ollama)"
 fi
 
 wait_http() {

@@ -3,16 +3,23 @@
 #
 #   LLM_BASE_URL=http://127.0.0.1:4000/v1
 #   LLM_API_KEY=<LITELLM_MASTER_KEY>
-#   LLM_MODEL=nexus-interpreter
+#   LLM_MODEL=gemini-3.8-flash          # live smoke / tests
+#   LLM_MODEL=nexus-interpreter         # venue alias (Gemini → OpenAI → Anthropic → Ollama)
 #
 # Probabilistic proposes; deterministic Core gate still disposes.
 
 model_list:
-  # Default C2 alias. Cloud OpenAI first; router falls back to local Ollama.
+  # Live smoke / tests — pin Gemini 3.8 Flash (Google AI Studio).
+  - model_name: gemini-3.8-flash
+    litellm_params:
+      model: gemini/gemini-3.8-flash
+      api_key: os.environ/GEMINI_API_KEY
+
+  # Venue alias: Gemini first, then the other cloud vendors, then local Ollama.
   - model_name: nexus-interpreter
     litellm_params:
-      model: openai/gpt-4o-mini
-      api_key: os.environ/OPENAI_API_KEY
+      model: gemini/gemini-3.8-flash
+      api_key: os.environ/GEMINI_API_KEY
 
   - model_name: gpt-4o-mini
     litellm_params:
@@ -43,7 +50,7 @@ litellm_settings:
 
 router_settings:
   fallbacks:
-    - nexus-interpreter: [ollama-llama3]
+    - nexus-interpreter: [gpt-4o-mini, claude-haiku, ollama-llama3]
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY

@@ -106,24 +106,32 @@ Never commit API keys — use env / Wrangler Secrets. Sample: `.env.example` (C2
 ```text
 sdth-c2-server  ──LLM_BASE_URL──►  LiteLLM (:4000/v1)
                                         │
+                                        ├── Google Gemini 3.8 Flash  (live smoke / tests)
                                         ├── OpenAI / Anthropic
                                         └── Ollama / vLLM (offline venue)
 ```
 
 ```bash
-cp deploy/litellm/.env.example deploy/litellm/.env   # set OPENAI_API_KEY (or run Ollama)
-cp .env.example .env                                 # C2 → LiteLLM mapping
+cp deploy/litellm/.env.example deploy/litellm/.env   # set GEMINI_API_KEY (tests) or OPENAI/ANTHROPIC
+cp .env.example .env                                 # C2 → LiteLLM mapping (LLM_MODEL=gemini-3.8-flash)
 docker compose -f deploy/litellm/docker-compose.yml up -d
-./scripts/litellm_interpret_smoke.sh                 # S2 → source == "llm"
+./scripts/litellm_interpret_smoke.sh                 # S2 → source == "llm" via gemini-3.8-flash
 # closed loop with interpreter overlay:
 INTERPRET=1 ./scripts/picture_to_tasking.sh
 ```
+
+| Provider | LiteLLM alias (`LLM_MODEL`) | Upstream env |
+|----------|-----------------------------|--------------|
+| **Google Gemini** | `gemini-3.8-flash` (live smoke default) | `GEMINI_API_KEY` |
+| OpenAI | `gpt-4o-mini` | `OPENAI_API_KEY` |
+| Anthropic | `claude-haiku` | `ANTHROPIC_API_KEY` |
+| Venue alias | `nexus-interpreter` (Gemini → OpenAI → Anthropic → Ollama) | whichever backend is configured |
 
 | Env | Role |
 |-----|------|
 | `LLM_BASE_URL` | `http://127.0.0.1:4000/v1` |
 | `LLM_API_KEY` | LiteLLM master key (`LITELLM_MASTER_KEY`) |
-| `LLM_MODEL` | LiteLLM alias (`nexus-interpreter` → gpt-4o-mini, fallback `ollama-llama3`) |
+| `LLM_MODEL` | `gemini-3.8-flash` for tests; `nexus-interpreter` for venue fallbacks |
 
 LiteLLM down / no key → existing heuristic demo still works. Agent Router / Envoy is Phase 5.
 

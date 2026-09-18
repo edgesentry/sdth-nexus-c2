@@ -128,6 +128,62 @@ def test_llm_interpret_parses_structured_json(monkeypatch: pytest.MonkeyPatch) -
     assert result.picture_summary == "LLM picture"
 
 
+def test_llm_interpret_sends_gemini_38_flash_model(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Live smoke/tests pin Gemini 3.8 Flash via LLM_MODEL (LiteLLM alias)."""
+    monkeypatch.setenv("LLM_BASE_URL", "http://llm.test/v1")
+    monkeypatch.setenv("LLM_API_KEY", "sk-litellm-local")
+    monkeypatch.setenv("LLM_MODEL", "gemini-3.8-flash")
+
+    seen: dict[str, Any] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["body"] = json.loads(request.content.decode())
+        return httpx.Response(
+            200,
+            json={
+                "choices": [
+                    {
+                        "message": {
+                            "content": json.dumps(
+                                {
+                                    "hypotheses": [
+                                        {
+                                            "label": "count_mismatch",
+                                            "claim": "3 vs 1",
+                                            "confidence": 0.8,
+                                            "supports_threat": True,
+                                            "modality_hints": ["social"],
+                                        }
+                                    ],
+                                    "confidence": 0.8,
+                                    "intent": "CUE_AND_IDENTIFY",
+                                    "picture_summary": "gemini",
+                                    "adversarial_hypothesis": "if social is false",
+                                }
+                            )
+                        }
+                    }
+                ]
+            },
+        )
+
+    transport = httpx.MockTransport(handler)
+    graph, finding = _s2_graph_and_finding()
+    real_client = httpx.Client
+
+    def client_factory(*args: Any, **kwargs: Any) -> httpx.Client:
+        kwargs["transport"] = transport
+        return real_client(*args, **kwargs)
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr("app.llm_interpreter.httpx.Client", client_factory)
+        result = llm_interpret(graph, finding, timeout_seconds=5.0)
+
+    assert seen["body"]["model"] == "gemini-3.8-flash"
+    assert result.source == "llm"
+    assert result.model == "gemini-3.8-flash"
+
+
 def test_api_interpret_heuristic(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("LLM_BASE_URL", raising=False)
     resp = client.post(

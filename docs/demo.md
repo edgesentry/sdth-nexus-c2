@@ -54,17 +54,23 @@ INTERPRET=1 ./scripts/picture_to_tasking.sh          # interpreter overlay (Lite
 **Probabilistic proposes; deterministic disposes.** Stands up LiteLLM as the OpenAI-compatible front door and proves `POST /api/interpret` returns `source: "llm"`. CI stays LLM-free (heuristic fallback when `LLM_BASE_URL` is unset or LiteLLM is down).
 
 ```bash
-cp deploy/litellm/.env.example deploy/litellm/.env   # set OPENAI_API_KEY, or run `ollama serve`
+cp deploy/litellm/.env.example deploy/litellm/.env   # set GEMINI_API_KEY for live smoke
 cp .env.example .env
 docker compose -f deploy/litellm/docker-compose.yml up -d
-./scripts/litellm_interpret_smoke.sh                 # S2 → source == "llm", non-empty hypotheses
+./scripts/litellm_interpret_smoke.sh                 # S2 → source == "llm" via gemini-3.8-flash
 ```
 
 | Env (C2) | Value |
 |----------|--------|
 | `LLM_BASE_URL` | `http://127.0.0.1:4000/v1` |
 | `LLM_API_KEY` | LiteLLM master key (`LITELLM_MASTER_KEY`, sample `sk-litellm-local`) |
-| `LLM_MODEL` | `nexus-interpreter` (gpt-4o-mini, falls back to `ollama-llama3`) |
+| `LLM_MODEL` | `gemini-3.8-flash` (live smoke). Also `gpt-4o-mini`, `claude-haiku`, or `nexus-interpreter` |
+
+| Provider | Alias | Key |
+|----------|--------|-----|
+| Google Gemini | `gemini-3.8-flash` | `GEMINI_API_KEY` |
+| OpenAI | `gpt-4o-mini` | `OPENAI_API_KEY` |
+| Anthropic | `claude-haiku` | `ANTHROPIC_API_KEY` |
 
 Never commit keys. Agent Router / Envoy AI Gateway remains Phase 5.
 
