@@ -223,6 +223,8 @@ Phase 2 explicitly delivers thin / demo-fidelity slices of the 4 core pitch pill
 - [x] Validate end-to-end backend closed loop via curl / automated scripts without frontend dependency (`scripts/picture_to_tasking.sh`).
 - [x] Containerize C2 server for optional **Cloudflare Containers** deployment while retaining identical REST contract (issue #18).
 - [x] Establish hardened fallback to local `sdth-c2-server` for zero-internet venue reliability.
+- [x] **Document laptop I/O client steps:** Screen 1 (ingress + command) / Screen 2 (inbox + ack) cold-start runbook in [Demo Path A](demo.md#demo-path-a-two-laptop--two-terminal-io-issue-17); same paths for local Core and Cloudflare (§4.2) (issue #17).
+
 
 ### Phase 3: BattlePlan UI Integration on Frozen REST Contract (Planned)
 - [ ] Integrate the Next.js BattlePlan UI with `app/c2_server.py` (two-screen software handshake).
