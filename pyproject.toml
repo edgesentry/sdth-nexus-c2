@@ -83,3 +83,7 @@ dev = [
     "ruff>=0.11.0",
     "types-PyYAML>=6.0.12",
 ]
+# Local / venue LiteLLM proxy (not in CI). uv sync --group litellm
+litellm = [
+    "litellm[proxy]>=1.76.0",
+]

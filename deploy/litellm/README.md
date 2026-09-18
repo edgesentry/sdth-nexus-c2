@@ -15,7 +15,9 @@ sdth-c2-server  ──LLM_BASE_URL──►  LiteLLM (:4000/v1)
 ```bash
 cp deploy/litellm/.env.example deploy/litellm/.env   # set GEMINI_API_KEY for tests
 cp .env.example .env                                 # LLM_MODEL=gemini-3.8-flash
-docker compose -f deploy/litellm/docker-compose.yml up -d
+uv sync --group litellm
+set -a && source deploy/litellm/.env && set +a
+uv run --group litellm litellm --config deploy/litellm/config.yaml --port 4000
 ./scripts/litellm_interpret_smoke.sh                 # S2 → source == "llm"
 ```
 

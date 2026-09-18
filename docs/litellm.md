@@ -1,4 +1,4 @@
-# LiteLLM keys
+# LiteLLM
 
 LiteLLM sits in front of vendor APIs. Two different kinds of secrets are involved — **do not mix them**.
 
@@ -14,6 +14,28 @@ LiteLLM (:4000/v1)                       ← locked by LITELLM_MASTER_KEY
         ├── Anthropic  ANTHROPIC_API_KEY
         └── Fireworks  FIREWORKS_AI_API_KEY
 ```
+
+## Run locally (Python — preferred)
+
+Docker Compose is optional. On some Colima/ARM hosts the `main-stable` image dies with SIGILL; the Python proxy is the default local path.
+
+```bash
+cp deploy/litellm/.env.example deploy/litellm/.env   # set GEMINI_API_KEY
+cp .env.example .env                                 # LLM_API_KEY must equal LITELLM_MASTER_KEY
+uv sync --group litellm --group dev
+set -a && source deploy/litellm/.env && set +a
+uv run --group litellm litellm --config deploy/litellm/config.yaml --port 4000
+```
+
+Then in another terminal:
+
+```bash
+set -a && source .env && set +a
+uv run sdth-c2-server
+./scripts/litellm_interpret_smoke.sh
+```
+
+CI does **not** install this group (`uv sync --locked --group dev` only).
 
 ## `LITELLM_MASTER_KEY` — proxy lock
 
@@ -77,7 +99,7 @@ CI does not start LiteLLM. Unset `LLM_BASE_URL` → heuristic interpret; no keys
 1. Pick a new `sk-…` value (do not reuse a vendor key).
 2. Put it in `deploy/litellm/.env` as `LITELLM_MASTER_KEY`.
 3. Put the **same** value in C2 `.env` as `LLM_API_KEY`.
-4. Restart Compose and `sdth-c2-server`.
+4. Restart the Python proxy (`uv run --group litellm litellm …`) and `sdth-c2-server`.
 5. Never commit `.env`. Examples (`.env.example`) may keep `sk-litellm-local`.
 
 Live path: [Demo Path D](demo.md#demo-path-d-live-llm-via-litellm). Interpret contract: [C2 REST](api/rest.md#post-apiinterpret).

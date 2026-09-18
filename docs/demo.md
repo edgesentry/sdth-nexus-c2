@@ -56,9 +56,14 @@ INTERPRET=1 ./scripts/picture_to_tasking.sh          # interpreter overlay (Lite
 ```bash
 cp deploy/litellm/.env.example deploy/litellm/.env   # set GEMINI_API_KEY for live smoke
 cp .env.example .env
-docker compose -f deploy/litellm/docker-compose.yml up -d
+uv sync --group litellm
+set -a && source deploy/litellm/.env && set +a
+uv run --group litellm litellm --config deploy/litellm/config.yaml --port 4000
+# other terminal:
 ./scripts/litellm_interpret_smoke.sh                 # S2 → source == "llm" via gemini-3.8-flash
 ```
+
+Docker Compose (`deploy/litellm/docker-compose.yml`) is optional. Prefer the Python proxy on Colima/ARM if the image exits 132 (SIGILL).
 
 | Env (C2) | Value |
 |----------|--------|

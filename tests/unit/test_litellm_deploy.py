@@ -60,3 +60,13 @@ def test_litellm_compose_is_stateless_proxy() -> None:
     root_env = (ROOT / ".env.example").read_text()
     assert "LLM_BASE_URL=http://127.0.0.1:4000/v1" in root_env
     assert "LLM_MODEL=gemini-3.8-flash" in root_env
+
+
+def test_pyproject_has_optional_litellm_group() -> None:
+    pyproject = (ROOT / "pyproject.toml").read_text()
+    assert "[dependency-groups]" in pyproject
+    assert 'litellm = [' in pyproject or "litellm = [" in pyproject
+    assert "litellm[proxy]" in pyproject
+    mkdocs = (ROOT / "mkdocs.yml").read_text()
+    assert "litellm.md" in mkdocs
+    assert "LiteLLM:" in mkdocs or "- LiteLLM:" in mkdocs

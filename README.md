@@ -114,7 +114,9 @@ sdth-c2-server  ──LLM_BASE_URL──►  LiteLLM (:4000/v1)
 ```bash
 cp deploy/litellm/.env.example deploy/litellm/.env   # set GEMINI_API_KEY (tests) or OPENAI/ANTHROPIC
 cp .env.example .env                                 # C2 → LiteLLM mapping (LLM_MODEL=gemini-3.8-flash)
-docker compose -f deploy/litellm/docker-compose.yml up -d
+uv sync --group litellm
+set -a && source deploy/litellm/.env && set +a
+uv run --group litellm litellm --config deploy/litellm/config.yaml --port 4000
 ./scripts/litellm_interpret_smoke.sh                 # S2 → source == "llm" via gemini-3.8-flash
 # closed loop with interpreter overlay:
 INTERPRET=1 ./scripts/picture_to_tasking.sh
