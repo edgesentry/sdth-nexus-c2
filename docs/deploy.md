@@ -51,7 +51,35 @@ C2_BASE_URL=http://127.0.0.1:8787 ./scripts/picture_to_tasking.sh
 
 First request after sleep pays a 2–3s container cold start. Subsequent handshake hops use the warm singleton.
 
-## Deploy
+## Deploy (GitHub Actions → Cloudflare)
+
+**Preferred path:** merge to `main`. Workflow `.github/workflows/deploy-cloudflare.yml` builds the Dockerfile, runs `wrangler deploy`, then smokes `GET /health`.
+
+### One-time GitHub setup
+
+1. Create a Cloudflare API token with at least:
+   - **Workers Scripts: Edit** (or Edit Cloudflare Workers template)
+   - **Account → Cloudflare Containers: Edit** (`containers:write`)
+2. In the GitHub repo → **Settings → Secrets and variables → Actions**, add:
+
+| Secret | Value |
+|--------|--------|
+| `CLOUDFLARE_API_TOKEN` | Token from step 1 |
+| `CLOUDFLARE_ACCOUNT_ID` | Account ID (dashboard sidebar / `wrangler whoami`) |
+
+3. (Optional) Create GitHub Environment **`cloudflare`** (Settings → Environments) so deploys show a URL and can require reviewers.
+
+Manual re-run: Actions → **Deploy Cloudflare** → **Run workflow**.
+
+After the first successful deploy, Wrangler prints a workers.dev URL, for example:
+
+```text
+https://sdth-c2-core.<YOUR_SUBDOMAIN>.workers.dev
+```
+
+Record that as `C2_BASE_URL`. A token that only has `workers:write` (no `containers:write`) will fail image publish.
+
+### Manual / laptop deploy
 
 ```bash
 cd deploy/cloudflare
@@ -59,14 +87,6 @@ npm install
 npx wrangler types
 npx wrangler deploy
 ```
-
-Wrangler prints the workers.dev URL, for example:
-
-```text
-https://sdth-c2-core.<YOUR_SUBDOMAIN>.workers.dev
-```
-
-Record that URL as `C2_BASE_URL`. A token that only has `workers:write` (no `containers:write`) can upload the Worker but **cannot** publish the container image — add the Containers write scope, then re-run `npx wrangler deploy`.
 
 Optional LLM overlay (heuristic is the default if these are unset):
 

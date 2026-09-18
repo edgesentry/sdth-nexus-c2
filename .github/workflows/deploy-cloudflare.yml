@@ -1,0 +1,80 @@
+name: Deploy Cloudflare
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+      - "core/**"
+      - "Dockerfile"
+      - ".dockerignore"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "deploy/cloudflare/**"
+      - ".github/workflows/deploy-cloudflare.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-cloudflare
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy C2 Core
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment:
+      name: cloudflare
+      url: ${{ steps.deploy.outputs.deployment-url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: deploy/cloudflare/package-lock.json
+
+      - name: Install Wrangler deps
+        working-directory: deploy/cloudflare
+        run: npm ci
+
+      # Dockerfile image requires a Docker-compatible engine on the runner.
+      - name: Deploy Worker + Container
+        id: deploy
+        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4.0.0
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: deploy/cloudflare
+          packageManager: npm
+          command: deploy
+          # Pin to lockfile wrangler so local + CI stay aligned.
+          wranglerVersion: "4.134.0"
+
+      - name: Smoke /health
+        env:
+          C2_BASE_URL: ${{ steps.deploy.outputs.deployment-url }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${C2_BASE_URL}" ]]; then
+            echo "FAIL: wrangler-action did not set deployment-url" >&2
+            exit 1
+          fi
+          echo "C2_BASE_URL=${C2_BASE_URL}"
+          # Container cold start can take a few seconds after first rollout.
+          for _ in $(seq 1 60); do
+            if curl -sf "${C2_BASE_URL}/health" >/dev/null; then
+              curl -sf "${C2_BASE_URL}/health"
+              echo
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "FAIL: ${C2_BASE_URL}/health did not become ready" >&2
+          exit 1

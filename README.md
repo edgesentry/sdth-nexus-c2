@@ -48,15 +48,15 @@ Screen 1 (command laptop: curl / TUI; BattlePlan in Phase 3) + Screen 2 (recipie
 uv run sdth-c2-server   # http://127.0.0.1:8080  (pitch-day / CI fallback)
 ```
 
-Cloudflare Containers (optional public Core):
+Cloudflare Containers (optional public Core): merge to `main` runs [Deploy Cloudflare](.github/workflows/deploy-cloudflare.yml) (`wrangler deploy` + `/health` smoke). Requires repo secrets `CLOUDFLARE_API_TOKEN` (needs **`containers:write`**) and `CLOUDFLARE_ACCOUNT_ID` — see [`docs/deploy.md`](docs/deploy.md).
 
 ```bash
-cd deploy/cloudflare && npm install && npx wrangler deploy
 export C2_BASE_URL=https://sdth-c2-core.<YOUR_SUBDOMAIN>.workers.dev
 ./scripts/picture_to_tasking.sh
+# local front door:
+cd deploy/cloudflare && npm install && npx wrangler dev
+C2_BASE_URL=http://127.0.0.1:8787 ./scripts/picture_to_tasking.sh
 ```
-
-Local container front door: `npx wrangler dev` then `C2_BASE_URL=http://127.0.0.1:8787 ./scripts/picture_to_tasking.sh`. Full runbook: [`docs/deploy.md`](docs/deploy.md).
 
 Laptop I/O (Phase 2 — no UI):
 

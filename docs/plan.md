@@ -177,7 +177,7 @@ Optional public Core. **Same REST paths** as local `sdth-c2-server`. Ingress / A
 | Secrets | Wrangler Secrets (`LLM_API_KEY`, optional `LLM_BASE_URL`) | Never commit keys |
 | Fallback | Local `uv run sdth-c2-server` | Pitch-day / CI / zero-internet |
 
-Verify: `wrangler dev` + `C2_BASE_URL=http://127.0.0.1:8787 ./scripts/picture_to_tasking.sh`. Runbook: [Cloudflare Containers](deploy.md).
+Verify: `wrangler dev` + `C2_BASE_URL=http://127.0.0.1:8787 ./scripts/picture_to_tasking.sh`. Production: merge to `main` → GitHub Action **Deploy Cloudflare**. Runbook: [Cloudflare Containers](deploy.md).
 
 ---
 

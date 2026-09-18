@@ -61,6 +61,14 @@ def test_docs_and_mkdocs_cover_cloudflare_deploy() -> None:
     assert "npx wrangler deploy" in deploy
     assert 'getByName("demo")' in deploy or "getByName('demo')" in deploy
     assert "uv run sdth-c2-server" in deploy
+    assert "CLOUDFLARE_API_TOKEN" in deploy
+    assert "deploy-cloudflare.yml" in deploy
+    workflow = (ROOT / ".github" / "workflows" / "deploy-cloudflare.yml").read_text()
+    assert "branches: [main]" in workflow
+    assert "cloudflare/wrangler-action@" in workflow
+    assert "workingDirectory: deploy/cloudflare" in workflow
+    assert "command: deploy" in workflow
+    assert "containers:write" not in workflow  # documented in deploy.md, not in YAML secrets
 
 
 def _strip_jsonc(raw: str) -> str:
