@@ -97,6 +97,9 @@ curl -s "${AUTH[@]}" "$C2_BASE_URL/api/recipient/inbox?unit_id=$UNIT_ID" | jq .
 curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/recipient/ack" \
   -H 'content-type: application/json' \
   -d "{\"coa_id\":\"$COA_ID\",\"unit_id\":\"$UNIT_ID\",\"message\":\"screen2 ack\"}"
+
+# Optional stretch (#20): blink on this laptop/Pi (not on Cloudflare Core)
+# RASPI_ACK_BLINK=1 uv run python scripts/raspi_ack_blink.py
 ```
 
 ### 3. Either screen — audit seal
@@ -200,22 +203,25 @@ Cloudflare down → `uv run sdth-c2-server` (do not set `C2_BASE_URL` / `C2_API_
 2. **2D kinematics** — lat/lon toward waypoint after approve
 3. **RasPi GPIO** — optional secondary proof on Ack (issue #20)
 
-### Optional RasPi Ack blink (stretch)
+### Optional RasPi Ack blink (stretch, Screen 2 client)
 
-On the machine running Core (or a local Core on the recipient laptop), enable:
+GPIO runs on the **recipient laptop / RasPi**, not inside Core (Cloudflare has no GPIO).
 
 ```bash
+# After a successful Screen 2 Ack (curl or script) on the Pi-side machine:
 export RASPI_ACK_BLINK=1          # or RASPI_GPIO=1
 # export RASPI_LED_PIN=17         # BCM pin; default 17
-uv run sdth-c2-server
+uv run python scripts/raspi_ack_blink.py
+
+# Or one-shot demo (blinks locally after Core returns ACKED):
+RASPI_ACK_BLINK=1 ./scripts/picture_to_tasking.sh
 ```
 
-Then complete Screen 2 `POST /api/recipient/ack` as usual. Ack telemetry includes `raspi_gpio`:
+- hardware present → `blinked: true` (LED pulsed)
+- no `RPi.GPIO` / no Pi → `blinked: false`, `hardware: unavailable` (no-op; CI-safe)
+- unset env → no blink attempt
 
-- hardware present → `"blinked": true` (LED pulsed)
-- no `RPi.GPIO` / no Pi → `"blinked": false`, `"hardware": "unavailable"` (no-op; CI-safe)
-
-Unset the env to leave the Ack path unchanged. CLI Level-3 path: `./scripts/raspi-run.sh` (same adapter).
+CLI Level-3 dispatch path: `./scripts/raspi-run.sh` (same adapter).
 
 `ClearbotRestAdapter` remains a thin alias of `UsvRestAdapter` for older imports.
 

@@ -1,19 +1,16 @@
-"""Optional RasPi GPIO blink on recipient ack (issue #20)."""
+"""Optional RasPi GPIO blink on Screen 2 client after Ack (issue #20)."""
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
-from app import c2_server
 from app.adapters.raspi_hardware import (
     RaspiHardwareAdapter,
+    blink_on_ack_sync,
     maybe_blink_on_ack,
     raspi_ack_blink_enabled,
     resolve_led_pin,
 )
-from app.c2_server import app
-from fastapi.testclient import TestClient
+from core.coa import ActionTier, CourseOfAction
 
 
 class _FakeGPIO:
@@ -82,10 +79,19 @@ async def test_maybe_blink_on_ack_enabled_noop() -> None:
     assert tel["blinked"] is False
 
 
+def test_blink_on_ack_sync_disabled() -> None:
+    assert blink_on_ack_sync(enabled=False) is None
+
+
+def test_blink_on_ack_sync_noop() -> None:
+    adapter = RaspiHardwareAdapter(auto_init=False)
+    tel = blink_on_ack_sync(enabled=True, adapter=adapter)
+    assert tel is not None
+    assert tel["blinked"] is False
+
+
 @pytest.mark.asyncio
 async def test_dispatch_and_station_keep_with_mock_gpio() -> None:
-    from core.coa import ActionTier, CourseOfAction
-
     gpio = _FakeGPIO()
     adapter = RaspiHardwareAdapter(gpio=gpio)
     coa = CourseOfAction(
@@ -105,56 +111,3 @@ async def test_dispatch_and_station_keep_with_mock_gpio() -> None:
     keep = await adapter.emergency_station_keep()
     assert keep.status == "STATION_KEEP"
     assert (17, False) in gpio.outputs
-
-
-@pytest.fixture()
-def client(tmp_path: Path) -> TestClient:
-    audit = tmp_path / "gate.jsonl"
-    c2_server._runtime = c2_server.C2Runtime(audit_path=audit)
-    with TestClient(app) as c:
-        yield c
-
-
-def _approve_one(client: TestClient) -> str:
-    proposed = client.post(
-        "/api/gate/proposals",
-        json={"scenario_id": "S2", "unit_id": "CUE-NODE-01"},
-    )
-    assert proposed.status_code == 200
-    coa_id = proposed.json()["coa"]["coa_id"]
-    approved = client.post(
-        "/api/gate/approve",
-        json={"coa_id": coa_id, "decision": "y", "operator_id": "op-1"},
-    )
-    assert approved.status_code == 200
-    return coa_id
-
-
-def test_recipient_ack_without_raspi_env(client: TestClient) -> None:
-    coa_id = _approve_one(client)
-    ack = client.post(
-        "/api/recipient/ack",
-        json={"coa_id": coa_id, "unit_id": "CUE-NODE-01", "telemetry": {"mode": "cue"}},
-    )
-    assert ack.status_code == 200
-    tel = ack.json()["ack"]["telemetry"]
-    assert tel.get("mode") == "cue"
-    assert "raspi_gpio" not in tel
-
-
-def test_recipient_ack_raspi_env_noop(
-    client: TestClient,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("RASPI_ACK_BLINK", "1")
-    coa_id = _approve_one(client)
-    ack = client.post(
-        "/api/recipient/ack",
-        json={"coa_id": coa_id, "unit_id": "CUE-NODE-01", "telemetry": {"mode": "cue"}},
-    )
-    assert ack.status_code == 200
-    tel = ack.json()["ack"]["telemetry"]
-    assert tel["mode"] == "cue"
-    # No RPi.GPIO in CI/laptop → blinked=False, but key is present when opt-in.
-    assert tel["raspi_gpio"]["blinked"] is False
-    assert tel["raspi_gpio"]["hardware"] == "unavailable"

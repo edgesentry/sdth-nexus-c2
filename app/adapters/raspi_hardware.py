@@ -134,9 +134,10 @@ async def maybe_blink_on_ack(
     adapter: RaspiHardwareAdapter | None = None,
 ) -> dict[str, Any] | None:
     """
-    Optional GPIO blink for POST /api/recipient/ack (issue #20).
+    Client-side GPIO blink after a successful recipient Ack (issue #20).
 
-    Returns None when the feature is disabled; otherwise blink telemetry
+    Runs on the Screen 2 laptop / RasPi edge — never inside Cloudflare Core.
+    Returns None when disabled; otherwise blink telemetry
     (blinked=False when RPi.GPIO / hardware is absent).
     """
     if enabled is None:
@@ -145,3 +146,12 @@ async def maybe_blink_on_ack(
         return None
     hardware = adapter or RaspiHardwareAdapter()
     return await hardware.blink()
+
+
+def blink_on_ack_sync(
+    *,
+    enabled: bool | None = None,
+    adapter: RaspiHardwareAdapter | None = None,
+) -> dict[str, Any] | None:
+    """Sync wrapper for curl helpers / picture_to_tasking (Screen 2 client)."""
+    return asyncio.run(maybe_blink_on_ack(enabled=enabled, adapter=adapter))

@@ -224,7 +224,7 @@ Phase 2 explicitly delivers thin / demo-fidelity slices of the 4 core pitch pill
 - [x] Containerize C2 server for optional **Cloudflare Containers** deployment while retaining identical REST contract (issue #18).
 - [x] Establish hardened fallback to local `sdth-c2-server` for zero-internet venue reliability.
 - [x] **Document laptop I/O client steps:** Screen 1 (ingress + command) / Screen 2 (inbox + ack) cold-start runbook in [Demo Path A](demo.md#demo-path-a-two-laptop--two-terminal-io-issue-17); same paths for local Core and Cloudflare (§4.2) (issue #17).
-- [x] **(Optional Stretch) Laptop-side RasPi GPIO blink:** Opt-in `RASPI_ACK_BLINK=1` on Core; `POST /api/recipient/ack` pulses LED via `RaspiHardwareAdapter` when GPIO present, no-op otherwise (issue #20).
+- [x] **(Optional Stretch) Laptop-side RasPi GPIO blink:** Screen 2 client opt-in `RASPI_ACK_BLINK=1` after successful Ack (`scripts/raspi_ack_blink.py` / `picture_to_tasking`); Core (incl. Cloudflare) never touches GPIO; no-op without hardware (issue #20).
 
 
 ### Phase 3: BattlePlan UI Integration on Frozen REST Contract (Planned)

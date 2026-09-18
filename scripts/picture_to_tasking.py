@@ -24,6 +24,7 @@ Env:
   C2_API_TOKEN            Optional Bearer for Cloudflare Worker front door (#38)
   UNIT_ID                 Recipient unit (default CUE-NODE-01)
   SCENARIO                Scenario id (default S2)
+  RASPI_ACK_BLINK         Optional: blink GPIO on Screen 2 after Ack (#20)
 
 Optional live LLM (issue #32): pass --interpret so proposals use POST interpret:true.
 Core must be started with LLM_BASE_URL pointing at LiteLLM; otherwise heuristic is used.
@@ -39,6 +40,7 @@ import time
 from typing import Any
 
 import httpx
+from app.adapters.raspi_hardware import blink_on_ack_sync
 
 ROUNDTRIP_TARGET_S = 3.0
 DEFAULT_BASE = "http://127.0.0.1:8080"
@@ -197,6 +199,14 @@ def run_demo(
             return 1
         t_ack = time.perf_counter()
         print(f"  status=ACKED  audit_hash={ack_body.get('audit_hash')}")
+
+        # Screen 2 laptop / RasPi edge only — Core (incl. Cloudflare) never GPIO (#20).
+        gpio = blink_on_ack_sync()
+        if gpio is not None:
+            print(
+                f"  raspi_gpio  blinked={gpio.get('blinked')}  "
+                f"hardware={gpio.get('hardware')}"
+            )
 
         _print_hop(5, "Audit trail — assert Ack sealed")
         trail = client.get("/api/audit/trail")
