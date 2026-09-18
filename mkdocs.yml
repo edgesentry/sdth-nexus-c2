@@ -52,6 +52,7 @@ nav:
   - Architecture:
     - Closed loop: architecture/index.md
     - Topology: architecture/topology.md
+    - Space SAR & Sensor Pipeline: architecture/sar_pipeline.md
   - C2 REST API (frozen): api/rest.md
   - Cloudflare Containers: deploy.md
   - LiteLLM: litellm.md

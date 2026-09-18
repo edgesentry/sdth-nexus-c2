@@ -30,7 +30,7 @@ Operational (not frozen handshake): `GET /health`, `PUT /api/admin/audit/snapsho
 
 ## Handshake (curl)
 
-Two-laptop / two-terminal cold start (Screen 1 propose+approve, Screen 2 inbox+ack): [Demo Path A](../demo.md#demo-path-a-two-laptop--two-terminal-io-issue-17). Compact single-shell form:
+Two-laptop / two-terminal cold start (Screen 1 propose+approve, Screen 2 inbox+ack): [Demo Path A](../demo.md#demo-path-a-two-laptop-two-terminal-io-issue-17). Compact single-shell form:
 
 ```bash
 uv run sdth-c2-server

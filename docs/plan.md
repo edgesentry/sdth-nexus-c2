@@ -57,7 +57,7 @@ Synthetic multi-vendor observations without shared track IDs:
 
 | Modality | Used in | Characteristics | Role in Contradiction |
 |----------|---------|-----------------|-----------------------|
-| **Space-based SAR Anomaly Ingress** | **S3** | Macro scene-difference anomaly evidence (all-weather radar satellite diff over sea lanes) | Flags unannounced vessel clusters or dark ships (AIS-silent) where optical sensors are blind |
+| **Space-based SAR Anomaly Ingress** | **S3** | Macro scene-difference anomaly evidence (all-weather radar satellite diff over sea lanes, integrated via in-house Sentinel-1 SAR × AIS correlation pipeline or external cross-track feeds; see [SAR Pipeline](architecture/sar_pipeline.md)) | Flags unannounced vessel clusters or dark ships (AIS-silent) where optical sensors are blind |
 | **Social Media OSINT / Text Intel** | **S2** | Unstructured text summary (Instagram/Telegram/Recon) | Exaggerated social reports ("20 drones incoming") filtered down to 3 Shahed-136 drones heading to Objective Bravo at T+4 min |
 | **Coastal / Gap-Filler Radar** | S1–S3 | 2D/3D kinematic contacts | Disagrees in count (sees 1 contact) or bearing (+1,200m north) |
 | **EO / Optical Camera** | S1, S2 | Visual bearings, YOLO bounding box | Obscured blur, low confidence (0.42), unable to verify independently |
@@ -110,7 +110,7 @@ build_events()  →  SpatialEntityGraph
 |----|-------|-------------|-------------------|--------------------|
 | **S1** | **Sea Approach — Adversarial AIS Spoof** | Slide 01, 06 | Manipulable stationary AIS vs ~20 kt radar/EO approach (~850m mismatch) | Mismatch ≥500m → `ISR_IDENTIFY_CONTACT` → Generic Coastal ISR USV |
 | **S2** | **Air Corridor — Shahed Swarm Contradiction** | **Slide 04 (Hero)** | **Civilian social media / recon reports 3 drones; radar sees 1 contact 1,200m north; EO/IR shows blur (0.42 conf); RF silent; no ADS-B** | Count & bearing contradiction → Amber Alert → `CUE_AND_IDENTIFY` (Non-kinetic investigation) |
-| **S3** | **Shipping Lane & Coastal Anomaly — SAR Difference vs AIS** | Slide 02, 06 | Space-based SAR scene difference flags unannounced cluster while coastal AIS is silent/thin (<0.40) | Mismatch / Dark Cluster → `APPROACH_PATROL` → Tactical patrol & USV interceptor dispatch |
+| **S3** | **Shipping Lane & Coastal Anomaly — SAR Difference vs AIS** | Slide 02, 06 | Space-based SAR scene difference flags unannounced cluster with OBB physical metrology (length, beam, heading) and radar image chip while coastal AIS is silent/thin (<0.40) | Mismatch / Dark Cluster → `APPROACH_PATROL` → Tactical patrol & USV interceptor dispatch (visual review via radar chip popup) |
 
 ---
 
@@ -219,16 +219,18 @@ Phase 2 explicitly delivers thin / demo-fidelity slices of the 4 core pitch pill
 - [x] **Pitch-2 Probabilistic interpreter:** `app/llm_interpreter.py` + `POST /api/interpret` — LLM (env) or heuristic fallback → hypotheses + candidate COA; Core gate still disposes (issue #22).
 - [x] **Pitch-2 follow-on LiteLLM live path:** Stand up LiteLLM as OpenAI-compatible front door; point `LLM_BASE_URL` at it; smoke S2 → `/api/interpret` with `source: "llm"`; CI stays LLM-free via heuristic fallback (issue #32). MCP / live upstream SAR API remain out of Phase 2 must-haves.
 - [x] **Pitch-1 Multimodal demo harness & SAR CandidateEvent adapter:** Explicit modality-tagged ingress harness + assumed `CandidateEvent` (v1.3.0 schema) adapter (`app/adapters/sar_candidate_event.py`), backed by `tests/fixtures/candidate_event_assumed.json` for non-blocking stand-alone execution (see [REST API](api/rest.md#upstream-ingress-contract-assumed-candidateevent-specification)) (issue #25). Priority: fixture-first S3 (macro SAR baseline vs AIS) — not a realtime satellite stream.
+- [x] **In-house SAR pipeline & GLINT fail-safe integration:** Upstream integration with `Sentinel-Imagery-Analysis` (Copernicus Sentinel-1 SAR × AIS correlation engine by Swee Gaeng Tan), generating authentic Singapore Strait dark vessel fixtures and providing zero-risk operational redundancy against external GLINT API downtime (see [SAR Pipeline Architecture](architecture/sar_pipeline.md)).
 - [x] **Optional open-feed ingress:** Demo-grade open AIS (data.gov.sg-shaped) + open air fixtures via `app/adapters/open_feed.py`, CLI `--open-feed` / `OPEN_FEED`, and `POST /api/ingress/open-feed`; synthetic S1–S3 remain primary (issue #16). Live coastal harness remains Phase 5.
 - [x] Validate end-to-end backend closed loop via curl / automated scripts without frontend dependency (`scripts/picture_to_tasking.sh`).
 - [x] Containerize C2 server for optional **Cloudflare Containers** deployment while retaining identical REST contract (issue #18).
 - [x] Establish hardened fallback to local `sdth-c2-server` for zero-internet venue reliability.
-- [x] **Document laptop I/O client steps:** Screen 1 (ingress + command) / Screen 2 (inbox + ack) cold-start runbook in [Demo Path A](demo.md#demo-path-a-two-laptop--two-terminal-io-issue-17); same paths for local Core and Cloudflare (§4.2) (issue #17).
+- [x] **Document laptop I/O client steps:** Screen 1 (ingress + command) / Screen 2 (inbox + ack) cold-start runbook in [Demo Path A](demo.md#demo-path-a-two-laptop-two-terminal-io-issue-17); same paths for local Core and Cloudflare (§4.2) (issue #17).
 - [x] **(Optional Stretch) Laptop-side RasPi GPIO blink:** Screen 2 client opt-in `RASPI_ACK_BLINK=1` after successful Ack (`scripts/raspi_ack_blink.py` / `picture_to_tasking`); Core (incl. Cloudflare) never touches GPIO; no-op without hardware (issue #20).
 
 
 ### Phase 3: BattlePlan UI Integration on Frozen REST Contract (Planned)
 - [ ] Integrate the Next.js BattlePlan UI with `app/c2_server.py` (two-screen software handshake).
+- [ ] Incorporate radar image chip preview modal in Screen 1 for Amber Alert dark vessel tracks (`evidence_image_uri`).
 - [x] Wire **demo-grade** open feeds (`data.gov.sg` / open air traffic) as optional ingress — synthetic S1–S3 remain the primary story (done in Phase 2 / issue #16).
 - [x] (Optional Stretch) Laptop-side RasPi GPIO blink as secondary proof — not required for pitch (done in Phase 2 / issue #20).
 
@@ -242,11 +244,11 @@ Maps to the 9-month NUS Defence Tech Venture Lab bridge. Owns the pitch points P
 
 | Pitch point | Phase 5 deliverable |
 |-------------|---------------------|
-| **1. Multimodal integration** | Live coastal AIS + optical (+ RF when available); multi-vendor association under real latency / spoof pressure |
+| **1. Multimodal integration** | Multi-constellation SAR (Sentinel-1, ICEYE, Capella) + live coastal AIS + 3D radar + EO/IR slew-to-cue; GPU-accelerated Rotated Object Detection (Rotated DETR / YOLOv8-OBB); multi-vendor IMM-PDAF association under latency/spoof pressure (see [Target Production Architecture](architecture/sar_pipeline.md#3-target-production-sovereign-architecture)) |
 | **2. Probabilistic interpretation** | App-layer LLM + CV pipeline: text intel extraction, YOLO/EO blur, hypothesis COAs — still gated by Core |
 | **3. Deterministic gate** | Air-gapped Core hardening; 1,000+ track swarm stress; dual-key Tier-2; sub-50ms under load |
 | **4. Picture→Tasking** | Controlled-water USV / Clearbot field trial; production recipient adapters; optional RasPi forward outpost as primary edge Ack |
-| **5. Sovereign interlock** | DSTA/SAF C4 evaluation sandbox add-on; OCSF + stronger crypto seal (e.g. Ed25519); Agent Governance & Safety Interlock Evaluation SOW |
+| **5. Sovereign interlock** | DSTA/SAF C4 evaluation sandbox add-on; OCSF + stronger crypto seal (e.g. Ed25519); Agent Governance & Safety Interlock Evaluation SOW; tactical data link integration (Link 16, Link 22, STANAG 4586) |
 
 Checklist:
 - [ ] **Probabilistic App Layer:** Local LLM / CV ingestion → candidate COAs; Core remains zero-hallucination gate.

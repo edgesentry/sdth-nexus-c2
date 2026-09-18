@@ -15,7 +15,7 @@ Laptop Screen 1: Command Cockpit             NexusGate C2 Core (Local / Cloudfla
 | **C2 Core** | Local *or* Cloudflare | `app/c2_server.py` — ontology graph, gate, token sealing, inbox, OCSF audit |
 | **Screen 2 (Recipient)** | Laptop | Recipient node polling inbox (`/api/recipient/inbox`) and submitting signed Ack (`/api/recipient/ack`); optional RasPi GPIO blink on the laptop after Ack (#20) |
 
-Phase 2 cold-start curl rehearsal (two laptops / two terminals, no UI): [Demo Path A](../demo.md#demo-path-a-two-laptop--two-terminal-io-issue-17). Plan context: [§4.2 Cloudflare Containers](../plan.md#42-cloudflare-containers-phase-2).
+Phase 2 cold-start curl rehearsal (two laptops / two terminals, no UI): [Demo Path A](../demo.md#demo-path-a-two-laptop-two-terminal-io-issue-17). Plan context: [§4.2 Cloudflare Containers](../plan.md#42-cloudflare-containers-phase-2).
 
 ## Cloudflare (Phase 2)
 
