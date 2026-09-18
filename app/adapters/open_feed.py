@@ -148,7 +148,7 @@ def open_air_to_events(payload: dict[str, Any]) -> list[dict[str, Any]]:
                 "entity_id": callsign,
                 "latitude": lat,
                 "longitude": lon,
-                "speed_kt": float(speed),
+                "speed_kt": float(speed if speed is not None else 0.0),
                 "heading_deg": raw.get("heading_deg"),
                 "confidence": float(raw.get("confidence", 0.65)),
                 "observed_at": raw.get("timestamp") or payload.get("retrieved_at"),
