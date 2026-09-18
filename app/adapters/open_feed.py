@@ -3,7 +3,7 @@
 Normalizes open AIS (data.gov.sg-shaped) and open air (ADS-B-style) snapshots
 into southbound sensor dicts, then ``normalize_sensor_event``.
 
-Live coastal polling is Phase 5. CI and default demos stay on synthetic S1–S3;
+Live coastal polling is Phase 5. CI and default demos stay on synthetic S1-S3;
 opt in via CLI ``--open-feed``, env ``OPEN_FEED``, or ``POST /api/ingress/open-feed``.
 """
 
@@ -14,8 +14,9 @@ import os
 from pathlib import Path
 from typing import Any, Literal
 
-from app.adapters.southbound_sensor import normalize_sensor_event
 from core.schema import Observation
+
+from app.adapters.southbound_sensor import normalize_sensor_event
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_AIS_FIXTURE = ROOT / "tests" / "fixtures" / "open_ais_datagovsg.json"

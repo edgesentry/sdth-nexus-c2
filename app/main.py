@@ -61,7 +61,7 @@ async def run_c2_cycle(
         {"count": len(observations), "scenario": scenario.id},
     )
 
-    # Optional open AIS / open air fixtures (issue #16); synthetic S1–S3 stay primary.
+    # Optional open AIS / open air fixtures (issue #16); synthetic S1-S3 stay primary.
     extra = observations_from_open_feeds(open_feeds)
     if extra:
         graph.ingest_many(extra)

@@ -7,8 +7,8 @@ from pathlib import Path
 import pytest
 from app import c2_server
 from app.adapters.open_feed import (
-    load_open_ais_fixture,
     load_open_air_fixture,
+    load_open_ais_fixture,
     open_feed_to_observations,
     open_feeds_from_env,
     parse_open_feed_selection,
