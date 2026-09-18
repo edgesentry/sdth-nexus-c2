@@ -14,4 +14,3 @@ __all__ = [
     "raspi_ack_blink_enabled",
     "resolve_effector_base_url",
 ]
-

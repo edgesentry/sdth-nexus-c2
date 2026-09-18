@@ -103,7 +103,9 @@ def run_smoke(
         try:
             resp.raise_for_status()
         except httpx.HTTPStatusError as exc:
-            print(f"FAIL: HTTP {exc.response.status_code}: {exc.response.text[:400]}", file=sys.stderr)
+            print(
+                f"FAIL: HTTP {exc.response.status_code}: {exc.response.text[:400]}", file=sys.stderr
+            )
             return 1
 
         body = resp.json()

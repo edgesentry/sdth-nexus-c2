@@ -203,10 +203,7 @@ def run_demo(
         # Screen 2 laptop / RasPi edge only — Core (incl. Cloudflare) never GPIO (#20).
         gpio = blink_on_ack_sync()
         if gpio is not None:
-            print(
-                f"  raspi_gpio  blinked={gpio.get('blinked')}  "
-                f"hardware={gpio.get('hardware')}"
-            )
+            print(f"  raspi_gpio  blinked={gpio.get('blinked')}  hardware={gpio.get('hardware')}")
 
         _print_hop(5, "Audit trail — assert Ack sealed")
         trail = client.get("/api/audit/trail")
