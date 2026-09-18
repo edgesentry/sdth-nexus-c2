@@ -2,7 +2,7 @@
 
 > Canonical planning source for this repo (MkDocs / GitHub Pages).
 
-**Status:** Phase 2 venue app complete (backend closed loop & Cloudflare Core; Sentinel ingress #47) · Phase 3 BattlePlan UI next · Phase 5 = post-hackathon sovereign PoC · **2026-09-18 Updated**  
+**Status:** Phase 2 complete · Phase 3 BattlePlan UI in progress (`ui/battleplan/`) · Phase 5 = post-hackathon sovereign PoC · **2026-09-19 Updated**  
 **Challenge:** SDTH 2026 **PS 04 — One Picture, Many Eyes** (From Picture to Tasking)  
 **Product face:** Project NexusGate (core gate) + venue Command and Control (C2) app  
 **Target Reviewers:** DSTA, MINDEF/SAF C4I, EDTH, NUS Defense Tech Venture Lab  
@@ -229,9 +229,9 @@ Phase 2 explicitly delivers thin / demo-fidelity slices of the 4 core pitch pill
 - [x] **Keep local CI green:** unit / integration / `scripts/benchmark.py` / `scripts/stream_events.py --fast` covered in GitHub Actions (issue #19).
 
 
-### Phase 3: BattlePlan UI Integration on Frozen REST Contract (Planned)
-- [ ] Integrate the Next.js BattlePlan UI with `app/c2_server.py` (two-screen software handshake).
-- [ ] Incorporate radar image chip preview modal in Screen 1 for Amber Alert dark vessel tracks (`evidence_image_uri`).
+### Phase 3: BattlePlan UI Integration on Frozen REST Contract (Active)
+- [x] Integrate the Next.js BattlePlan UI with `app/c2_server.py` (two-screen software handshake) — `ui/battleplan/` Screen 1 `/command` + Screen 2 `/recipient`; local CORS + Cloudflare response CORS.
+- [x] Incorporate radar / SAR image chip preview modal in Screen 1 for Amber Alert dark vessel tracks (`evidence_image_uri`) via Core `/static/fixtures/` + modal.
 - [x] Wire **demo-grade** open feeds (`data.gov.sg` / open air traffic) as optional ingress — synthetic S1–S3 remain the primary story (done in Phase 2 / issue #16).
 - [x] (Optional Stretch) Laptop-side RasPi GPIO blink as secondary proof — not required for pitch (done in Phase 2 / issue #20).
 

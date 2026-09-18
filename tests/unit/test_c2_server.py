@@ -132,6 +132,31 @@ def test_health_ok(client: TestClient) -> None:
     assert res.json() == {"status": "ok"}
 
 
+def test_cors_allows_battleplan_origin(client: TestClient) -> None:
+    origin = "http://localhost:3000"
+    preflight = client.options(
+        "/api/ontology/state",
+        headers={
+            "Origin": origin,
+            "Access-Control-Request-Method": "GET",
+            "Access-Control-Request-Headers": "content-type",
+        },
+    )
+    assert preflight.status_code in (200, 204)
+    assert preflight.headers.get("access-control-allow-origin") == origin
+
+    state = client.get("/api/ontology/state", headers={"Origin": origin})
+    assert state.status_code == 200
+    assert state.headers.get("access-control-allow-origin") == origin
+
+
+def test_static_fixture_sentinel_chip(client: TestClient) -> None:
+    res = client.get("/static/fixtures/sentinel_chip.jpg")
+    assert res.status_code == 200
+    assert res.headers["content-type"].startswith("image/")
+    assert len(res.content) > 100
+
+
 def test_admin_audit_snapshot_hydrates_chain(client: TestClient) -> None:
     proposed = client.post(
         "/api/gate/proposals",

@@ -177,18 +177,34 @@ export function authorizeRequest(request: Request, env: EnvWithAuth): Response |
   return null;
 }
 
+function corsHeaders(request: Request): HeadersInit {
+  return {
+    "access-control-allow-origin": request.headers.get("Origin") ?? "*",
+    "access-control-allow-methods": "GET, POST, PUT, OPTIONS",
+    "access-control-allow-headers": "Authorization, Content-Type",
+    "access-control-max-age": "86400",
+  };
+}
+
+function withCors(request: Request, response: Response): Response {
+  const headers = new Headers(response.headers);
+  for (const [key, value] of Object.entries(corsHeaders(request))) {
+    headers.set(key, value);
+  }
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 function corsPreflight(request: Request): Response | null {
   if (request.method.toUpperCase() !== "OPTIONS") {
     return null;
   }
   return new Response(null, {
     status: 204,
-    headers: {
-      "access-control-allow-origin": request.headers.get("Origin") ?? "*",
-      "access-control-allow-methods": "GET, POST, PUT, OPTIONS",
-      "access-control-allow-headers": "Authorization, Content-Type",
-      "access-control-max-age": "86400",
-    },
+    headers: corsHeaders(request),
   });
 }
 
@@ -200,9 +216,10 @@ export default {
     }
     const denied = authorizeRequest(request, env as EnvWithAuth);
     if (denied) {
-      return denied;
+      return withCors(request, denied);
     }
     const container = env.C2_CONTAINER.getByName("demo");
-    return container.fetch(request);
+    const upstream = await container.fetch(request);
+    return withCors(request, upstream);
   },
 } satisfies ExportedHandler<Env>;
