@@ -14,15 +14,33 @@ class AuditLogger:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._prev = "0" * 64
-        if self.path.exists():
-            last = None
-            with self.path.open(encoding="utf-8") as fh:
-                for line in fh:
-                    line = line.strip()
-                    if line:
-                        last = json.loads(line)
-            if last and "hash" in last:
-                self._prev = last["hash"]
+        self._rewind_from_disk()
+
+    def records(self) -> list[dict[str, Any]]:
+        out: list[dict[str, Any]] = []
+        if not self.path.exists():
+            return out
+        with self.path.open(encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if line:
+                    loaded = json.loads(line)
+                    if isinstance(loaded, dict):
+                        out.append(loaded)
+        return out
+
+    def replace_records(self, records: list[dict[str, Any]]) -> None:
+        """Overwrite the jsonl file (used to hydrate after ephemeral container disk reset)."""
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with self.path.open("w", encoding="utf-8") as fh:
+            for rec in records:
+                fh.write(json.dumps(rec, default=str) + "\n")
+        self._rewind_from_disk()
+
+    def _rewind_from_disk(self) -> None:
+        recs = self.records()
+        last = recs[-1] if recs else None
+        self._prev = str(last["hash"]) if last and "hash" in last else "0" * 64
 
     def append(self, event_name: str, severity: str, data: dict[str, Any]) -> dict[str, Any]:
         record = {

@@ -6,7 +6,7 @@
 |------|--------|
 | Server | `app/c2_server.py` |
 | CLI | `uv run sdth-c2-server` |
-| Default base | `http://127.0.0.1:8080` |
+| Default base | `http://127.0.0.1:8080` (local) or `C2_BASE_URL` (Cloudflare HTTPS) |
 | Proof | `tests/unit/test_c2_server.py`, `tests/unit/test_c2_rest_contract.py`, `tests/integration/test_s2_c2_e2e.py` |
 
 Screen 1 = command · Screen 2 = recipient. No BattlePlan required for Phase 2 demos.
@@ -24,6 +24,8 @@ Screen 1 = command · Screen 2 = recipient. No BattlePlan required for Phase 2 d
 | `POST` | `/api/recipient/ack` | Recipient ack sealed to audit chain |
 | `GET` | `/api/audit/trail` | OCSF-shaped hash-chain records |
 | `POST` | `/api/admin/reset` | Clear in-memory runtime (tests / demos) |
+
+Operational (not frozen handshake): `GET /health`, `PUT /api/admin/audit/snapshot` — see [Cloudflare Containers](../deploy.md).
 
 ## Handshake (curl)
 
@@ -474,6 +476,36 @@ Clears in-memory ontology, findings, proposals, inbox, and ack sets. **Does not*
 
 ---
 
+## `GET /health`
+
+Operational readiness (Docker smoke, `wrangler dev`, laptop scripts). **Not** part of the frozen Screen 1/2 handshake.
+
+**Response `200`**
+
+```json
+{ "status": "ok" }
+```
+
+---
+
+## `PUT /api/admin/audit/snapshot`
+
+Replace on-disk OCSF jsonl. Used by the Cloudflare Worker to hydrate the hash chain after ephemeral container disk reset. **Does not** mint `DecisionToken`s.
+
+**Request**
+
+```json
+{ "records": [ { "class_name": "Security Finding", "hash": "…", "prev_hash": "…" } ] }
+```
+
+**Response `200`**
+
+```json
+{ "status": "restored", "count": 1 }
+```
+
+---
+
 ## Shared types (stable fields)
 
 ### `CourseOfAction` (`coa`)
@@ -569,7 +601,9 @@ Clears in-memory ontology, findings, proposals, inbox, and ack sets. **Does not*
 ## Client binding (Phase 3)
 
 ```bash
-export C2_BASE_URL=http://127.0.0.1:8080   # or Cloudflare HTTPS later
+export C2_BASE_URL=http://127.0.0.1:8080
+# or Cloudflare:
+# export C2_BASE_URL=https://sdth-c2-core.<YOUR_SUBDOMAIN>.workers.dev
 # BASE_URL is accepted by scripts/picture_to_tasking.py
 ```
 

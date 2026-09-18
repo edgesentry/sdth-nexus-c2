@@ -163,6 +163,22 @@ The unified server provides **8** endpoints (5 core operational + 1 probabilisti
 8. `POST /api/admin/reset`
    - Clears in-memory runtime state for automated tests and repeatable demo rehearsals without wiping disk audit files.
 
+Operational (not frozen Screen 1/2): `GET /health` (readiness) and `PUT /api/admin/audit/snapshot` (hydrate OCSF jsonl after ephemeral disk reset).
+
+### 4.2 Cloudflare Containers (Phase 2)
+
+Optional public Core. **Same REST paths** as local `sdth-c2-server`. Ingress / Ack stay on laptops.
+
+| Layer | Choice | Why |
+|-------|--------|-----|
+| Runtime | Cloudflare Containers + Worker front door | Keep FastAPI / `uv` (no Python Workers rewrite) |
+| Routing | Worker → `getByName("demo")` singleton | Shared in-memory `C2Runtime` for the venue demo |
+| Persistence | Durable Object SQLite snapshot of OCSF jsonl | Container disk is ephemeral |
+| Secrets | Wrangler Secrets (`LLM_API_KEY`, optional `LLM_BASE_URL`) | Never commit keys |
+| Fallback | Local `uv run sdth-c2-server` | Pitch-day / CI / zero-internet |
+
+Verify: `wrangler dev` + `C2_BASE_URL=http://127.0.0.1:8787 ./scripts/picture_to_tasking.sh`. Runbook: [Cloudflare Containers](deploy.md).
+
 ---
 
 ## 5. Quantitative Operational Benchmarks (Slide 11 Proof)
@@ -204,8 +220,8 @@ Phase 2 explicitly delivers thin / demo-fidelity slices of the 4 core pitch pill
 - [x] **Pitch-2 follow-on LiteLLM live path:** Stand up LiteLLM as OpenAI-compatible front door; point `LLM_BASE_URL` at it; smoke S2 → `/api/interpret` with `source: "llm"`; CI stays LLM-free via heuristic fallback (issue #32). MCP / live upstream SAR API remain out of Phase 2 must-haves.
 - [x] **Pitch-1 Multimodal demo harness & SAR CandidateEvent adapter:** Explicit modality-tagged ingress harness + assumed `CandidateEvent` (v1.3.0 schema) adapter (`app/adapters/sar_candidate_event.py`), backed by `tests/fixtures/candidate_event_assumed.json` for non-blocking stand-alone execution (see [REST API](api/rest.md#upstream-ingress-contract-assumed-candidateevent-specification)) (issue #25, #16). Priority: fixture-first S3 (macro SAR baseline vs AIS) — not a realtime satellite stream.
 - [x] Validate end-to-end backend closed loop via curl / automated scripts without frontend dependency (`scripts/picture_to_tasking.sh`).
-- [ ] Containerize C2 server for optional **Cloudflare Containers** deployment while retaining identical REST contract (issue #18).
-- [ ] Establish hardened fallback to local `sdth-c2-server` for zero-internet venue reliability.
+- [x] Containerize C2 server for optional **Cloudflare Containers** deployment while retaining identical REST contract (issue #18).
+- [x] Establish hardened fallback to local `sdth-c2-server` for zero-internet venue reliability.
 
 ### Phase 3: BattlePlan UI Integration on Frozen REST Contract (Planned)
 - [ ] Integrate the Next.js BattlePlan UI with `app/c2_server.py` (two-screen software handshake).

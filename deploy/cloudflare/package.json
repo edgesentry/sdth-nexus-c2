@@ -1,0 +1,15 @@
+{
+  "name": "sdth-c2-core",
+  "private": true,
+  "description": "Worker front door for NexusGate C2 on Cloudflare Containers (issue #18).",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "types": "wrangler types",
+    "check": "wrangler types --check"
+  },
+  "devDependencies": {
+    "@cloudflare/containers": "^0.0.31",
+    "wrangler": "^4.37.1"
+  }
+}

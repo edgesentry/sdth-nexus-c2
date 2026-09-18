@@ -124,3 +124,29 @@ def test_c2_geofence_rejects_proposal(client: TestClient) -> None:
     assert bad.status_code == 200
     assert bad.json()["status"] == "REJECTED_FAST"
     assert "Geofence" in (bad.json().get("reason") or "")
+
+
+def test_health_ok(client: TestClient) -> None:
+    res = client.get("/health")
+    assert res.status_code == 200
+    assert res.json() == {"status": "ok"}
+
+
+def test_admin_audit_snapshot_hydrates_chain(client: TestClient) -> None:
+    proposed = client.post(
+        "/api/gate/proposals",
+        json={"scenario_id": "S2", "unit_id": "CUE-NODE-01"},
+    )
+    assert proposed.status_code == 200
+    snapshot = client.get("/api/audit/trail").json()["records"]
+    assert snapshot
+
+    wiped = client.put("/api/admin/audit/snapshot", json={"records": []})
+    assert wiped.status_code == 200
+    assert wiped.json() == {"status": "restored", "count": 0}
+    assert client.get("/api/audit/trail").json()["count"] == 0
+
+    restored = client.put("/api/admin/audit/snapshot", json={"records": snapshot})
+    assert restored.status_code == 200
+    assert restored.json()["count"] == len(snapshot)
+    assert client.get("/api/audit/trail").json()["records"] == snapshot
