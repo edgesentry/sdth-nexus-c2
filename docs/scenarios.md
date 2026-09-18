@@ -19,9 +19,11 @@ App-layer scenarios under `app/scenarios/`. Each run builds synthetic multi-vend
 | Social / recon text | S2 | Exaggerated count claims |
 | Gap-filler radar | S1–S3 | Count / bearing disagree |
 | EO / optical | S1, S2 | Low-confidence blur |
-| AIS / open AIS | S1, S3 | Spoof or density break |
+| AIS / open AIS | S1, S3 (+ optional open feed) | Spoof, density break, or demo-grade data.gov.sg-shaped fixture |
 | RF | S1, S2 | Silent / emitter cue |
-| ADS-B | S2 | Empty sector |
+| ADS-B | S2 (+ optional open air) | Empty sector, or opt-in open air fixture |
+
+Optional open feeds (issue #16): `OPEN_FEED=ais,air` / `--open-feed` / `POST /api/ingress/open-feed` — additive only; does not replace S1–S3.
 
 ## Temporal streamer
 
