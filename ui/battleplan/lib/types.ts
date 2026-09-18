@@ -95,7 +95,8 @@ export type InboxItem = {
 export type InboxResponse = {
   unit_id: string;
   count: number;
-  items: InboxItem[];
+  /** Frozen contract key (docs/api/rest.md) — not `items`. */
+  taskings: InboxItem[];
 };
 
 export type AckResponse = {

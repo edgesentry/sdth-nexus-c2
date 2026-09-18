@@ -18,7 +18,7 @@ export default function RecipientPage() {
 
   const refresh = useCallback(async () => {
     const [box, audit] = await Promise.all([inbox(unitId), auditTrail()]);
-    setItems(box.items);
+    setItems(box.taskings ?? []);
     setTrail(audit);
   }, [unitId]);
 
