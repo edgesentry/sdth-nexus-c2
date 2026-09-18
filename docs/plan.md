@@ -2,7 +2,7 @@
 
 > Canonical planning source for this repo (MkDocs / GitHub Pages).
 
-**Status:** Phase 2 venue app (Backend closed loop & Cloudflare Core) · Phase 5 = post-hackathon sovereign PoC · **2026-09-18 Updated**  
+**Status:** Phase 2 venue app complete (backend closed loop & Cloudflare Core) · Phase 3 BattlePlan UI next · Phase 5 = post-hackathon sovereign PoC · **2026-09-18 Updated**  
 **Challenge:** SDTH 2026 **PS 04 — One Picture, Many Eyes** (From Picture to Tasking)  
 **Product face:** Project NexusGate (core gate) + venue Command and Control (C2) app  
 **Target Reviewers:** DSTA, MINDEF/SAF C4I, EDTH, NUS Defense Tech Venture Lab  
@@ -210,7 +210,7 @@ The pitch deck commits to 4 rigorous engineering metrics:
 - [x] **19-Event Temporal Streamer:** Implement `scripts/stream_events.py` for T-60s to T-00s event playback.
 - [x] **Automated Benchmark Suite:** Implement `scripts/benchmark.py` verifying Slide 11 performance metrics.
 
-### Phase 2: Backend Closed Loop & Cloudflare Core Deployment (Active Focus)
+### Phase 2: Backend Closed Loop & Cloudflare Core Deployment (Completed)
 
 Phase 2 explicitly delivers thin / demo-fidelity slices of the 4 core pitch pillars (backend closed loop without UI dependencies), while production CV, live field hardware, and full swarm loads remain Phase 5:
 
@@ -225,6 +225,7 @@ Phase 2 explicitly delivers thin / demo-fidelity slices of the 4 core pitch pill
 - [x] Establish hardened fallback to local `sdth-c2-server` for zero-internet venue reliability.
 - [x] **Document laptop I/O client steps:** Screen 1 (ingress + command) / Screen 2 (inbox + ack) cold-start runbook in [Demo Path A](demo.md#demo-path-a-two-laptop--two-terminal-io-issue-17); same paths for local Core and Cloudflare (§4.2) (issue #17).
 - [x] **(Optional Stretch) Laptop-side RasPi GPIO blink:** Screen 2 client opt-in `RASPI_ACK_BLINK=1` after successful Ack (`scripts/raspi_ack_blink.py` / `picture_to_tasking`); Core (incl. Cloudflare) never touches GPIO; no-op without hardware (issue #20).
+- [x] **Keep local CI green:** unit / integration / `scripts/benchmark.py` / `scripts/stream_events.py --fast` covered in GitHub Actions (issue #19).
 
 
 ### Phase 3: BattlePlan UI Integration on Frozen REST Contract (Planned)
