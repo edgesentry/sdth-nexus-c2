@@ -4,8 +4,8 @@
 |-------|--------|--------|
 | **0** | Core foundations (graph, interlock, gate, audit) | Done |
 | **1** | S1–S3, C2 REST, streamer, benchmarks | Done |
-| **2** | Backend closed loop (no UI); Cloudflare Core; thin pitch cores | Done (#47 Sentinel SAR×AIS) |
-| **3** | BattlePlan UI on frozen REST contract | Planned |
+| **2** | Backend closed loop (no UI); Cloudflare Core; thin pitch cores | Done (#47 Sentinel SAR×AIS); epic #21 closed |
+| **3** | BattlePlan UI on frozen REST contract | Active (`ui/battleplan/`) |
 | **4** | Pitch-day polish + fallback | Planned |
 | **5** | Post-hackathon sovereign PoC (live sensors, field USV) | Planned |
 

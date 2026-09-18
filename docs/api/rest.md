@@ -26,7 +26,9 @@ Screen 1 = command · Screen 2 = recipient. No BattlePlan required for Phase 2 d
 | `GET` | `/api/audit/trail` | OCSF-shaped hash-chain records |
 | `POST` | `/api/admin/reset` | Clear in-memory runtime (tests / demos) |
 
-Operational (not frozen handshake): `GET /health`, `PUT /api/admin/audit/snapshot` — see [Cloudflare Containers](../deploy.md).
+Operational (not frozen handshake): `GET /health`, `PUT /api/admin/audit/snapshot`, `GET /static/fixtures/*` (demo evidence chips for BattlePlan) — see [Cloudflare Containers](../deploy.md) · [Demo Path F](../demo.md#demo-path-f-battleplan-ui-phase-3).
+
+Local Core enables CORS for BattlePlan (`C2_CORS_ORIGINS`, default `localhost:3000`). Cloudflare Worker attaches CORS headers on all responses (including Bearer `401`).
 
 ## Handshake (curl)
 

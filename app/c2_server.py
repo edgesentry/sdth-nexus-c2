@@ -16,6 +16,8 @@ from core.ontology import SpatialEntityGraph
 from core.policy import TieredPolicy
 from core.schema import DecisionToken, canonical_json, sha256_hex, utc_now
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from app.adapters.sar_candidate_event import candidate_event_to_observation
@@ -26,6 +28,7 @@ from app.scenarios.base import Finding, get_scenario
 APP_DIR = Path(__file__).resolve().parent
 ROOT = APP_DIR.parent
 DEFAULT_POLICY = APP_DIR / "config" / "maritime_defense_policy.yaml"
+FIXTURES_DIR = ROOT / "tests" / "fixtures"
 
 
 def _default_audit_path() -> Path:
@@ -38,6 +41,31 @@ def _default_audit_path() -> Path:
 DEFAULT_AUDIT = _default_audit_path()
 
 app = FastAPI(title="NexusGate C2 Server", version="0.1.0")
+
+# Browser BattlePlan (Phase 3) — local Core. Cloudflare Worker adds CORS separately.
+_cors_origins = [
+    o.strip()
+    for o in os.environ.get(
+        "C2_CORS_ORIGINS",
+        "http://127.0.0.1:3000,http://localhost:3000",
+    ).split(",")
+    if o.strip()
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
+)
+
+# Demo evidence chips (e.g. Sentinel SAR) — operational, not frozen Screen 1/2 handshake.
+if FIXTURES_DIR.is_dir():
+    app.mount(
+        "/static/fixtures",
+        StaticFiles(directory=str(FIXTURES_DIR)),
+        name="fixtures",
+    )
 
 
 class ProposalRequest(BaseModel):

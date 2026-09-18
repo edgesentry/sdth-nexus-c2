@@ -1,6 +1,6 @@
 # Demo & benchmarks
 
-Phase 2 demos use **curl / scripts / two laptops** — no BattlePlan UI. Contract: [C2 REST API](api/rest.md). Topology: [Topology](architecture/topology.md) · [Plan §4.2](plan.md#42-cloudflare-containers-phase-2).
+Phase 2 demos use **curl / scripts / two laptops**. Phase 3 adds **BattlePlan** (Next.js) on the same frozen paths. Contract: [C2 REST API](api/rest.md). Topology: [Topology](architecture/topology.md) · [Plan §4.2](plan.md#42-cloudflare-containers-phase-2).
 
 ## Quick start
 
@@ -120,6 +120,31 @@ Expect a `recipient_ack` for that `coa_id` within **< 3 s** of approve on a loca
 **One-shot shortcut** (same hops, automated): `./scripts/picture_to_tasking.sh` — fine for CI; use Screen 1/2 curl above for the live two-laptop rehearsal.
 
 Endpoint table: [C2 REST API](api/rest.md).
+
+---
+
+## Demo Path F: BattlePlan UI (Phase 3)
+
+Browser Screen 1 / Screen 2 against local or Cloudflare Core. App: [`ui/battleplan/`](../ui/battleplan/).
+
+```bash
+# Terminal A — Core (CORS defaults allow localhost:3000)
+uv run sdth-c2-server
+
+# Terminal B — BattlePlan
+cd ui/battleplan && npm install && npm run dev
+# open http://127.0.0.1:3000 → Screen 1 + Screen 2 (two tabs)
+```
+
+| Step | Where | Action |
+|------|-------|--------|
+| 1 | Screen 1 | Propose `S2` → Approve |
+| 2 | Screen 2 | Poll inbox (or auto-poll) → Ack |
+| 3 | Optional | Screen 1 → Ingress Sentinel fixture → open evidence chip modal |
+
+Cloudflare: set `NEXT_PUBLIC_C2_BASE_URL` + `NEXT_PUBLIC_C2_API_TOKEN` in `ui/battleplan/.env.local` (same Bearer as [deploy.md](deploy.md)).
+
+Invariant: the UI never seals tokens — only Core `POST /api/gate/approve` does.
 
 ---
 
