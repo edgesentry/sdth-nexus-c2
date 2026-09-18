@@ -84,15 +84,15 @@ Never commit keys. What `LITELLM_MASTER_KEY` is, and how it differs from vendor 
 Same handshake over a Worker → container singleton (`getByName("demo")`). Runbook: [Cloudflare Containers](deploy.md).
 
 ```bash
-cd deploy/cloudflare && npm install && npx wrangler dev    # http://127.0.0.1:8787
-# other terminal:
-C2_BASE_URL=http://127.0.0.1:8787 ./scripts/picture_to_tasking.sh
+cd deploy/cloudflare && npm install && cp .dev.vars.example .dev.vars && npx wrangler dev
+# other terminal (shared Bearer from .dev.vars / wrangler secret):
+C2_BASE_URL=http://127.0.0.1:8787 C2_API_TOKEN=dev-shared-c2-token ./scripts/picture_to_tasking.sh
 
-# after `npx wrangler deploy`:
-C2_BASE_URL=https://sdth-c2-core.<YOUR_SUBDOMAIN>.workers.dev ./scripts/picture_to_tasking.sh
+# after `npx wrangler deploy` (+ C2_API_TOKEN secret):
+C2_BASE_URL=https://sdth-c2-core.<YOUR_SUBDOMAIN>.workers.dev C2_API_TOKEN='…' ./scripts/picture_to_tasking.sh
 ```
 
-Cloudflare down → `uv run sdth-c2-server` (do not set `C2_BASE_URL`).
+Cloudflare down → `uv run sdth-c2-server` (do not set `C2_BASE_URL` / `C2_API_TOKEN`). Auth: [deploy.md](deploy.md#shared-bearer-auth-issue-38).
 
 ## Effector levels
 

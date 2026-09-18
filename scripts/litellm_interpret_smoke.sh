@@ -83,7 +83,7 @@ fi
 uv sync --group dev
 
 if [[ "${START_LOCAL}" -eq 1 ]]; then
-  if curl -sf "${C2_BASE_URL}/api/ontology/state" >/dev/null; then
+  if curl -sf "${C2_BASE_URL}/health" >/dev/null; then
     echo "NOTE: reusing already-running Core at ${C2_BASE_URL}"
     echo "      (it must have been started with LLM_BASE_URL=${LLM_BASE_URL})"
     START_LOCAL=0
@@ -94,7 +94,7 @@ if [[ "${START_LOCAL}" -eq 1 ]]; then
   load_litellm_env
   uv run sdth-c2-server &
   SERVER_PID=$!
-  if ! wait_http "${C2_BASE_URL}/api/ontology/state" 50 0.1; then
+  if ! wait_http "${C2_BASE_URL}/health" 50 0.1; then
     echo "FAIL: local sdth-c2-server did not become ready at ${C2_BASE_URL}" >&2
     exit 2
   fi

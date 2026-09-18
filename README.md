@@ -52,10 +52,11 @@ Cloudflare Containers (optional public Core): merge to `main` runs [Deploy Cloud
 
 ```bash
 export C2_BASE_URL=https://sdth-c2-core.<YOUR_SUBDOMAIN>.workers.dev
+export C2_API_TOKEN='…'   # shared Worker Bearer (#38); see docs/deploy.md
 ./scripts/picture_to_tasking.sh
 # local front door:
 cd deploy/cloudflare && npm install && npx wrangler dev
-C2_BASE_URL=http://127.0.0.1:8787 ./scripts/picture_to_tasking.sh
+C2_BASE_URL=http://127.0.0.1:8787 C2_API_TOKEN=dev-shared-c2-token ./scripts/picture_to_tasking.sh
 ```
 
 Laptop I/O (Phase 2 — no UI):
@@ -162,10 +163,10 @@ uv run python scripts/picture_to_tasking.py   # Terminal B
 Point at a remote Core later without changing paths:
 
 ```bash
-C2_BASE_URL=https://sdth-c2-core.<YOUR_SUBDOMAIN>.workers.dev ./scripts/picture_to_tasking.sh
+C2_BASE_URL=https://sdth-c2-core.<YOUR_SUBDOMAIN>.workers.dev C2_API_TOKEN='…' ./scripts/picture_to_tasking.sh
 # aliases: BASE_URL also accepted by the Python client
 # Cloudflare down:
-uv run sdth-c2-server && unset C2_BASE_URL && ./scripts/picture_to_tasking.sh
+uv run sdth-c2-server && unset C2_BASE_URL C2_API_TOKEN && ./scripts/picture_to_tasking.sh
 ```
 
 ## Layout

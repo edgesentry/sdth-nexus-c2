@@ -2,6 +2,9 @@ import { Container, type StopParams } from "@cloudflare/containers";
 
 const AUDIT_STORAGE_KEY = "audit_records";
 
+/** Shared team Bearer for Cloudflare front door (issue #38). */
+type EnvWithAuth = Env & { C2_API_TOKEN?: string };
+
 /**
  * Singleton FastAPI C2 Core. Disk is ephemeral; OCSF jsonl is snapshotted
  * into this Durable Object's SQLite so the hash chain survives sleep/restart.
@@ -114,8 +117,91 @@ function optionalContainerEnv(env: Env): Record<string, string> {
   return extra;
 }
 
+/** Exported for unit-style source checks / future Vitest. */
+export function pathRequiresBearer(pathname: string, method: string): boolean {
+  if (method.toUpperCase() === "OPTIONS") {
+    return false;
+  }
+  if (pathname === "/health") {
+    return false;
+  }
+  return pathname === "/api" || pathname.startsWith("/api/");
+}
+
+export function unauthorizedResponse(): Response {
+  return new Response(JSON.stringify({ detail: "Unauthorized" }), {
+    status: 401,
+    headers: {
+      "content-type": "application/json",
+      "www-authenticate": 'Bearer realm="sdth-c2-core"',
+    },
+  });
+}
+
+function timingSafeEqual(a: string, b: string): boolean {
+  const enc = new TextEncoder();
+  const ba = enc.encode(a);
+  const bb = enc.encode(b);
+  const len = Math.max(ba.byteLength, bb.byteLength);
+  let diff = ba.byteLength ^ bb.byteLength;
+  for (let i = 0; i < len; i++) {
+    diff |= (ba[i] ?? 0) ^ (bb[i] ?? 0);
+  }
+  return diff === 0;
+}
+
+function extractBearer(request: Request): string {
+  const header = request.headers.get("Authorization") ?? "";
+  const match = /^Bearer\s+(\S+)/i.exec(header.trim());
+  return match?.[1] ?? "";
+}
+
+/**
+ * Returns a 401 Response when the request must be rejected; otherwise null.
+ * If C2_API_TOKEN is unset, /api stays open (local `wrangler dev` without .dev.vars).
+ */
+export function authorizeRequest(request: Request, env: EnvWithAuth): Response | null {
+  const url = new URL(request.url);
+  if (!pathRequiresBearer(url.pathname, request.method)) {
+    return null;
+  }
+  const expected = env.C2_API_TOKEN?.trim() ?? "";
+  if (!expected) {
+    console.warn("C2_API_TOKEN unset; Cloudflare /api is open (set wrangler secret for production)");
+    return null;
+  }
+  const presented = extractBearer(request);
+  if (!presented || !timingSafeEqual(presented, expected)) {
+    return unauthorizedResponse();
+  }
+  return null;
+}
+
+function corsPreflight(request: Request): Response | null {
+  if (request.method.toUpperCase() !== "OPTIONS") {
+    return null;
+  }
+  return new Response(null, {
+    status: 204,
+    headers: {
+      "access-control-allow-origin": request.headers.get("Origin") ?? "*",
+      "access-control-allow-methods": "GET, POST, PUT, OPTIONS",
+      "access-control-allow-headers": "Authorization, Content-Type",
+      "access-control-max-age": "86400",
+    },
+  });
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    const preflight = corsPreflight(request);
+    if (preflight) {
+      return preflight;
+    }
+    const denied = authorizeRequest(request, env as EnvWithAuth);
+    if (denied) {
+      return denied;
+    }
     const container = env.C2_CONTAINER.getByName("demo");
     return container.fetch(request);
   },

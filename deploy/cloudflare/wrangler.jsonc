@@ -12,6 +12,8 @@
   // Optional LLM overlay. Secrets: `npx wrangler secret put LLM_API_KEY`
   // and `npx wrangler secret put LLM_BASE_URL` (public OpenAI-compatible URL).
   // Unset LLM_BASE_URL → heuristic interpreter (CI / pitch-day fallback).
+  // Shared C2 Bearer (issue #38): `npx wrangler secret put C2_API_TOKEN`
+  // Also add GitHub Actions secret C2_API_TOKEN so deploys re-sync it.
   "vars": {
     "LLM_MODEL": "gemini-3.8-flash"
   },

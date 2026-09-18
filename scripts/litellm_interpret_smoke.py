@@ -38,6 +38,13 @@ def _base_url(cli: str | None) -> str:
     ).rstrip("/")
 
 
+def _client_headers() -> dict[str, str]:
+    token = os.environ.get("C2_API_TOKEN", "").strip()
+    if token:
+        return {"Authorization": f"Bearer {token}"}
+    return {}
+
+
 def evaluate_interpret_response(body: dict[str, Any]) -> tuple[bool, str]:
     """Return (ok, detail). Live path must be LLM-sourced and never seal a token."""
     status = body.get("status")
@@ -74,7 +81,7 @@ def run_smoke(
     print("  Expect     : source == llm  (probabilistic proposes; gate disposes)")
     print("=" * 60)
 
-    with httpx.Client(base_url=base_url, timeout=timeout_s) as client:
+    with httpx.Client(base_url=base_url, timeout=timeout_s, headers=_client_headers()) as client:
         try:
             resp = client.post(
                 "/api/interpret",
