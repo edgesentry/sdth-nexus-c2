@@ -2,7 +2,7 @@
 
 > Canonical planning source for this repo (MkDocs / GitHub Pages).
 
-**Status:** Phase 2 venue app (Backend closed loop & Cloudflare Core) · Phase 5 = post-hackathon sovereign PoC · **2026-09-17 Updated**  
+**Status:** Phase 2 venue app (Backend closed loop & Cloudflare Core) · Phase 5 = post-hackathon sovereign PoC · **2026-09-18 Updated**  
 **Challenge:** SDTH 2026 **PS 04 — One Picture, Many Eyes** (From Picture to Tasking)  
 **Product face:** Project NexusGate (core gate) + venue Command and Control (C2) app  
 **Target Reviewers:** DSTA, MINDEF/SAF C4I, EDTH, NUS Defense Tech Venture Lab  
@@ -144,21 +144,23 @@ To support the **BattlePlan Next.js Command Cockpit** and recipient nodes on sta
 
 ### 4.1 REST Endpoints
 
-The unified server provides 7 endpoints (5 core operational + 1 audit inspection + 1 test admin reset):
+The unified server provides **8** endpoints (5 core operational + 1 probabilistic interpret + 1 audit inspection + 1 test admin reset):
 
 1. `GET /api/ontology/state`
    - Returns live tracks, observations, and discrepancy details (count mismatch, coordinate divergence, amber alerts).
-2. `POST /api/gate/proposals`
-   - Ingests candidate COA proposal into the operator approval queue.
-3. `POST /api/gate/approve`
+2. `POST /api/interpret`
+   - App-layer probabilistic propose: hypotheses + candidate COA (**never seals** `DecisionToken`; Pitch-2).
+3. `POST /api/gate/proposals`
+   - Ingests candidate COA proposal into the operator approval queue (`scenario_id`, raw `coa`, or `interpret:true`).
+4. `POST /api/gate/approve`
    - Operator approves/denies proposal. Generates sealed `DecisionToken`.
-4. `GET /api/recipient/inbox?unit_id={unit_id}`
+5. `GET /api/recipient/inbox?unit_id={unit_id}`
    - Recipient node retrieves pending approved taskings.
-5. `POST /api/recipient/ack`
+6. `POST /api/recipient/ack`
    - Recipient submits signed acknowledgment with timestamp and hardware/software signature, sealed to `.audit/gate.jsonl`.
-6. `GET /api/audit/trail`
+7. `GET /api/audit/trail`
    - Returns current OCSF hash chain records for real-time audit inspection.
-7. `POST /api/admin/reset`
+8. `POST /api/admin/reset`
    - Clears in-memory runtime state for automated tests and repeatable demo rehearsals without wiping disk audit files.
 
 ---
@@ -199,7 +201,8 @@ Phase 2 explicitly delivers thin / demo-fidelity slices of the 4 core pitch pill
 - [x] **Pitch-4 Picture→Tasking demo script:** `scripts/picture_to_tasking.py` + `scripts/picture_to_tasking.sh` executes Warning Picture → gate approve → inbox → Ack → audit (<3s local roundtrip) (issue #24).
 - [x] **Pitch-3 Deterministic gate stress:** `scripts/benchmark.py` floods ontology with 100+ tracks and mixed COAs; asserts gate p95 < 50 ms and unauthorized = 0 (issue #23).
 - [x] **Pitch-2 Probabilistic interpreter:** `app/llm_interpreter.py` + `POST /api/interpret` — LLM (env) or heuristic fallback → hypotheses + candidate COA; Core gate still disposes (issue #22).
-- [ ] **Pitch-1 Multimodal demo harness & SAR CandidateEvent adapter:** Explicit modality-tagged ingress harness + assumed `CandidateEvent` (v1.3.0 schema) adapter (`app/adapters/sar_candidate_event.py`), backed by `tests/fixtures/candidate_event_assumed.json` for non-blocking stand-alone execution (see [REST API](api/rest.md#upstream-ingress-contract-assumed-candidateevent-specification)) (issue #25, #16).
+- [ ] **Pitch-2 follow-on LiteLLM live path:** Stand up LiteLLM as OpenAI-compatible front door; point `LLM_BASE_URL` at it; smoke S2 → `/api/interpret` with `source: "llm"`; CI stays LLM-free via heuristic fallback (issue #32). MCP / live upstream SAR API remain out of Phase 2 must-haves.
+- [x] **Pitch-1 Multimodal demo harness & SAR CandidateEvent adapter:** Explicit modality-tagged ingress harness + assumed `CandidateEvent` (v1.3.0 schema) adapter (`app/adapters/sar_candidate_event.py`), backed by `tests/fixtures/candidate_event_assumed.json` for non-blocking stand-alone execution (see [REST API](api/rest.md#upstream-ingress-contract-assumed-candidateevent-specification)) (issue #25, #16). Priority: fixture-first S3 (macro SAR baseline vs AIS) — not a realtime satellite stream.
 - [x] Validate end-to-end backend closed loop via curl / automated scripts without frontend dependency (`scripts/picture_to_tasking.sh`).
 - [ ] Containerize C2 server for optional **Cloudflare Containers** deployment while retaining identical REST contract (issue #18).
 - [ ] Establish hardened fallback to local `sdth-c2-server` for zero-internet venue reliability.

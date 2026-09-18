@@ -19,6 +19,7 @@ from core.schema import DecisionToken, canonical_json, sha256_hex, utc_now
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from app.adapters.sar_candidate_event import candidate_event_to_observation
 from app.adapters.southbound_sensor import normalize_sensor_event
 from app.llm_interpreter import InterpretationResult, interpret
 from app.scenarios.base import Finding, get_scenario
@@ -49,6 +50,13 @@ class InterpretRequest(BaseModel):
     scenario_id: str
     timeout_seconds: float | None = None
     force_heuristic: bool = False
+
+
+class CandidateEventIngressRequest(BaseModel):
+    """Upstream macro intelligence push (assumed CandidateEvent v1.3.0)."""
+
+    event: dict[str, Any] | None = None
+    use_fixture: bool = False
 
 
 class ApproveRequest(BaseModel):
@@ -193,6 +201,43 @@ async def ontology_state() -> dict[str, Any]:
         "amber_alert": amber,
         "pending_proposals": list(runtime.proposals.keys()),
         "inbox_depth": len([k for k in runtime.inbox if k not in runtime.acked]),
+    }
+
+
+@app.post("/api/ingress/candidate-event")
+async def ingress_candidate_event(req: CandidateEventIngressRequest) -> dict[str, Any]:
+    """Ingest assumed CandidateEvent → Observation (modality=space_sar). Never seals tokens."""
+    from app.adapters.sar_candidate_event import load_assumed_fixture
+
+    runtime = get_runtime()
+    if req.use_fixture:
+        payload = load_assumed_fixture()
+    elif req.event is not None:
+        payload = req.event
+    else:
+        raise HTTPException(status_code=400, detail="Provide event or use_fixture=true")
+
+    try:
+        obs = candidate_event_to_observation(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    track = runtime.graph.ingest(obs)
+    runtime.audit.append(
+        "candidate_event_ingested",
+        "Info",
+        {
+            "observation_id": obs.observation_id,
+            "source_id": obs.source_id,
+            "modality": obs.modality,
+            "track_id": track.track_id,
+            "event_type": obs.entity_hint,
+        },
+    )
+    return {
+        "status": "INGESTED",
+        "observation": obs.model_dump(mode="json"),
+        "track_id": track.track_id,
     }
 
 

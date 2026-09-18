@@ -65,14 +65,15 @@ def test_s2_hero_count_and_bearing_amber() -> None:
     assert coa.metadata.get("amber_alert") == "COUNT_AND_BEARING_MISMATCH"
 
 
-def test_s3_lane_spof_picture() -> None:
+def test_s3_sar_ais_picture() -> None:
     scenario = get_scenario("S3")
     graph = SpatialEntityGraph(associate_radius_m=2_000.0)
     graph.ingest_many([normalize_sensor_event(e) for e in scenario.build_events()])
     finding = scenario.detect(graph)
     assert finding is not None
     text = finding.picture_summary.lower()
-    assert "lane" in text or "spof" in text or "pattern" in text
+    assert "sar" in text or "space" in text
+    assert finding.amber_alert == "SAR_DARK_CLUSTER_VS_AIS_SILENCE"
     coa = scenario.build_coa(graph, finding, timeout_seconds=5.0)
     assert coa.intent == "APPROACH_PATROL"
 
