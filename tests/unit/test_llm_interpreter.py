@@ -74,8 +74,7 @@ def test_interpret_falls_back_on_llm_failure(monkeypatch: pytest.MonkeyPatch) ->
     graph, finding = _s2_graph_and_finding()
     result = interpret(graph, finding)
     assert result.source == "heuristic"
-    assert result.error is not None
-    assert result.error.startswith("llm_failed:")
+    assert result.error == "llm_failed"
     assert result.candidate_coa.intent == "CUE_AND_IDENTIFY"
 
 
