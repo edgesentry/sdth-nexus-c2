@@ -41,22 +41,14 @@ def test_litellm_config_has_openai_anthropic_gemini_fireworks() -> None:
     assert cfg["general_settings"]["master_key"] == "os.environ/LITELLM_MASTER_KEY"
 
 
-def test_litellm_compose_is_stateless_proxy() -> None:
-    compose = yaml.safe_load((LITELLM_DIR / "docker-compose.yml").read_text())
-    services = compose["services"]
-    assert "litellm" in services
-    assert "db" not in services
-    assert "postgres" not in services
-    litellm = services["litellm"]
-    assert "4000:4000" in str(litellm["ports"]) or "4000" in str(litellm["ports"])
-    assert "--config" in litellm["command"]
-    assert "GEMINI_API_KEY" in litellm["environment"]
-    assert "FIREWORKS_AI_API_KEY" in litellm["environment"]
+def test_litellm_env_example_documents_vendor_keys() -> None:
+    assert not (LITELLM_DIR / "docker-compose.yml").exists()
     env_example = (LITELLM_DIR / ".env.example").read_text()
     assert "GEMINI_API_KEY" in env_example
     assert "OPENAI_API_KEY" in env_example
     assert "ANTHROPIC_API_KEY" in env_example
     assert "FIREWORKS_AI_API_KEY" in env_example
+    assert "host.docker.internal" not in env_example
     root_env = (ROOT / ".env.example").read_text()
     assert "LLM_BASE_URL=http://127.0.0.1:4000/v1" in root_env
     assert "LLM_MODEL=gemini-3.8-flash" in root_env

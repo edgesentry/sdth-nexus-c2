@@ -15,9 +15,7 @@ LiteLLM (:4000/v1)                       ← locked by LITELLM_MASTER_KEY
         └── Fireworks  FIREWORKS_AI_API_KEY
 ```
 
-## Run locally (Python — preferred)
-
-Docker Compose is optional. On some Colima/ARM hosts the `main-stable` image dies with SIGILL; the Python proxy is the default local path.
+## Run locally (Python)
 
 ```bash
 cp deploy/litellm/.env.example deploy/litellm/.env   # set GEMINI_API_KEY
@@ -53,7 +51,7 @@ LiteLLM expects this value to start with `sk-`.
 
 | File | Variable | Role |
 |------|----------|------|
-| `deploy/litellm/.env` | `LITELLM_MASTER_KEY` | Injected into the Compose container; becomes `master_key` |
+| `deploy/litellm/.env` | `LITELLM_MASTER_KEY` | Sourced into the Python proxy; becomes `master_key` |
 | repo-root `.env` (C2) | `LLM_API_KEY` | What `sdth-c2-server` sends as the Bearer token |
 
 **These two strings must be identical.** Sample for local demo only: `sk-litellm-local` (in both `.env.example` files). Rotate it before a shared venue laptop.
@@ -82,7 +80,7 @@ These are sent **by LiteLLM to the model provider**. C2 never holds them.
 | `ANTHROPIC_API_KEY` | Anthropic | `claude-haiku` |
 | `FIREWORKS_AI_API_KEY` | Fireworks AI | `fireworks-glm` (`fireworks_ai/glm-5p2`; any `fireworks_ai/<slug>` works) |
 
-To use another Fireworks serverless slug (`kimi-k3`, `deepseek-v4-pro`, `qwen3p8-max`, …), change `litellm_params.model` to `fireworks_ai/<slug>` in `deploy/litellm/config.yaml` and restart Compose. The C2 env stays `LLM_MODEL=fireworks-glm` if you keep the same alias, or set `LLM_MODEL` to a new alias you add.
+To use another Fireworks serverless slug (`kimi-k3`, `deepseek-v4-pro`, `qwen3p8-max`, …), change `litellm_params.model` to `fireworks_ai/<slug>` in `deploy/litellm/config.yaml` and restart the Python proxy. The C2 env stays `LLM_MODEL=fireworks-glm` if you keep the same alias, or set `LLM_MODEL` to a new alias you add.
 
 `nexus-interpreter` tries Gemini first, then OpenAI, then Anthropic, then Fireworks, then local Ollama. Live smoke pins `gemini-3.8-flash` so a missing Gemini key does **not** silently fall through to another vendor.
 

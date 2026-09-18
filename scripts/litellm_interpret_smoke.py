@@ -2,7 +2,7 @@
 """Pitch-2 follow-on: live LiteLLM interpret smoke (issue #32).
 
 POSTs S2 to /api/interpret and asserts source == "llm" with hypotheses.
-Does **not** require Docker itself — point C2 at an already-running LiteLLM:
+Point C2 at an already-running Python LiteLLM:
 
   LLM_BASE_URL=http://127.0.0.1:4000/v1
   LLM_API_KEY=<LITELLM_MASTER_KEY>
@@ -11,7 +11,7 @@ Does **not** require Docker itself — point C2 at an already-running LiteLLM:
 
   uv run python scripts/litellm_interpret_smoke.py
 
-One-shot (starts LiteLLM compose + local C2): ./scripts/litellm_interpret_smoke.sh
+One-shot (starts Python LiteLLM + local C2): ./scripts/litellm_interpret_smoke.sh
 
 CI stays LLM-free. Heuristic fallback remains the default when LiteLLM is down.
 """

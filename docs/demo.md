@@ -63,8 +63,6 @@ uv run --group litellm litellm --config deploy/litellm/config.yaml --port 4000
 ./scripts/litellm_interpret_smoke.sh                 # S2 → source == "llm" via gemini-3.8-flash
 ```
 
-Docker Compose (`deploy/litellm/docker-compose.yml`) is optional. Prefer the Python proxy on Colima/ARM if the image exits 132 (SIGILL).
-
 | Env (C2) | Value |
 |----------|--------|
 | `LLM_BASE_URL` | `http://127.0.0.1:4000/v1` |

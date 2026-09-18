@@ -138,6 +138,9 @@ Env: `LLM_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL` / `LLM_TIMEOUT_S`. Unset or fa
 Live path (issue #32): point C2 at LiteLLM (`deploy/litellm/`):
 
 ```bash
+set -a && source deploy/litellm/.env && set +a
+uv run --group litellm litellm --config deploy/litellm/config.yaml --port 4000
+# other terminal:
 export LLM_BASE_URL=http://127.0.0.1:4000/v1
 export LLM_API_KEY=sk-litellm-local          # must equal LITELLM_MASTER_KEY (proxy lock, not Gemini)
 export LLM_MODEL=gemini-3.8-flash

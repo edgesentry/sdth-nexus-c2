@@ -164,7 +164,7 @@ C2_BASE_URL=https://your-c2.example.com ./scripts/picture_to_tasking.sh
 | `app/scenarios/` | S1–S3 defense scenarios + registry |
 | `app/c2_server.py` | Two-screen C2 REST (ontology / interpret / gate / recipient / audit) |
 | `app/llm_interpreter.py` | Pitch-2 probabilistic propose (LLM + heuristic fallback) |
-| `deploy/litellm/` | LiteLLM OpenAI-compatible front door (Compose + config) |
+| `deploy/litellm/` | LiteLLM OpenAI-compatible front door (`config.yaml` + Python `uv --group litellm`) |
 | `app/adapters/usv_rest.py` | Vendor-neutral USV REST effector (`EFFECTOR_BASE_URL`) |
 | `app/adapters/sar_candidate_event.py` | Assumed CandidateEvent → `space_sar` Observation (Pitch-1) |
 | `scripts/picture_to_tasking.py` | UI-less Picture→Tasking demo (`C2_BASE_URL` / `BASE_URL`; `--interpret`) |
