@@ -32,12 +32,17 @@ flowchart TD
         DARK --> CHIP["Radar Image Chip Cropper (demo_detection.jpg)"]
     end
 
-    subgraph IngressBridge ["Ingress Adapter & Transport Layer"]
-        DARK --> ADAPT["Adapter: sar_candidate_event.py"]
-        CHIP --> ADAPT
+    subgraph ExternalPartner ["External Cross-Track Partner"]
+        GLINT["Team 02 GLINT REST/MCP API (Space-based SAR Anomaly)"]
+    end
+
+    subgraph IngressBridge ["In-House Ingress Adapters & Transport Layer (app/adapters/)"]
+        ADAPT["Adapter: sar_candidate_event.py"]
+        DARK -->|"In-House Standalone / Fail-Safe"| ADAPT
+        CHIP -->|"Image URI / Asset"| ADAPT
+        GLINT -.->|"External REST/MCP Stream"| ADAPT
         ADAPT --> PAYLOAD["CandidateEvent (v1.3.0 Schema) + Image URI"]
-        GLINT["Team 02 GLINT REST/MCP API"] -.->|"Primary External Partner"| C2_INGRESS["POST /api/ingress/candidate-event"]
-        PAYLOAD -->|"In-House Standalone / Fail-Safe"| C2_INGRESS
+        PAYLOAD --> C2_INGRESS["POST /api/ingress/candidate-event"]
     end
 
     subgraph NexusGateC2 ["Project NexusGate C2 Core (app/c2_server.py)"]
