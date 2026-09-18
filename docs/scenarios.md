@@ -6,10 +6,10 @@ App-layer scenarios under `app/scenarios/`. Each run builds synthetic multi-vend
 |----|-------|----------|---------|
 | **S1** | Sea Approach — Adversarial AIS Spoof | Stationary AIS vs ~20 kt radar/EO (~850 m) | `ISR_IDENTIFY_CONTACT` |
 | **S2** | Air Corridor — Shahed Swarm Contradiction | Social claims 3; radar 1 (~1.2 km N); EO blur 0.42; RF silent; no ADS-B | Amber `COUNT_AND_BEARING_MISMATCH` → `CUE_AND_IDENTIFY` |
-| **S3** | Shipping Lane & Coastal Anomaly — SAR Difference vs AIS | Space-based SAR anomaly diff (unannounced dark cluster) vs thin AIS & coastal radar | `APPROACH_PATROL` |
+| **S3** | Shipping Lane & Coastal Anomaly — SAR Difference vs AIS | Space-based SAR anomaly diff (unannounced dark cluster with length/beam/heading metrology) vs thin AIS & coastal radar (reviewed via radar chip modal) | `APPROACH_PATROL` |
 
 **S2** is the air hero (Slide 04): do not fuse into one hallucinated track — cue identify only.  
-**S3** is the maritime hero: connects macro space-based SAR scene-difference alerts to tactical C2 tasking.
+**S3** is the maritime hero: connects macro space-based SAR scene-difference alerts and OBB metrology to tactical C2 tasking (see [SAR Pipeline Architecture](architecture/sar_pipeline.md)).
 
 Each CLI / TUI run prints a **WARNING PICTURE** (threat class, minutes of warning, sources, “if false collapses when…”) before the gate.
 
@@ -17,7 +17,7 @@ Each CLI / TUI run prints a **WARNING PICTURE** (threat class, minutes of warnin
 
 | Modality | Scenarios | Role in contradiction |
 |----------|-----------|------------------------|
-| Space-based SAR | S3 | Macro scene-difference anomaly (dark vessels, unannounced clusters) |
+| Space-based SAR | S3 | Macro scene-difference anomaly (dark vessels, unannounced clusters with OBB dimensions and radar image chips) |
 | Social / recon text | S2 | Exaggerated count claims |
 | Gap-filler radar | S1–S3 | Count / bearing disagree |
 | EO / optical | S1, S2 | Low-confidence blur |
