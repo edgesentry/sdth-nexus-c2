@@ -561,3 +561,61 @@ Paths above are the frozen surface. UI clients must not invent alternate routes 
     Endpoints currently return ad-hoc `dict[str, Any]`, so `/openapi.json` lacks response schemas.
     Introduce response models (`OntologyStateResponse`, `ApproveResponse`, …) later to auto-validate
     outgoing payloads and enable TypeScript client generation for BattlePlan.
+
+---
+
+## Upstream Ingress Contract (Assumed CandidateEvent Specification)
+
+The 7 core endpoints above govern the **downstream C2 decision, gating, and recipient handshake** and remain frozen.
+
+For **upstream macro intelligence ingress** (such as space-based SAR scene-difference anomaly evidence), the C2 engine assumes an open, typed `CandidateEvent` payload structure (pending final schema file handover). This enables continuous, non-blocking development via local fixtures and mock adapters.
+
+### Assumed Wire Payload (`CandidateEvent` v1.3.0)
+
+```json
+{
+  "event_id": "evt_sar_20260918_001",
+  "timestamp": "2026-09-18T14:30:00Z",
+  "source_id": "SPACE_SAR_SCENE_DIFF",
+  "area_id": "malacca_strait_sector_b",
+  "event_type": "UNANNOUNCED_DARK_VESSEL_CLUSTER",
+  "confidence": 0.88,
+  "location": {
+    "latitude": 1.254,
+    "longitude": 103.812
+  },
+  "bounding_box": {
+    "min_lat": 1.250,
+    "max_lat": 1.258,
+    "min_lon": 103.808,
+    "max_lon": 103.816
+  },
+  "attributes": {
+    "vessel_count_est": 2,
+    "ais_correlation": "NONE",
+    "diff_metric": "intensity_ratio_anomaly",
+    "sar_pass_id": "S1_20260918_PASS_42"
+  }
+}
+```
+
+### Ingress to Observation Mapping
+
+When ingested (either via upstream REST pull, optional `POST /api/ingress/candidate-event`, or local scenario fixture), the adapter maps the payload into an internal `Observation` entity:
+
+| `CandidateEvent` Field | Internal `Observation` Target | Notes |
+|------------------------|-------------------------------|-------|
+| `event_id` | `observation_id` | Unique ingress identifier |
+| `source_id` | `source_id` | e.g. `SPACE_SAR_SCENE_DIFF` |
+| `event_type` | `entity_hint` | Used for track correlation |
+| `location.latitude` | `latitude` | Spatial point |
+| `location.longitude` | `longitude` | Spatial point |
+| `confidence` | `confidence` | Normalized (0.0 to 1.0) |
+| `timestamp` | `observed_at` | Ingress observation time |
+| `"space_sar"` | `modality` | Explicit modality tag |
+| `bounding_box` + `attributes` | `attributes` | Preserved for audit & operator display |
+
+### Operational Assumptions
+1. **Retrospective & Periodic Ingress:** The payload represents a discrete, verified evidence package derived from satellite passes, not a high-frequency live video feed.
+2. **Non-Blocking Loose Coupling:** The C2 platform operates 100% stand-alone using synthetic fixture equivalents (`tests/fixtures/candidate_event_assumed.json`) if live upstream services are offline during hackathon operations.
+3. **Transport Interfaces:** Supported via HTTP REST (`GET` pull or `POST` push) and compatible with Model Context Protocol (MCP) tool querying.
