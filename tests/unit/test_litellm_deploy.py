@@ -57,7 +57,7 @@ def test_litellm_env_example_documents_vendor_keys() -> None:
 def test_pyproject_has_optional_litellm_group() -> None:
     pyproject = (ROOT / "pyproject.toml").read_text()
     assert "[dependency-groups]" in pyproject
-    assert 'litellm = [' in pyproject or "litellm = [" in pyproject
+    assert "litellm = [" in pyproject or "litellm = [" in pyproject
     assert "litellm[proxy]" in pyproject
     mkdocs = (ROOT / "mkdocs.yml").read_text()
     assert "litellm.md" in mkdocs
