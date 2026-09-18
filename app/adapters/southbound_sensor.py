@@ -21,17 +21,17 @@ def normalize_sensor_event(event: dict[str, Any]) -> Observation:
         observed_at = datetime.now(UTC)
 
     speed_kt = float(event.get("speed_kt", 0.0))
-    obs = Observation(
-        source_id=str(event["source_id"]),
-        entity_hint=str(event.get("entity_id", event["source_id"])),
-        latitude=float(event["latitude"]),
-        longitude=float(event["longitude"]),
-        speed_mps=kt_to_mps(speed_kt),
-        heading_deg=event.get("heading_deg"),
-        confidence=float(event.get("confidence", 0.5)),
-        observed_at=observed_at,
-        modality=str(event.get("modality", "generic")),
-        attributes={
+    obs_kwargs: dict[str, Any] = {
+        "source_id": str(event["source_id"]),
+        "entity_hint": str(event.get("entity_id", event["source_id"])),
+        "latitude": float(event["latitude"]),
+        "longitude": float(event["longitude"]),
+        "speed_mps": kt_to_mps(speed_kt),
+        "heading_deg": event.get("heading_deg"),
+        "confidence": float(event.get("confidence", 0.5)),
+        "observed_at": observed_at,
+        "modality": str(event.get("modality", "generic")),
+        "attributes": {
             "speed_kt": speed_kt,
             **{
                 k: v
@@ -40,6 +40,7 @@ def normalize_sensor_event(event: dict[str, Any]) -> Observation:
                 not in {
                     "source_id",
                     "entity_id",
+                    "observation_id",
                     "latitude",
                     "longitude",
                     "speed_kt",
@@ -50,6 +51,9 @@ def normalize_sensor_event(event: dict[str, Any]) -> Observation:
                 }
             },
         },
-    )
+    }
+    if event.get("observation_id"):
+        obs_kwargs["observation_id"] = str(event["observation_id"])
+    obs = Observation(**obs_kwargs)
     obs.ensure_digest()
     return obs

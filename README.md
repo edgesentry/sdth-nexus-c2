@@ -25,7 +25,7 @@ uv run python -m app.main --scenario S3 --stub --yes
 |----|-------|--------|
 | **S1** | Sea Approach — Adversarial AIS Spoof | Sea approaches; manipulable AIS vs radar/EO; vendor IDs not shared; ISR USV identify |
 | **S2** | Air Corridor — Shahed Swarm Contradiction | Social/recon claims 3; radar sees 1 (~1.2 km N); EO blur 0.42; amber count+bearing; cue/identify |
-| **S3** | Shipping Lane SPOF — Pattern Break | Open AIS thins; uncorrelated coastal radar; approach patrol |
+| **S3** | Shipping Lane & Coastal Anomaly — SAR vs AIS | Space SAR dark cluster vs thin AIS; coastal radar cue; approach patrol |
 
 Each run prints a **WARNING PICTURE** (threat class, minutes of warning, sources, “if false collapses when…”) before the gate.
 
@@ -59,6 +59,7 @@ Laptop I/O (Phase 2 — no UI):
 |--------|------|------|
 | `GET` | `/api/ontology/state` | Live tracks, observations, amber alert |
 | `POST` | `/api/interpret` | Probabilistic propose: hypotheses + candidate COA (no token) |
+| `POST` | `/api/ingress/candidate-event` | Upstream macro SAR CandidateEvent → `space_sar` Observation |
 | `POST` | `/api/gate/proposals` | Queue COA (`scenario_id`, raw `coa`, or `interpret:true`) |
 | `POST` | `/api/gate/approve` | Operator y/n → sealed `DecisionToken` |
 | `GET` | `/api/recipient/inbox?unit_id=` | Pending approved taskings |
@@ -125,6 +126,7 @@ C2_BASE_URL=https://your-c2.example.com ./scripts/picture_to_tasking.sh
 | `app/c2_server.py` | Two-screen C2 REST (ontology / interpret / gate / recipient / audit) |
 | `app/llm_interpreter.py` | Pitch-2 probabilistic propose (LLM + heuristic fallback) |
 | `app/adapters/usv_rest.py` | Vendor-neutral USV REST effector (`EFFECTOR_BASE_URL`) |
+| `app/adapters/sar_candidate_event.py` | Assumed CandidateEvent → `space_sar` Observation (Pitch-1) |
 | `scripts/picture_to_tasking.py` | UI-less Picture→Tasking demo (`C2_BASE_URL` / `BASE_URL`) |
 | `app/` | Warning Picture TUI, mock server, kinematics, RasPi stub |
 | `app/config/maritime_defense_policy.yaml` | Geofences / thresholds (app-owned) |

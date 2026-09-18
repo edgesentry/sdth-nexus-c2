@@ -17,6 +17,7 @@ Screen 1 = command · Screen 2 = recipient. No BattlePlan required for Phase 2 d
 |--------|------|------|
 | `GET` | `/api/ontology/state` | Live tracks, observations, amber alert |
 | `POST` | `/api/interpret` | Probabilistic propose: hypotheses + candidate COA (**never seals**) |
+| `POST` | `/api/ingress/candidate-event` | Upstream assumed CandidateEvent → `space_sar` Observation |
 | `POST` | `/api/gate/proposals` | Queue COA (`scenario_id`, raw `coa`, or `interpret:true`) |
 | `POST` | `/api/gate/approve` | Operator y/n → sealed `DecisionToken` |
 | `GET` | `/api/recipient/inbox?unit_id=` | Pending approved taskings |
@@ -619,3 +620,19 @@ When ingested (either via upstream REST pull, optional `POST /api/ingress/candid
 1. **Retrospective & Periodic Ingress:** The payload represents a discrete, verified evidence package derived from satellite passes, not a high-frequency live video feed.
 2. **Non-Blocking Loose Coupling:** The C2 platform operates 100% stand-alone using synthetic fixture equivalents (`tests/fixtures/candidate_event_assumed.json`) if live upstream services are offline during hackathon operations.
 3. **Transport Interfaces:** Supported via HTTP REST (`GET` pull or `POST` push) and compatible with Model Context Protocol (MCP) tool querying.
+
+### `POST /api/ingress/candidate-event`
+
+Push an assumed CandidateEvent (or load the offline fixture):
+
+```bash
+curl -s -X POST localhost:8080/api/ingress/candidate-event \
+  -H 'content-type: application/json' \
+  -d '{"use_fixture":true}'
+```
+
+```json
+{ "event": { "...CandidateEvent v1.3.0..." } }
+```
+
+Response `200`: `{ "status": "INGESTED", "observation": {...}, "track_id": "..." }` — never seals a DecisionToken.
