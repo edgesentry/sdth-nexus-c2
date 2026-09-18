@@ -152,6 +152,51 @@ uv run python scripts/sentinel_ingress_smoke.py --pull
 
 Only `correlation_status == "uncorrelated"` detections become `UNANNOUNCED_DARK_VESSEL` with `ais_absent=true`.
 
+### AIS correlate then C2 (live scan)
+
+Without AIS in Sentinel’s DB, every detection stays `uncorrelated`. Ingest AIS for the scan bbox (mock or real scraper), re-run `run_cv`, then push only dark vessels to C2:
+
+```bash
+# Prerequisites
+#   Terminal A: cd ~/work/Sentinel-Imagery-Analysis && python app.py   # :5050, COP_* in .env
+#   Terminal B: uv run sdth-c2-server                                   # :8080
+#   Real scene (once): python -m sentinel_analysis download \
+#     --bbox 103.80 1.22 103.90 1.30 --days-ago 45 --output-dir static/output
+
+uv run python scripts/sentinel_ais_correlate.py \
+  --scan 20260916_224721_162544676155 \
+  --plugin MockAISPlugin \
+  --ingest-c2 --reset-c2
+```
+
+| Flag | Role |
+|------|------|
+| `--scan` / `SAR_UPSTREAM_SCAN` | Sentinel scan folder under `static/output/` |
+| `--plugin` | AIS scraper (`MockAISPlugin` offline; or live scraper name from `/api/scrapers`) |
+| `--skip-ais-ingest` | Reuse AIS already in Sentinel DB |
+| `--ais-correlation-distance` | Match radius in meters (default 100) |
+| `--ingest-c2` | `POST /api/ingress/candidate-event` with raw `run_cv` |
+| `--reset-c2` | Clear Core ontology before ingest |
+| `--save-run-cv PATH` | Write raw `run_cv` JSON for inspection |
+
+Manual equivalent:
+
+```bash
+# 1) AIS for scan bbox + pass time (acquisition datetime)
+curl -s -X POST http://127.0.0.1:5050/api/ingest_ais \
+  -H 'content-type: application/json' \
+  -d '{"bbox":[103.8,1.22,103.9,1.3],"plugin":"MockAISPlugin","pass_time":"2026-09-16T22:47:21Z"}'
+
+# 2) CV + correlate
+curl -s -X POST http://127.0.0.1:5050/api/run_cv/<scan_folder> \
+  -H 'content-type: application/json' \
+  -d '{"threshold":40,"dem_land_mask_enabled":false,"ais_correlation_distance":100}'
+
+# 3) Dark vessels only → C2 (or use the script --ingest-c2)
+```
+
+After a successful correlate, `correlated_count` rises and `uncorrelated_count` (C2 dark-vessel count) falls.
+
 ---
 
 ## Demo Path B: 19-Event Temporal Streamer
@@ -295,6 +340,7 @@ uv run pytest tests/integration/ -v -m integration  # S2 + C2 two-screen / live 
 uv run python scripts/stream_events.py --fast       # 19-step temporal playback
 uv run python scripts/benchmark.py                  # Slide 11 proof
 uv run python scripts/sentinel_ingress_smoke.py     # Sentinel fixture ingress (#47)
+uv run python scripts/sentinel_ais_correlate.py --help  # AIS → run_cv → optional C2
 ./scripts/litellm_interpret_smoke.sh                # live LiteLLM (optional; not in CI)
 ```
 
