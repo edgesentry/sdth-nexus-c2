@@ -2,7 +2,7 @@
 
 > Canonical planning source for this repo (MkDocs / GitHub Pages).
 
-**Status:** Phase 2 venue app (Backend closed loop & Cloudflare Core) — remaining: Sentinel-Imagery-Analysis ingress (#47) · Phase 5 = post-hackathon sovereign PoC · **2026-09-18 Updated**  
+**Status:** Phase 2 venue app complete (backend closed loop & Cloudflare Core; Sentinel ingress #47) · Phase 3 BattlePlan UI next · Phase 5 = post-hackathon sovereign PoC · **2026-09-18 Updated**  
 **Challenge:** SDTH 2026 **PS 04 — One Picture, Many Eyes** (From Picture to Tasking)  
 **Product face:** Project NexusGate (core gate) + venue Command and Control (C2) app  
 **Target Reviewers:** DSTA, MINDEF/SAF C4I, EDTH, NUS Defense Tech Venture Lab  
@@ -210,7 +210,7 @@ The pitch deck commits to 4 rigorous engineering metrics:
 - [x] **19-Event Temporal Streamer:** Implement `scripts/stream_events.py` for T-60s to T-00s event playback.
 - [x] **Automated Benchmark Suite:** Implement `scripts/benchmark.py` verifying Slide 11 performance metrics.
 
-### Phase 2: Backend Closed Loop & Cloudflare Core Deployment (Active)
+### Phase 2: Backend Closed Loop & Cloudflare Core Deployment (Completed)
 
 Phase 2 explicitly delivers thin / demo-fidelity slices of the 4 core pitch pillars (backend closed loop without UI dependencies), while production CV, live field hardware, and full swarm loads remain Phase 5:
 
@@ -219,7 +219,7 @@ Phase 2 explicitly delivers thin / demo-fidelity slices of the 4 core pitch pill
 - [x] **Pitch-2 Probabilistic interpreter:** `app/llm_interpreter.py` + `POST /api/interpret` — LLM (env) or heuristic fallback → hypotheses + candidate COA; Core gate still disposes (issue #22).
 - [x] **Pitch-2 follow-on LiteLLM live path:** Stand up LiteLLM as OpenAI-compatible front door; point `LLM_BASE_URL` at it; smoke S2 → `/api/interpret` with `source: "llm"`; CI stays LLM-free via heuristic fallback (issue #32). MCP / live upstream SAR API remain out of Phase 2 must-haves.
 - [x] **Pitch-1 Multimodal demo harness & SAR CandidateEvent adapter:** Explicit modality-tagged ingress harness + assumed `CandidateEvent` (v1.3.0 schema) adapter (`app/adapters/sar_candidate_event.py`), backed by `tests/fixtures/candidate_event_assumed.json` for non-blocking stand-alone execution (see [REST API](api/rest.md#upstream-ingress-contract-assumed-candidateevent-specification)) (issue #25). Priority: fixture-first S3 (macro SAR baseline vs AIS) — not a realtime satellite stream.
-- [ ] **In-house SAR pipeline & GLINT fail-safe integration:** Wire upstream [`Sentinel-Imagery-Analysis`](https://github.com/StrixGoldhorn/Sentinel-Imagery-Analysis) (Copernicus Sentinel-1 SAR × AIS) → `CandidateEvent` ingress; Singapore Strait dark-vessel fixture + venue Pattern A/B; zero-risk fallback when external GLINT is down (see [SAR Pipeline Architecture](architecture/sar_pipeline.md)) (issue #47).
+- [x] **In-house SAR pipeline & GLINT fail-safe integration:** Wire upstream [`Sentinel-Imagery-Analysis`](https://github.com/StrixGoldhorn/Sentinel-Imagery-Analysis) (Copernicus Sentinel-1 SAR × AIS) → `CandidateEvent` ingress via `app/adapters/sentinel_imagery.py`; Singapore Strait `run_cv` fixture + Pattern A/B (`use_sentinel_fixture` / `pull_upstream`, port **5050**); fixture fail-safe when upstream/GLINT is down (see [SAR Pipeline Architecture](architecture/sar_pipeline.md)) (issue #47).
 - [x] **Optional open-feed ingress:** Demo-grade open AIS (data.gov.sg-shaped) + open air fixtures via `app/adapters/open_feed.py`, CLI `--open-feed` / `OPEN_FEED`, and `POST /api/ingress/open-feed`; synthetic S1–S3 remain primary (issue #16). Live coastal harness remains Phase 5.
 - [x] Validate end-to-end backend closed loop via curl / automated scripts without frontend dependency (`scripts/picture_to_tasking.sh`).
 - [x] Containerize C2 server for optional **Cloudflare Containers** deployment while retaining identical REST contract (issue #18).

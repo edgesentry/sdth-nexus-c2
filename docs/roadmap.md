@@ -4,7 +4,7 @@
 |-------|--------|--------|
 | **0** | Core foundations (graph, interlock, gate, audit) | Done |
 | **1** | S1–S3, C2 REST, streamer, benchmarks | Done |
-| **2** | Backend closed loop (no UI); Cloudflare Core; thin pitch cores | Active (#47 Sentinel SAR×AIS) |
+| **2** | Backend closed loop (no UI); Cloudflare Core; thin pitch cores | Done (#47 Sentinel SAR×AIS) |
 | **3** | BattlePlan UI on frozen REST contract | Planned |
 | **4** | Pitch-day polish + fallback | Planned |
 | **5** | Post-hackathon sovereign PoC (live sensors, field USV) | Planned |
@@ -13,7 +13,7 @@
 
 | Point | Phase 2 thin | Phase 5 raise |
 |-------|--------------|---------------|
-| Multimodal | Synthetic + open feeds + in-house Singapore Strait Sentinel-1 SAR fixture & GLINT fail-safe ([SAR Pipeline](architecture/sar_pipeline.md), issue #47) | Live coastal + multi-constellation sovereign satellite & GPU CV cluster |
+| Multimodal | Synthetic + open feeds + in-house Singapore Strait Sentinel-1 SAR fixture & GLINT fail-safe ([SAR Pipeline](architecture/sar_pipeline.md), #47 done) | Live coastal + multi-constellation sovereign satellite & GPU CV cluster |
 | Probabilistic | Backend LLM → hypotheses + COA (still gated); LiteLLM live path (#32, done) | Production CV + hardened LLM; Agent Router egress |
 | Deterministic gate | Stress 100+ tracks; p95 / unauthorized=0 | Air-gap, dual-key Tier-2 |
 | Picture→Tasking | curl / script / two-laptop (S2 air + S3 maritime) | Field USV & live interceptor cueing |
