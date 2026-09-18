@@ -18,6 +18,7 @@ from core.schema import DecisionToken, canonical_json, sha256_hex, utc_now
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from app.adapters.raspi_hardware import maybe_blink_on_ack
 from app.adapters.sar_candidate_event import candidate_event_to_observation
 from app.adapters.southbound_sensor import normalize_sensor_event
 from app.llm_interpreter import InterpretationResult, interpret
@@ -556,13 +557,19 @@ async def recipient_ack(req: AckRequest) -> dict[str, Any]:
             }
         )
     )
+    telemetry = dict(req.telemetry)
+    # Optional stretch: laptop-side RasPi GPIO blink on Ack (issue #20).
+    gpio_blink = await maybe_blink_on_ack()
+    if gpio_blink is not None:
+        telemetry["raspi_gpio"] = gpio_blink
+
     ack_record = {
         "ack_id": str(uuid4()),
         "coa_id": req.coa_id,
         "unit_id": req.unit_id,
         "status": req.status,
         "message": req.message,
-        "telemetry": req.telemetry,
+        "telemetry": telemetry,
         "signature": signature,
         "token_digest": tasking["token"].get("digest"),
         "acked_at": utc_now().isoformat(),

@@ -198,7 +198,24 @@ Cloudflare down → `uv run sdth-c2-server` (do not set `C2_BASE_URL` / `C2_API_
 
 1. **Mock REST** — `app/mock_server.py` (`EFFECTOR_BASE_URL`, default `http://127.0.0.1:8000`; `CLEARBOT_BASE_URL` still accepted)
 2. **2D kinematics** — lat/lon toward waypoint after approve
-3. **RasPi GPIO** — optional / no-op without hardware
+3. **RasPi GPIO** — optional secondary proof on Ack (issue #20)
+
+### Optional RasPi Ack blink (stretch)
+
+On the machine running Core (or a local Core on the recipient laptop), enable:
+
+```bash
+export RASPI_ACK_BLINK=1          # or RASPI_GPIO=1
+# export RASPI_LED_PIN=17         # BCM pin; default 17
+uv run sdth-c2-server
+```
+
+Then complete Screen 2 `POST /api/recipient/ack` as usual. Ack telemetry includes `raspi_gpio`:
+
+- hardware present → `"blinked": true` (LED pulsed)
+- no `RPi.GPIO` / no Pi → `"blinked": false`, `"hardware": "unavailable"` (no-op; CI-safe)
+
+Unset the env to leave the Ack path unchanged. CLI Level-3 path: `./scripts/raspi-run.sh` (same adapter).
 
 `ClearbotRestAdapter` remains a thin alias of `UsvRestAdapter` for older imports.
 

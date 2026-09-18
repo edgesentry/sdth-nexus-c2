@@ -21,6 +21,7 @@ from app.adapters.open_feed import (
     observations_from_open_feeds,
     parse_open_feed_selection,
 )
+from app.adapters.raspi_hardware import RaspiHardwareAdapter
 from app.adapters.southbound_sensor import normalize_sensor_event
 from app.adapters.usv_rest import UsvRestAdapter, resolve_effector_base_url
 from app.scenarios.base import get_scenario, list_scenario_ids
@@ -42,6 +43,7 @@ async def run_c2_cycle(
     audit_path: Path | None = None,
     auto_decision: str | None = None,
     use_stub: bool = False,
+    use_raspi: bool = False,
     gate_timeout_sec: float | None = None,
     open_feeds: list[FeedKind] | None = None,
 ) -> GateVerdict:
@@ -130,6 +132,8 @@ async def run_c2_cycle(
 
     if use_stub:
         effector: EffectorProxy = StubEffector()
+    elif use_raspi:
+        effector = RaspiHardwareAdapter()
     else:
         base = resolve_effector_base_url(effector_base_url or clearbot_base_url)
         effector = UsvRestAdapter(endpoint=base)
@@ -175,6 +179,11 @@ def cli_main() -> None:
     parser.add_argument("--yes", action="store_true", help="Auto-approve HITL")
     parser.add_argument("--no", action="store_true", help="Auto-deny HITL")
     parser.add_argument("--stub", action="store_true", help="Use StubEffector (no HTTP)")
+    parser.add_argument(
+        "--raspi",
+        action="store_true",
+        help="Use RaspiHardwareAdapter (GPIO blink on dispatch; no-op without hardware)",
+    )
     parser.add_argument("--timeout", type=float, default=None)
     parser.add_argument(
         "--open-feed",
@@ -210,6 +219,7 @@ def cli_main() -> None:
             audit_path=args.audit,
             auto_decision=auto,
             use_stub=args.stub,
+            use_raspi=args.raspi,
             gate_timeout_sec=args.timeout,
             open_feeds=open_feeds or None,
         )

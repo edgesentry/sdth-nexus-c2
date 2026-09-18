@@ -428,6 +428,8 @@ Defaults: `status=ACKED`, `message=""`, `telemetry={}`.
 
 Appends OCSF activity `recipient_ack` on the hash chain (`GET /api/audit/trail`).
 
+**Optional stretch (issue #20):** when Core is started with `RASPI_ACK_BLINK=1` (or `RASPI_GPIO=1`), Ack telemetry gains `raspi_gpio` (`blinked` / `hardware`). Without Pi hardware the field is still present with `blinked: false`. Unset the env to leave telemetry unchanged.
+
 ### Errors
 
 | Code | Detail |
