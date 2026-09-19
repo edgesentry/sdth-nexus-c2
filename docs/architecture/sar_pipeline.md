@@ -14,7 +14,7 @@ Space-based SAR provides all-weather, day-and-night macro sea surveillance. Howe
 
 To resolve this, the C2 architecture integrates an upstream **SAR × AIS Correlation Engine** ([`Sentinel-Imagery-Analysis`](https://github.com/StrixGoldhorn/Sentinel-Imagery-Analysis)) feeding structured, verified evidence packages into the NexusGate deterministic gating engine.
 
-**Phase 2 (issue [#47](https://github.com/edgesentry/sdth-nexus-c2/issues/47)):** fixture-first ingress via `app/adapters/sentinel_imagery.py` + `POST /api/ingress/candidate-event` (`use_sentinel_fixture` / `pull_upstream` / `run_cv`). Sibling upstream at `http://127.0.0.1:5050` — not a git submodule. **GLINT Assumed-mock (issue [#55](https://github.com/edgesentry/sdth-nexus-c2/issues/55)):** `app/adapters/glint_client.py` + stub on `:5051` (`pull_glint` / `use_glint_fixture`). Production multi-constellation / GPU CV remains Phase 5 (§3).
+**Phase 2 (issue [#47](https://github.com/edgesentry/sdth-nexus-c2/issues/47)):** fixture-first ingress via `app/adapters/sentinel_imagery.py` + `POST /api/ingress/candidate-event` (`use_sentinel_fixture` / `pull_upstream` / `run_cv`). Sibling upstream at `http://127.0.0.1:5050` — not a git submodule. **GLINT Assumed-mock (issue [#55](https://github.com/edgesentry/sdth-nexus-c2/issues/55)):** `app/adapters/glint_client.py` + stub on `:5051` (`pull_glint` / `use_glint_fixture`). **Dual-SAR (issue [#56](https://github.com/edgesentry/sdth-nexus-c2/issues/56)):** `app/adapters/dual_sar.py` + ingress `dual_sar` / `pull_dual_sar`. Production multi-constellation / GPU CV remains Phase 5 (§3).
 
 ---
 
@@ -101,7 +101,7 @@ Beyond viewing raw radar chips, NexusGate resolves two fundamental operational h
 1. **Dual-SAR Synergy (GLINT Macro Anomaly × SIA Micro Metrology)**:
    - **GLINT (Team 02)** detects macro statistical anomalies across wider shipping corridors (e.g. `UNANNOUNCED_DARK_VESSEL_CLUSTER` with confidence 0.88 over sector $B$).
    - **Sentinel-Imagery-Analysis (In-House)** extracts physical Oriented Bounding Box geometry (length 78.2m, beam 14.6m, angle -18.5°, confidence 0.91) and evidence radar chips (`demo_detection.jpg`).
-   - **Unified Corroborator (`app/adapters/dual_sar.py`)**: When both observations align spatially within the sector, the C2 synthesizes an enriched composite observation with elevated confidence ($\min(0.98, \text{conf} + 0.1)$). If GLINT's external API is unreachable during the venue demo, the engine fails safe to local SIA (`:5050`) or local golden fixtures without interruption.
+   - **Unified Corroborator (`app/adapters/dual_sar.py`, issue [#56](https://github.com/edgesentry/sdth-nexus-c2/issues/56))**: When both observations align spatially within the sector (macro bbox or ≤3 km), the C2 synthesizes an enriched composite observation with elevated confidence ($\min(0.98, \max(c_g,c_s) + 0.1)$). Ingress: `POST /api/ingress/candidate-event` with `dual_sar=true` (fixtures) or `pull_dual_sar=true`. Venue resilience: if the live GLINT endpoint is down, `pull_dual_sar` falls back to the GLINT assumed fixture (and SIA live/fixture) and still returns `source=dual_sar` when the fixtures align spatially. `source=sia_only` applies when macro events cannot be loaded at all, or when SIA detections fall outside the macro corridor.
 
 2. **Temporal Kinematic Projection (`core/kinematics.py`)**:
    - Satellite SAR overpasses are historical snapshots ($T - \Delta t$, typically 30 minutes to 4 hours old).

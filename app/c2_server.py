@@ -102,7 +102,8 @@ class CandidateEventIngressRequest(BaseModel):
 
     Sentinel-Imagery-Analysis (issue #47): ``use_sentinel_fixture``, ``pull_upstream``,
     or raw ``run_cv`` body. GLINT Assumed-mock (issue #55): ``pull_glint`` /
-    ``use_glint_fixture``. Assumed fixture / ``event`` remain for Pitch-1 (#25).
+    ``use_glint_fixture``. Dual-SAR (issue #56): ``dual_sar`` / ``pull_dual_sar``.
+    Assumed fixture / ``event`` remain for Pitch-1 (#25).
     """
 
     event: dict[str, Any] | None = None
@@ -112,6 +113,8 @@ class CandidateEventIngressRequest(BaseModel):
     run_cv: dict[str, Any] | None = None
     pull_glint: bool = False
     use_glint_fixture: bool = False
+    dual_sar: bool = False
+    pull_dual_sar: bool = False
 
 
 class OpenFeedIngressRequest(BaseModel):
@@ -277,12 +280,14 @@ async def ontology_state() -> dict[str, Any]:
 
 @app.post("/api/ingress/candidate-event")
 async def ingress_candidate_event(req: CandidateEventIngressRequest) -> dict[str, Any]:
-    """Ingest CandidateEvent / Sentinel / GLINT → Observation (modality=space_sar).
+    """Ingest CandidateEvent / Sentinel / GLINT / Dual-SAR → Observation (space_sar).
 
     Never seals tokens. Sentinel paths (issue #47) fall back to the Singapore Strait
     fixture when ``pull_upstream`` cannot reach the sibling upstream. GLINT paths
     (issue #55) fall back to the assumed CandidateEvent fixture when mock/live is down.
+    Dual-SAR (issue #56) corroborates GLINT x SIA and fails safe to SIA/fixture.
     """
+    from app.adapters.dual_sar import resolve_dual_sar_events
     from app.adapters.glint_client import resolve_glint_events
     from app.adapters.sar_candidate_event import load_assumed_fixture
     from app.adapters.sentinel_imagery import resolve_sentinel_events
@@ -291,7 +296,22 @@ async def ingress_candidate_event(req: CandidateEventIngressRequest) -> dict[str
     resolved_source: str | None = None
     events: list[Any]
 
-    if req.run_cv is not None or req.pull_upstream or req.use_sentinel_fixture:
+    if req.dual_sar or req.pull_dual_sar:
+        try:
+            mapped, resolved_source = resolve_dual_sar_events(
+                pull=req.pull_dual_sar,
+                use_fixture=req.dual_sar or req.pull_dual_sar,
+                run_cv=req.run_cv,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if not mapped:
+            raise HTTPException(
+                status_code=400,
+                detail="No Dual-SAR / dark-vessel detections to ingest",
+            )
+        events = mapped
+    elif req.run_cv is not None or req.pull_upstream or req.use_sentinel_fixture:
         try:
             mapped, resolved_source = resolve_sentinel_events(
                 run_cv=req.run_cv,
@@ -325,7 +345,7 @@ async def ingress_candidate_event(req: CandidateEventIngressRequest) -> dict[str
             detail=(
                 "Provide event, use_fixture=true, use_sentinel_fixture=true, "
                 "pull_upstream=true, run_cv={...}, pull_glint=true, "
-                "or use_glint_fixture=true"
+                "use_glint_fixture=true, dual_sar=true, or pull_dual_sar=true"
             ),
         )
 

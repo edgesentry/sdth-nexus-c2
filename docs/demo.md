@@ -78,6 +78,9 @@ curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/ingress/candidate-event" \
 # S3 GLINT pull (start mock first: uv run sdth-mock-glint → :5051):
 # curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/ingress/candidate-event" \
 #   -H 'content-type: application/json' -d '{"pull_glint":true}'
+# S3 Dual-SAR (GLINT × SIA fixtures — issue #56):
+curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/ingress/candidate-event" \
+  -H 'content-type: application/json' -d '{"dual_sar":true}'
 
 # Propose (loads S2 Warning Picture + queues COA). Capture coa_id:
 PROP=$(curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/gate/proposals" \

@@ -4,7 +4,7 @@
 |-------|--------|--------|
 | **0** | Core foundations (graph, interlock, gate, audit) | Done |
 | **1** | S1–S3, C2 REST, streamer, benchmarks | Done |
-| **2** | Backend closed loop & operational core | **Active (partial)** — #47 / #54 / #55 / #60 done; open: [#56](https://github.com/edgesentry/sdth-nexus-c2/issues/56)–[#59](https://github.com/edgesentry/sdth-nexus-c2/issues/59) |
+| **2** | Backend closed loop & operational core | **Active (partial)** — #47 / #54 / #55 / #56 / #60 done; open: [#57](https://github.com/edgesentry/sdth-nexus-c2/issues/57)–[#59](https://github.com/edgesentry/sdth-nexus-c2/issues/59) |
 | **3** | Verification WebUI on frozen REST (not pitch UI) | Active (`ui/battleplan/` harness) |
 | **4** | Pitch-day polish, Team 02 GLINT **live** integration & fallback | Planned (Sep 25–27) |
 | **5** | Post-hackathon sovereign PoC (live sensors, field USV) | Planned |
@@ -29,7 +29,7 @@ In **SDTH 2026 PS 04 ("One Picture, Many Eyes")**, a C2 system dies if it only r
 |---|---|---|
 | **Ingress replay** | Demo failure loses the CandidateEvent stream | ✅ `.audit/ingress.jsonl` + `scripts/replay_ingress.py` (#54) |
 | **GLINT mock** | Team 02 schema not final | ✅ HTTP stub `:5051` + `glint_client`; swap on handover |
-| **Dual-SAR** | GLINT and SIA ingested without joint rules | `app/adapters/dual_sar.py` |
+| **Dual-SAR** | GLINT and SIA ingested without joint rules | ✅ `app/adapters/dual_sar.py` (#56) |
 | **SAR Time-Delta** | Static SAR coords fail on moving ships | `core/kinematics.py` |
 | **OSINT parse** | S2 social counts hardcoded beside the text | `app/adapters/osint_text.py` |
 | **Tasking geometry** | Effector sent to static historical coords | POI in `core/coa.py` / `app/agent.py` |
@@ -38,7 +38,7 @@ In **SDTH 2026 PS 04 ("One Picture, Many Eyes")**, a C2 system dies if it only r
 
 | Point | Phase 2 implementation | Phase 5 raise |
 |-------|------------------------|---------------|
-| Multimodal & Kinematics | Synthetic tactical sensors + Real-processed SIA(+AIS) + Assumed-mock GLINT + kinematics (open) | Live coastal + multi-constellation SAR |
+| Multimodal & Kinematics | Synthetic tactical sensors + Real-processed SIA(+AIS) + Assumed-mock GLINT + Dual-SAR (#56) + kinematics (open) | Live coastal + multi-constellation SAR |
 | Probabilistic | LLM / heuristic → hypotheses + COA; LiteLLM (#32, done) | Production CV + hardened LLM |
 | Deterministic gate | Stress 100+ tracks; p95 < 50ms, unauthorized=0 (done) | Air-gap, dual-key Tier-2 |
 | Picture→Tasking | Closed loop + POI (open) + Screen 2 Ack <3.0s | Field USV |
