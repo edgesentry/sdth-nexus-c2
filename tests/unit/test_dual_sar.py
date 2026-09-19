@@ -15,12 +15,14 @@ from app.adapters.dual_sar import (
     STATUS_SIA_ONLY,
     corroborate,
     fuse_pair,
+    point_in_bbox,
     resolve_dual_sar_events,
     sector_aligns,
 )
 from app.adapters.glint_client import load_glint_fixture
 from app.adapters.sar_candidate_event import (
     SPACE_SAR_MODALITY,
+    CandidateEventBoundingBox,
     CandidateEventLocation,
     candidate_event_to_observation,
 )
@@ -102,6 +104,28 @@ def test_resolve_glint_unreachable_fails_safe_to_sia(monkeypatch: pytest.MonkeyP
     assert len(events) == 2
     assert all(e.attributes["dual_sar_status"] == STATUS_SIA_ONLY for e in events)
     assert all(e.source_id != COMPOSITE_SOURCE_ID for e in events)
+
+
+def test_resolve_glint_oserror_fails_safe_to_sia(monkeypatch: pytest.MonkeyPatch) -> None:
+    def _boom(**_kwargs: Any) -> tuple[list[Any], str]:
+        raise FileNotFoundError("missing glint fixture")
+
+    monkeypatch.setattr("app.adapters.dual_sar.resolve_glint_events", _boom)
+    events, source = resolve_dual_sar_events(use_fixture=True)
+    assert source == SOURCE_SIA_ONLY
+    assert len(events) == 2
+    assert all(e.attributes["dual_sar_status"] == STATUS_SIA_ONLY for e in events)
+
+
+def test_point_in_bbox_tolerates_inverted_bounds() -> None:
+    inverted = CandidateEventBoundingBox(
+        min_lat=1.258,
+        max_lat=1.25,
+        min_lon=103.816,
+        max_lon=103.808,
+    )
+    assert point_in_bbox(1.254, 103.812, inverted)
+    assert not point_in_bbox(1.40, 104.10, inverted)
 
 
 def test_ingress_dual_sar_fixture(client: TestClient) -> None:

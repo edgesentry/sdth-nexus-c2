@@ -37,7 +37,10 @@ def point_in_bbox(
     longitude: float,
     bbox: CandidateEventBoundingBox,
 ) -> bool:
-    return bbox.min_lat <= latitude <= bbox.max_lat and bbox.min_lon <= longitude <= bbox.max_lon
+    """True when point is inside bbox; tolerates inverted min/max from upstream feeds."""
+    lo_lat, hi_lat = sorted((bbox.min_lat, bbox.max_lat))
+    lo_lon, hi_lon = sorted((bbox.min_lon, bbox.max_lon))
+    return lo_lat <= latitude <= hi_lat and lo_lon <= longitude <= hi_lon
 
 
 def sector_aligns(
@@ -200,7 +203,8 @@ def resolve_dual_sar_events(
             timeout_s=glint_timeout_s,
             fixture_path=glint_fixture_path,
         )
-    except ValueError:
+    except (ValueError, OSError, TypeError):
+        # Missing/corrupt fixture or unexpected resolve failure → SIA-only fail-safe.
         macros = []
 
     fused = corroborate(macros, micros, max_align_m=max_align_m)
