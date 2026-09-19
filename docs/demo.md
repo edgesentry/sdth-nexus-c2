@@ -1,6 +1,6 @@
 # Demo & benchmarks
 
-Phase 2 demos use **curl / scripts / two laptops**. Phase 3 adds the **verification WebUI** (Next.js harness in `ui/battleplan/`; **not** Johnny’s BattlePlan pitch UI) on the same frozen paths. Contract: [C2 REST API](api/rest.md). Topology: [Topology](architecture/topology.md) · Provenance: [Data provenance](data-provenance.md).
+Phase 2 demos use **curl / scripts / two laptops**. Phase 3 adds the **verification WebUI** (Next.js harness in `ui/battleplan/`; **not** the external BattlePlan pitch UI) on the same frozen paths. Contract: [C2 REST API](api/rest.md). Topology: [Topology](architecture/topology.md) · Provenance: [Data provenance](data-provenance.md).
 
 ## Quick start
 

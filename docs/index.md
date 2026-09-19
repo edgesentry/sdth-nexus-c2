@@ -41,7 +41,7 @@ uv run sdth-c2-server             # http://127.0.0.1:8080 (Screen 1/2 REST Core)
 
 - Probabilistic proposes; **deterministic gate** alone seals tokens
 - Scenario detectors remain deterministic rules (LLM is optional overlay)
-- **UI Boundary:** `ui/battleplan/` and console TUI are **verification harnesses only**. **BattlePlan** (Johnny’s pitch UI) lives **outside this repository**
+- **UI Boundary:** `ui/battleplan/` and console TUI are **verification harnesses only**. **BattlePlan** (external pitch UI) lives **outside this repository**
 - Kinetic intercept is **not** claimed (S2 cues identify only)
 - C2 has **no application DB** — runtime is in-memory; audit is jsonl; AIS history stays in SIA SQLite
 

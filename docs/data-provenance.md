@@ -39,7 +39,7 @@ No C2 application RDB. AIS enters only via SIA’s own ingest plugins (`demo` / 
 
 | Name | Role | Location |
 |------|------|----------|
-| **BattlePlan** | Pitch UI (Johnny) | **Outside this repo** |
+| **BattlePlan** | External pitch UI | **Outside this repo** |
 | **Verification WebUI** | Inspect Nexus Screen 1/2 (not for pitch) | This repo `ui/` (folder still named `battleplan` — harness only) |
 | TUI / curl / scripts | Automation and cold-start | This repo |
 

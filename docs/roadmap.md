@@ -9,7 +9,7 @@
 | **4** | Pitch-day polish, Team 02 GLINT **live** integration & fallback | Planned (Sep 25–27) |
 | **5** | Post-hackathon sovereign PoC (live sensors, field USV) | Planned |
 
-> **UI Boundary:** **BattlePlan** = Johnny’s **pitch UI** (outside this repo). This repo’s `ui/battleplan/` + TUI are a **verification harness** only. Pitch deliverable = deterministic gate + interlock, not a presentation chrome in-tree.
+> **UI Boundary:** **BattlePlan** = external **pitch UI** (outside this repo). This repo’s `ui/battleplan/` + TUI are a **verification harness** only. Pitch deliverable = deterministic gate + interlock, not a presentation chrome in-tree.
 
 > **Data provenance:** See [Data provenance](data-provenance.md) (Synthetic / Real-processed / Assumed-mock).
 

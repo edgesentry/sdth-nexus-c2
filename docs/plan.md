@@ -238,7 +238,7 @@ Phase 2 delivers thin / demo-fidelity slices of the pitch pillars (backend close
 - [x] **AIS via SIA ingest only** (#60): `demo` / `offline` plugins → SIA local SQLite (no alternate AIS bridge).
 
 ### Phase 3: Verification WebUI on Frozen REST (Active — Not Pitch UI)
-> **UI Boundary:** **BattlePlan** = Johnny’s pitch UI (**outside this repo**). In-repo `ui/battleplan/` + TUI = verification harness for Screen 1 / Screen 2 only.
+> **UI Boundary:** **BattlePlan** = external pitch UI (**outside this repo**). In-repo `ui/battleplan/` + TUI = verification harness for Screen 1 / Screen 2 only.
 
 - [x] Integrate verification WebUI with `app/c2_server.py` — Screen 1 `/command` + Screen 2 `/recipient`; CORS.
 - [x] Radar / SAR image chip preview modal (`evidence_image_uri`).
