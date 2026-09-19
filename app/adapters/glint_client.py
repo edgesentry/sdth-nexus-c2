@@ -53,7 +53,9 @@ def annotate_glint_event(event: CandidateEvent) -> CandidateEvent:
 
 
 def load_glint_fixture(path: Path | None = None) -> CandidateEvent:
-    return annotate_glint_event(parse_candidate_event(load_assumed_fixture(path or DEFAULT_FIXTURE)))
+    return annotate_glint_event(
+        parse_candidate_event(load_assumed_fixture(path or DEFAULT_FIXTURE))
+    )
 
 
 def fetch_glint_event(

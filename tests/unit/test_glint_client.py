@@ -122,9 +122,7 @@ def test_ingress_glint_fixture(client: TestClient) -> None:
     assert body["observation"]["entity_hint"] == "UNANNOUNCED_DARK_VESSEL_CLUSTER"
 
 
-def test_ingress_pull_glint_fallback(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_ingress_pull_glint_fallback(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "app.adapters.glint_client.fetch_glint_event",
         lambda **_kwargs: None,
@@ -138,9 +136,7 @@ def test_ingress_pull_glint_fallback(
     assert resp.json()["count"] == 1
 
 
-def test_ingress_pull_glint_upstream(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_ingress_pull_glint_upstream(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     remote = annotate_glint_event(parse_candidate_event(load_assumed_fixture()))
     remote = remote.model_copy(update={"event_id": "evt_glint_http_001"})
     monkeypatch.setattr(
