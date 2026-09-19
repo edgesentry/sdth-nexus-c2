@@ -17,6 +17,7 @@ dependencies = [
 sdth-nexus-c2 = "app.main:cli_main"
 sdth-mock-effector = "app.mock_server:cli_main"
 sdth-mock-clearbot = "app.mock_server:cli_main"
+sdth-mock-glint = "app.mock_glint_server:cli_main"
 sdth-c2-server = "app.c2_server:cli_main"
 
 [build-system]

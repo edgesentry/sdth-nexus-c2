@@ -7,6 +7,7 @@ payload to the recorded endpoint. Does **not** touch ``.audit/gate.jsonl``.
   uv run sdth-c2-server
   # ... demo fails after some CandidateEvent POSTs ...
   uv run python scripts/replay_ingress.py --reset
+  uv run python scripts/replay_ingress.py --clear   # truncate jsonl only
 """
 
 from __future__ import annotations
@@ -39,6 +40,11 @@ def _default_log_path() -> Path:
     return DEFAULT_LOG
 
 
+def _join_url(base: str, endpoint: str) -> str:
+    """Join base + endpoint regardless of leading/trailing slash."""
+    return f"{base.rstrip('/')}/{endpoint.lstrip('/')}"
+
+
 def load_records(path: Path) -> list[dict[str, Any]]:
     if not path.exists():
         return []
@@ -58,6 +64,12 @@ def load_records(path: Path) -> list[dict[str, Any]]:
     return out
 
 
+def clear_log(path: Path) -> None:
+    """Truncate the ingress replay log (demo hygiene; not gate authority)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("", encoding="utf-8")
+
+
 def replay(
     *,
     base_url: str,
@@ -69,7 +81,7 @@ def replay(
     headers = _headers()
     with httpx.Client(timeout=timeout) as client:
         if reset:
-            resp = client.post(f"{base}/api/admin/reset", headers=headers)
+            resp = client.post(_join_url(base, "/api/admin/reset"), headers=headers)
             resp.raise_for_status()
             print(f"reset → {resp.json().get('status', resp.status_code)}")
 
@@ -80,7 +92,7 @@ def replay(
             if not isinstance(payload, dict):
                 print(f"SKIP {i}: missing payload object", file=sys.stderr)
                 continue
-            url = f"{base}{endpoint}"
+            url = _join_url(base, endpoint)
             resp = client.post(url, json=payload, headers=headers)
             if resp.status_code >= 400:
                 print(
@@ -117,12 +129,22 @@ def main(argv: list[str] | None = None) -> int:
         help="POST /api/admin/reset before replaying (memory only; keeps jsonl)",
     )
     parser.add_argument(
+        "--clear",
+        action="store_true",
+        help="Truncate the ingress jsonl and exit (no replay; demo hygiene)",
+    )
+    parser.add_argument(
         "--timeout",
         type=float,
         default=30.0,
         help="HTTP timeout seconds",
     )
     args = parser.parse_args(argv)
+
+    if args.clear:
+        clear_log(args.log)
+        print(f"cleared {args.log}")
+        return 0
 
     records = load_records(args.log)
     if not records:

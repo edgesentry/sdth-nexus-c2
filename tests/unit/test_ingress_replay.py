@@ -117,3 +117,29 @@ def test_replay_after_admin_reset_restores_observations(client: TestClient) -> N
     # Gate authority remains separate — ingest-only recovery seals no Ack.
     gate_names = {r.get("activity_name") for r in c2_server.get_runtime().audit.records()}
     assert "recipient_ack" not in gate_names
+
+
+def test_join_url_tolerates_slash_variants() -> None:
+    from scripts.replay_ingress import _join_url
+
+    assert _join_url("http://127.0.0.1:8080", "/api/ingress/candidate-event") == (
+        "http://127.0.0.1:8080/api/ingress/candidate-event"
+    )
+    assert _join_url("http://127.0.0.1:8080/", "api/ingress/candidate-event") == (
+        "http://127.0.0.1:8080/api/ingress/candidate-event"
+    )
+    assert _join_url("http://127.0.0.1:8080/", "/api/admin/reset") == (
+        "http://127.0.0.1:8080/api/admin/reset"
+    )
+
+
+def test_clear_truncates_ingress_log(tmp_path: Path) -> None:
+    from scripts.replay_ingress import clear_log, main
+
+    log = tmp_path / "ingress.jsonl"
+    log.write_text('{"source":"fixture"}\n', encoding="utf-8")
+    assert main(["--log", str(log), "--clear"]) == 0
+    assert log.read_text(encoding="utf-8") == ""
+    # Idempotent on missing/empty path.
+    clear_log(tmp_path / "missing.jsonl")
+    assert (tmp_path / "missing.jsonl").read_text(encoding="utf-8") == ""
