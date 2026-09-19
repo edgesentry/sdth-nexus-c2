@@ -118,7 +118,9 @@ def test_ingress_dual_sar_fixture(client: TestClient) -> None:
     assert first["confidence"] >= 0.91
 
 
-def test_ingress_pull_dual_sar_falls_back(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_ingress_pull_dual_sar_falls_back(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setattr("app.adapters.sentinel_imagery.fetch_run_cv", lambda **_k: None)
     monkeypatch.setattr("app.adapters.glint_client.fetch_glint_event", lambda **_k: None)
     resp = client.post("/api/ingress/candidate-event", json={"pull_dual_sar": True})

@@ -10,13 +10,14 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from core.ontology import haversine_m
+
 from app.adapters.glint_client import resolve_glint_events
 from app.adapters.sar_candidate_event import (
     CandidateEvent,
     CandidateEventBoundingBox,
 )
 from app.adapters.sentinel_imagery import resolve_sentinel_events
-from core.ontology import haversine_m
 
 DEFAULT_ALIGN_M = 3_000.0
 CONFIDENCE_BOOST = 0.1
@@ -36,10 +37,7 @@ def point_in_bbox(
     longitude: float,
     bbox: CandidateEventBoundingBox,
 ) -> bool:
-    return (
-        bbox.min_lat <= latitude <= bbox.max_lat
-        and bbox.min_lon <= longitude <= bbox.max_lon
-    )
+    return bbox.min_lat <= latitude <= bbox.max_lat and bbox.min_lon <= longitude <= bbox.max_lon
 
 
 def sector_aligns(
@@ -65,15 +63,12 @@ def sector_aligns(
     if distance_m <= max_align_m:
         return True
 
-    if (
+    return bool(
         macro.area_id
         and micro.area_id
         and macro.area_id == micro.area_id
         and distance_m <= max_align_m * 2.0
-    ):
-        return True
-
-    return False
+    )
 
 
 def _nearest_macro(
@@ -103,9 +98,7 @@ def fuse_pair(macro: CandidateEvent, micro: CandidateEvent) -> CandidateEvent:
         max(macro.confidence, micro.confidence) + CONFIDENCE_BOOST,
     )
     vessel_est = int(
-        macro.attributes.get("vessel_count_est")
-        or micro.attributes.get("vessel_count_est")
-        or 0
+        macro.attributes.get("vessel_count_est") or micro.attributes.get("vessel_count_est") or 0
     )
     attrs: dict[str, Any] = {
         **micro.attributes,
@@ -176,7 +169,7 @@ def resolve_dual_sar_events(
     sia_fixture_path: Path | None = None,
     run_cv: dict[str, Any] | None = None,
 ) -> tuple[list[CandidateEvent], str]:
-    """Resolve GLINT × SIA and corroborate.
+    """Resolve GLINT x SIA and corroborate.
 
     Returns ``(events, source)`` where source is ``dual_sar`` when at least one
     pair corroborates, else the SIA resolve source (fail-safe) or ``sia_only``.

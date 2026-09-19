@@ -285,7 +285,7 @@ async def ingress_candidate_event(req: CandidateEventIngressRequest) -> dict[str
     Never seals tokens. Sentinel paths (issue #47) fall back to the Singapore Strait
     fixture when ``pull_upstream`` cannot reach the sibling upstream. GLINT paths
     (issue #55) fall back to the assumed CandidateEvent fixture when mock/live is down.
-    Dual-SAR (issue #56) corroborates GLINT × SIA and fails safe to SIA/fixture.
+    Dual-SAR (issue #56) corroborates GLINT x SIA and fails safe to SIA/fixture.
     """
     from app.adapters.dual_sar import resolve_dual_sar_events
     from app.adapters.glint_client import resolve_glint_events
