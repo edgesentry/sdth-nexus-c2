@@ -94,6 +94,22 @@ To balance processing depth and live reliability, three deployment patterns are 
 | **Pattern B: Local Distributed (Zero-Internet)** | An upstream workstation runs `Sentinel-Imagery-Analysis` on port **5050**; C2 runs on port 8080. Local LAN or localhost REST (`pull_upstream` / `SAR_UPSTREAM_URL`). | Zero reliance on external internet; demonstrates real multi-machine networking. | **Hardened offline fallback** |
 | **Pattern C: Full Cloudflare Container** | Entire Python / OpenCV / Flask stack containerized and deployed to Cloudflare Containers. | 100% unified cloud footprint, but requires bundling cached scenes to prevent large image download timeouts. | Optional technical stretch |
 
+### 2.3 Dual-SAR Synergy & Temporal Kinematic Bridge
+
+Beyond viewing raw radar chips, NexusGate resolves two fundamental operational hurdles:
+
+1. **Dual-SAR Synergy (GLINT Macro Anomaly × SIA Micro Metrology)**:
+   - **GLINT (Team 02)** detects macro statistical anomalies across wider shipping corridors (e.g. `UNANNOUNCED_DARK_VESSEL_CLUSTER` with confidence 0.88 over sector $B$).
+   - **Sentinel-Imagery-Analysis (In-House)** extracts physical Oriented Bounding Box geometry (length 78.2m, beam 14.6m, angle -18.5°, confidence 0.91) and evidence radar chips (`demo_detection.jpg`).
+   - **Unified Corroborator (`app/adapters/dual_sar.py`)**: When both observations align spatially within the sector, the C2 synthesizes an enriched composite observation with elevated confidence ($\min(0.98, \text{conf} + 0.1)$). If GLINT's external API is unreachable during the venue demo, the engine fails safe to local SIA (`:5050`) or local golden fixtures without interruption.
+
+2. **Temporal Kinematic Projection (`core/kinematics.py`)**:
+   - Satellite SAR overpasses are historical snapshots ($T - \Delta t$, typically 30 minutes to 4 hours old).
+   - NexusGate projects the historical contact forward to current clock time $t_{\text{now}}$ using dead-reckoning kinematics:
+     $$\mathbf{p}_{\text{proj}} = \mathbf{p}_{\text{sar}} + \Delta t \cdot \mathbf{v}_{\text{est}}$$
+     $$R_{\text{uncertainty}}(\Delta t) = \Delta t \cdot \left(\frac{v_{\max} - v_{\min}}{2}\right) + \sigma_{\text{nav}}$$
+   - When coastal radar detects an unannounced contact, NexusGate verifies if it falls within the reachability uncertainty ellipse $\mathbf{E}(\Delta t)$, mathematically establishing tracking continuity from space SAR to coastal tactical C2 without relying on cooperative AIS transponders.
+
 ---
 
 ## 3. Target Production Sovereign Architecture

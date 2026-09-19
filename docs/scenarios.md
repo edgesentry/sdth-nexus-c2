@@ -15,15 +15,18 @@ Each CLI / TUI run prints a **WARNING PICTURE** (threat class, minutes of warnin
 
 ## Modalities
 
-| Modality | Scenarios | Role in contradiction |
-|----------|-----------|------------------------|
-| Space-based SAR | S3 | Macro scene-difference anomaly (dark vessels, unannounced clusters with OBB dimensions and radar image chips) |
-| Social / recon text | S2 | Exaggerated count claims |
-| Gap-filler radar | S1–S3 | Count / bearing disagree |
-| EO / optical | S1, S2 | Low-confidence blur |
-| AIS / open AIS | S1, S3 (+ optional open feed) | Spoof, density break, or demo-grade data.gov.sg-shaped fixture |
-| RF | S1, S2 | Silent / emitter cue |
-| ADS-B | S2 (+ optional open air) | Empty sector, or opt-in open air fixture |
+Provenance labels (**Synthetic** / **Real-processed** / **Assumed-mock**): [Data provenance](data-provenance.md).
+
+| Modality | Scenarios | Provenance | Role in contradiction |
+|----------|-----------|------------|------------------------|
+| Space-based SAR (SIA micro) | S3 | Real-processed or fixture | Dark vessels, OBB + chip |
+| Space-based SAR (GLINT macro) | S3 | Assumed-mock → live Phase 4 | Corridor-scale anomaly |
+| Social / recon text | S2 | **Synthetic** | Exaggerated count claims |
+| Gap-filler radar | S1–S3 | **Synthetic** | Count / bearing disagree |
+| EO / optical | S1, S2 | **Synthetic** | Low-confidence blur |
+| AIS | S1, S3 | S1 Synthetic; S3 via **SIA** Real-processed (`demo`) or MockAIS | Spoof / dark-vessel filter |
+| RF | S1, S2 | **Synthetic** | Silent / emitter cue |
+| ADS-B | S2 | **Synthetic** (+ optional open air fixture) | Empty sector |
 
 ## Optional open feeds (issue #16)
 
