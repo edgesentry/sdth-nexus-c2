@@ -54,8 +54,12 @@ AUTH=()
 ### 1. Screen 1 — command (ingress + gate)
 
 ```bash
-# Optional reset between rehearsals (memory only; does not wipe .audit/gate.jsonl)
+# Optional reset between rehearsals (memory only; does not wipe .audit/gate.jsonl
+# or .audit/ingress.jsonl)
 curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/admin/reset"
+
+# After a failed demo, re-POST prior ingress without re-collecting upstream:
+#   uv run python scripts/replay_ingress.py --reset
 
 # Optional ingress (skip for minimal S2 handshake — proposals load the scenario)
 curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/ingress/open-feed" \

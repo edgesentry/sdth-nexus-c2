@@ -12,6 +12,7 @@ import uvicorn
 from core.audit import AuditLogger
 from core.coa import ActionTier, CourseOfAction, GateVerdict
 from core.gate import LatencyBoundedGate
+from core.ingress_replay import IngressReplayLog
 from core.ontology import SpatialEntityGraph
 from core.policy import TieredPolicy
 from core.schema import DecisionToken, canonical_json, sha256_hex, utc_now
@@ -38,7 +39,15 @@ def _default_audit_path() -> Path:
     return ROOT / ".audit" / "gate.jsonl"
 
 
+def _default_ingress_replay_path() -> Path:
+    override = os.environ.get("INGRESS_REPLAY_PATH")
+    if override:
+        return Path(override)
+    return ROOT / ".audit" / "ingress.jsonl"
+
+
 DEFAULT_AUDIT = _default_audit_path()
+DEFAULT_INGRESS_REPLAY = _default_ingress_replay_path()
 
 app = FastAPI(title="NexusGate C2 Server", version="0.1.0")
 
@@ -137,9 +146,11 @@ class C2Runtime:
         *,
         policy_path: Path = DEFAULT_POLICY,
         audit_path: Path = DEFAULT_AUDIT,
+        ingress_replay_path: Path = DEFAULT_INGRESS_REPLAY,
     ) -> None:
         self.policy = TieredPolicy.from_yaml(policy_path)
         self.audit = AuditLogger(audit_path)
+        self.ingress_replay = IngressReplayLog(ingress_replay_path)
         self.graph = SpatialEntityGraph(associate_radius_m=2_000.0)
         self.finding: Finding | None = None
         self.scenario_id: str | None = None
@@ -326,6 +337,14 @@ async def ingress_candidate_event(req: CandidateEventIngressRequest) -> dict[str
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    ingress_source = sentinel_source or ("fixture" if req.use_fixture else "event")
+    # Replay log is best-effort — never fail a successful ingest (issue #54).
+    runtime.ingress_replay.append(
+        source=ingress_source,
+        endpoint="/api/ingress/candidate-event",
+        payload=req.model_dump(mode="json"),
+    )
+
     first = observations[0]
     return {
         "status": "INGESTED",
@@ -334,7 +353,7 @@ async def ingress_candidate_event(req: CandidateEventIngressRequest) -> dict[str
         "track_id": track_ids[0],
         "track_ids": track_ids,
         "count": len(observations),
-        "source": sentinel_source or ("fixture" if req.use_fixture else "event"),
+        "source": ingress_source,
     }
 
 
@@ -392,6 +411,13 @@ async def ingress_open_feed(req: OpenFeedIngressRequest) -> dict[str, Any]:
                     "track_id": track.track_id,
                 }
             )
+
+    # Optional open-feed replay (issue #54) — best-effort, never fails ingress.
+    runtime.ingress_replay.append(
+        source=f"open_feed:{','.join(feeds)}",
+        endpoint="/api/ingress/open-feed",
+        payload=req.model_dump(mode="json"),
+    )
 
     return {
         "status": "INGESTED",
