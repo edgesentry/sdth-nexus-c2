@@ -33,7 +33,7 @@ Labels used across this repo. Prefer these over vague “real” / “fake”.
 | **AIS history** | **SIA local SQLite** — C2 does not store raw AIS |
 | SAR imagery / chips | SIA `static/output` |
 
-No C2 application RDB. **Indago DuckDB bridge is removed / not used** — AIS enters only via SIA’s own ingest plugins (`demo` / `offline`).
+No C2 application RDB. AIS enters only via SIA’s own ingest plugins (`demo` / `offline`) into SIA local SQLite.
 
 ## UI boundary
 

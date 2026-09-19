@@ -2,7 +2,7 @@
 
 > Canonical planning source for this repo (MkDocs / GitHub Pages).
 
-**Status:** Phase 2 **active (partial)** — SIA #47 / Cloudflare / gate loop / ingress replay (#54) done; dual-SAR, kinematics, OSINT parser, POI, GLINT mock, drop Indago **open** · Phase 3 verification WebUI harness (`ui/battleplan/`; **BattlePlan pitch UI is out of repo**) · Phase 5 = post-hackathon sovereign PoC · **2026-09-19 Updated** · Provenance: [data-provenance.md](data-provenance.md)  
+**Status:** Phase 2 **active (partial)** — SIA #47 / Cloudflare / gate loop / ingress replay (#54) / AIS via SIA only (#60) done; dual-SAR, kinematics, OSINT parser, POI, GLINT mock **open** · Phase 3 verification WebUI harness (`ui/battleplan/`; **BattlePlan pitch UI is out of repo**) · Phase 5 = post-hackathon sovereign PoC · **2026-09-19 Updated** · Provenance: [data-provenance.md](data-provenance.md)  
 **Challenge:** SDTH 2026 **PS 04 — One Picture, Many Eyes** (From Picture to Tasking)  
 **Product face:** Project NexusGate (core gate) + venue Command and Control (C2) app  
 **Target Reviewers:** DSTA, MINDEF/SAF C4I, EDTH, NUS Defense Tech Venture Lab  
@@ -221,7 +221,7 @@ Phase 2 delivers thin / demo-fidelity slices of the pitch pillars (backend close
 - [x] **Pitch-2 Probabilistic interpreter:** `app/llm_interpreter.py` + `POST /api/interpret` (issue #22).
 - [x] **Pitch-2 follow-on LiteLLM live path:** (issue #32).
 - [x] **Pitch-1 Multimodal demo harness & SAR CandidateEvent adapter:** (issue #25).
-- [x] **In-house SAR pipeline (SIA) & fixture fail-safe:** `app/adapters/sentinel_imagery.py` + Singapore Strait fixture (issue #47). AIS via **SIA ingest only** (`demo` / `offline`) → SIA local SQLite; **no Indago DuckDB**.
+- [x] **In-house SAR pipeline (SIA) & fixture fail-safe:** `app/adapters/sentinel_imagery.py` + Singapore Strait fixture (issue #47). AIS via **SIA ingest only** (`demo` / `offline`) → SIA local SQLite.
 - [x] **Optional open-feed ingress:** (issue #16).
 - [x] Validate backend closed loop via curl / scripts (`scripts/picture_to_tasking.sh`).
 - [x] Cloudflare Containers + local fallback (issue #18).
@@ -235,7 +235,7 @@ Phase 2 delivers thin / demo-fidelity slices of the pitch pillars (backend close
 - [ ] **Temporal Kinematic Dead-Reckoning** (#57): `core/kinematics.py` — SAR $T-\Delta t$ → coastal radar $T-0$.
 - [ ] **Dynamic Intercept POI** (#58): lead-pursuit waypoint + ETA in `core/coa.py` / `app/agent.py`.
 - [ ] **OSINT text parser** (#59): `app/adapters/osint_text.py` — Synthetic social text → count/bearing for S2 (no SNS API).
-- [ ] **Remove Indago DuckDB path** (#60): delete `scripts/indago_ais_bridge.py`, `--ais-source prod`, and remaining code references.
+- [x] **AIS via SIA ingest only** (#60): `demo` / `offline` plugins → SIA local SQLite (no alternate AIS bridge).
 
 ### Phase 3: Verification WebUI on Frozen REST (Active — Not Pitch UI)
 > **UI Boundary:** **BattlePlan** = Johnny’s pitch UI (**outside this repo**). In-repo `ui/battleplan/` + TUI = verification harness for Screen 1 / Screen 2 only.

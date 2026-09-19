@@ -185,7 +185,7 @@ Only `correlation_status == "uncorrelated"` detections become `UNANNOUNCED_DARK_
 
 Without AIS in Sentinel’s DB, every detection stays `uncorrelated`. Pick an **AIS source profile**, re-run `run_cv`, then push only dark vessels to C2.
 
-AIS is ingested **by SIA itself** (`POST /api/ingest_ais` / plugins) into **SIA local SQLite** (`data.db`). C2 never stores raw AIS. **Indago DuckDB is not used** (removed / do not use `--ais-source prod`).
+AIS is ingested **by SIA itself** (`POST /api/ingest_ais` / plugins) into **SIA local SQLite** (`data.db`). C2 never stores raw AIS.
 
 | `--ais-source` | When | What happens |
 |----------------|------|----------------|
