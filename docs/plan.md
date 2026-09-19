@@ -2,7 +2,7 @@
 
 > Canonical planning source for this repo (MkDocs / GitHub Pages).
 
-**Status:** Phase 2 complete · Phase 3 BattlePlan UI in progress (`ui/battleplan/`) · Phase 5 = post-hackathon sovereign PoC · **2026-09-19 Updated**  
+**Status:** Phase 2 **active (partial)** — SIA #47 / Cloudflare / gate loop done; dual-SAR, kinematics, OSINT parser, POI, GLINT mock, ingress replay, drop Indago **open** · Phase 3 verification WebUI harness (`ui/battleplan/`; **BattlePlan pitch UI is out of repo**) · Phase 5 = post-hackathon sovereign PoC · **2026-09-19 Updated** · Provenance: [data-provenance.md](data-provenance.md)  
 **Challenge:** SDTH 2026 **PS 04 — One Picture, Many Eyes** (From Picture to Tasking)  
 **Product face:** Project NexusGate (core gate) + venue Command and Control (C2) app  
 **Target Reviewers:** DSTA, MINDEF/SAF C4I, EDTH, NUS Defense Tech Venture Lab  
@@ -210,35 +210,56 @@ The pitch deck commits to 4 rigorous engineering metrics:
 - [x] **19-Event Temporal Streamer:** Implement `scripts/stream_events.py` for T-60s to T-00s event playback.
 - [x] **Automated Benchmark Suite:** Implement `scripts/benchmark.py` verifying Slide 11 performance metrics.
 
-### Phase 2: Backend Closed Loop & Cloudflare Core Deployment (Completed)
+### Phase 2: Backend Closed Loop & Operational Core (Active — Partial)
 
-Phase 2 explicitly delivers thin / demo-fidelity slices of the 4 core pitch pillars (backend closed loop without UI dependencies), while production CV, live field hardware, and full swarm loads remain Phase 5:
+Phase 2 delivers thin / demo-fidelity slices of the pitch pillars (backend closed loop). Production CV, live field hardware, and full swarm loads remain Phase 5. Provenance labels: [Data provenance](data-provenance.md).
 
-- [x] **Pitch-4 Picture→Tasking demo script:** `scripts/picture_to_tasking.py` + `scripts/picture_to_tasking.sh` executes Warning Picture → gate approve → inbox → Ack → audit (<3s local roundtrip) (issue #24).
-- [x] **Pitch-3 Deterministic gate stress:** `scripts/benchmark.py` floods ontology with 100+ tracks and mixed COAs; asserts gate p95 < 50 ms and unauthorized = 0 (issue #23).
-- [x] **Pitch-2 Probabilistic interpreter:** `app/llm_interpreter.py` + `POST /api/interpret` — LLM (env) or heuristic fallback → hypotheses + candidate COA; Core gate still disposes (issue #22).
-- [x] **Pitch-2 follow-on LiteLLM live path:** Stand up LiteLLM as OpenAI-compatible front door; point `LLM_BASE_URL` at it; smoke S2 → `/api/interpret` with `source: "llm"`; CI stays LLM-free via heuristic fallback (issue #32). MCP / live upstream SAR API remain out of Phase 2 must-haves.
-- [x] **Pitch-1 Multimodal demo harness & SAR CandidateEvent adapter:** Explicit modality-tagged ingress harness + assumed `CandidateEvent` (v1.3.0 schema) adapter (`app/adapters/sar_candidate_event.py`), backed by `tests/fixtures/candidate_event_assumed.json` for non-blocking stand-alone execution (see [REST API](api/rest.md#upstream-ingress-contract-assumed-candidateevent-specification)) (issue #25). Priority: fixture-first S3 (macro SAR baseline vs AIS) — not a realtime satellite stream.
-- [x] **In-house SAR pipeline & GLINT fail-safe integration:** Wire upstream [`Sentinel-Imagery-Analysis`](https://github.com/StrixGoldhorn/Sentinel-Imagery-Analysis) (Copernicus Sentinel-1 SAR × AIS) → `CandidateEvent` ingress via `app/adapters/sentinel_imagery.py`; Singapore Strait `run_cv` fixture + Pattern A/B (`use_sentinel_fixture` / `pull_upstream`, port **5050**); fixture fail-safe when upstream/GLINT is down (see [SAR Pipeline Architecture](architecture/sar_pipeline.md)) (issue #47).
-- [x] **Optional open-feed ingress:** Demo-grade open AIS (data.gov.sg-shaped) + open air fixtures via `app/adapters/open_feed.py`, CLI `--open-feed` / `OPEN_FEED`, and `POST /api/ingress/open-feed`; synthetic S1–S3 remain primary (issue #16). Live coastal harness remains Phase 5.
-- [x] Validate end-to-end backend closed loop via curl / automated scripts without frontend dependency (`scripts/picture_to_tasking.sh`).
-- [x] Containerize C2 server for optional **Cloudflare Containers** deployment while retaining identical REST contract (issue #18).
-- [x] Establish hardened fallback to local `sdth-c2-server` for zero-internet venue reliability.
-- [x] **Document laptop I/O client steps:** Screen 1 (ingress + command) / Screen 2 (inbox + ack) cold-start runbook in [Demo Path A](demo.md#demo-path-a-two-laptop-two-terminal-io-issue-17); same paths for local Core and Cloudflare (§4.2) (issue #17).
-- [x] **(Optional Stretch) Laptop-side RasPi GPIO blink:** Screen 2 client opt-in `RASPI_ACK_BLINK=1` after successful Ack (`scripts/raspi_ack_blink.py` / `picture_to_tasking`); Core (incl. Cloudflare) never touches GPIO; no-op without hardware (issue #20).
-- [x] **Keep local CI green:** unit / integration / `scripts/benchmark.py` / `scripts/stream_events.py --fast` covered in GitHub Actions (issue #19).
+**Done:**
 
+- [x] **Pitch-4 Picture→Tasking demo script:** `scripts/picture_to_tasking.py` + `scripts/picture_to_tasking.sh` (issue #24).
+- [x] **Pitch-3 Deterministic gate stress:** `scripts/benchmark.py` (issue #23).
+- [x] **Pitch-2 Probabilistic interpreter:** `app/llm_interpreter.py` + `POST /api/interpret` (issue #22).
+- [x] **Pitch-2 follow-on LiteLLM live path:** (issue #32).
+- [x] **Pitch-1 Multimodal demo harness & SAR CandidateEvent adapter:** (issue #25).
+- [x] **In-house SAR pipeline (SIA) & fixture fail-safe:** `app/adapters/sentinel_imagery.py` + Singapore Strait fixture (issue #47). AIS via **SIA ingest only** (`demo` / `offline`) → SIA local SQLite; **no Indago DuckDB**.
+- [x] **Optional open-feed ingress:** (issue #16).
+- [x] Validate backend closed loop via curl / scripts (`scripts/picture_to_tasking.sh`).
+- [x] Cloudflare Containers + local fallback (issue #18).
+- [x] Laptop I/O runbook (issue #17); RasPi stretch (issue #20); CI green (issue #19).
 
-### Phase 3: BattlePlan UI Integration on Frozen REST Contract (Active)
-- [x] Integrate the Next.js BattlePlan UI with `app/c2_server.py` (two-screen software handshake) — `ui/battleplan/` Screen 1 `/command` + Screen 2 `/recipient`; local CORS + Cloudflare response CORS.
-- [x] Incorporate radar / SAR image chip preview modal in Screen 1 for Amber Alert dark vessel tracks (`evidence_image_uri`) via Core `/static/fixtures/` + modal.
-- [x] Wire **demo-grade** open feeds (`data.gov.sg` / open air traffic) as optional ingress — synthetic S1–S3 remain the primary story (done in Phase 2 / issue #16).
-- [x] (Optional Stretch) Laptop-side RasPi GPIO blink as secondary proof — not required for pitch (done in Phase 2 / issue #20).
+**Remaining (track via GitHub `phase-2` issues):**
 
-### Phase 4: Pitch-Day Polish & Live Demonstration (Planned)
+- [ ] **Ingress event replay log** (#54): append-only `.audit/ingress.jsonl` + `scripts/replay_ingress.py` (not gate authority).
+- [ ] **GLINT Assumed-mock HTTP stub + client** (#55): e.g. `:5051` / `scripts/mock_glint_server.py` + `app/adapters/glint_client.py`; schema swap on Team 02 handover (live = Phase 4).
+- [ ] **Dual-SAR Multi-Fidelity Corroborator** (#56): `app/adapters/dual_sar.py` — GLINT macro × SIA micro; fail-safe to SIA/fixture.
+- [ ] **Temporal Kinematic Dead-Reckoning** (#57): `core/kinematics.py` — SAR $T-\Delta t$ → coastal radar $T-0$.
+- [ ] **Dynamic Intercept POI** (#58): lead-pursuit waypoint + ETA in `core/coa.py` / `app/agent.py`.
+- [ ] **OSINT text parser** (#59): `app/adapters/osint_text.py` — Synthetic social text → count/bearing for S2 (no SNS API).
+- [ ] **Remove Indago DuckDB path** (#60): delete `scripts/indago_ais_bridge.py`, `--ais-source prod`, and remaining code references.
+
+### Phase 3: Verification WebUI on Frozen REST (Active — Not Pitch UI)
+> **UI Boundary:** **BattlePlan** = Johnny’s pitch UI (**outside this repo**). In-repo `ui/battleplan/` + TUI = verification harness for Screen 1 / Screen 2 only.
+
+- [x] Integrate verification WebUI with `app/c2_server.py` — Screen 1 `/command` + Screen 2 `/recipient`; CORS.
+- [x] Radar / SAR image chip preview modal (`evidence_image_uri`).
+- [x] Optional open feeds (Phase 2 / issue #16).
+- [x] RasPi GPIO blink stretch (issue #20).
+
+### Phase 4: Pitch-Day Polish & Hackathon Live Demonstration (Planned: Sep 25–27)
 Hackathon-completeable only. Anything that needs field hardware, real AI pipelines, or sovereign buyers → Phase 5.
-- [ ] Run rehearsals for 3-minute hackathon pitch & live software demonstration.
-- [ ] Verify 4 commitments on live screen: multimodal contradiction, deterministic gate, Picture→Tasking loop, immutable audit.
+- [ ] **Team 02 GLINT Live Cross-Team Integration (Day 1 - Fri 25 Sep)**:
+  - Connect with Team 02 (GLINT) at NUS Enterprise i³ Building Level 2 workspace.
+  - Verify live GLINT REST / MCP API endpoint against `CandidateEvent v1.3.0` schema.
+  - Validate live stream into C2 (`POST /api/ingress/candidate-event`).
+  - Verify zero-risk fallback: seamless switch to in-house SIA (`:5050`) or local Singapore Strait golden fixture if network degrades.
+- [ ] **End-to-End Operational Playthroughs (Day 1 Evening)**:
+  - Scenario S2 (Air Hero): Social (3) vs Radar (1) vs EO blur $\to$ Amber Contradiction $\to$ Cue Tasking $\to$ Ack within 3s.
+  - Scenario S3 (Maritime Hero): Dual-SAR (GLINT + SIA) + Kinematic projection vs Coastal Radar $\to$ Intercept POI Tasking $\to$ Ack.
+- [ ] **Preliminary Judging Cut (Day 2 - Sat 26 Sep)**:
+  - Deliver preliminary pitch to qualify in the Top ~20 of 37 two-day teams.
+- [ ] **VIP Judging Panel Pitch (Day 3 - Sun 27 Sep)**:
+  - Live 3-minute pitch before MG Kelvin Fan (Chief of Air Force), Mr Tan Peng Yam (Chief Defence Scientist, MINDEF), Prof Quek Tong Boon, and MINDEF/DSTA leadership.
+  - Live demonstration of Slide 11 commitments (<50ms gate latency, 0 unauthorized, <3.0s Ack).
 
 ### Phase 5: Post-Hackathon → Sovereign PoC (Planned)
 Maps to the 9-month NUS Defence Tech Venture Lab bridge. Owns the pitch points Phase 4 cannot close.

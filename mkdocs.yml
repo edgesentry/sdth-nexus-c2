@@ -54,6 +54,7 @@ nav:
     - Topology: architecture/topology.md
     - Space SAR & Sensor Pipeline: architecture/sar_pipeline.md
   - C2 REST API (frozen): api/rest.md
+  - Data provenance: data-provenance.md
   - Cloudflare Containers: deploy.md
   - LiteLLM: litellm.md
   - Scenarios: scenarios.md
