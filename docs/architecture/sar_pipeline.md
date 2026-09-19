@@ -14,7 +14,7 @@ Space-based SAR provides all-weather, day-and-night macro sea surveillance. Howe
 
 To resolve this, the C2 architecture integrates an upstream **SAR × AIS Correlation Engine** ([`Sentinel-Imagery-Analysis`](https://github.com/StrixGoldhorn/Sentinel-Imagery-Analysis)) feeding structured, verified evidence packages into the NexusGate deterministic gating engine.
 
-**Phase 2 (issue [#47](https://github.com/edgesentry/sdth-nexus-c2/issues/47)):** fixture-first ingress via `app/adapters/sentinel_imagery.py` + `POST /api/ingress/candidate-event` (`use_sentinel_fixture` / `pull_upstream` / `run_cv`). Sibling upstream at `http://127.0.0.1:5050` — not a git submodule. Production multi-constellation / GPU CV remains Phase 5 (§3).
+**Phase 2 (issue [#47](https://github.com/edgesentry/sdth-nexus-c2/issues/47)):** fixture-first ingress via `app/adapters/sentinel_imagery.py` + `POST /api/ingress/candidate-event` (`use_sentinel_fixture` / `pull_upstream` / `run_cv`). Sibling upstream at `http://127.0.0.1:5050` — not a git submodule. **GLINT Assumed-mock (issue [#55](https://github.com/edgesentry/sdth-nexus-c2/issues/55)):** `app/adapters/glint_client.py` + stub on `:5051` (`pull_glint` / `use_glint_fixture`). Production multi-constellation / GPU CV remains Phase 5 (§3).
 
 ---
 

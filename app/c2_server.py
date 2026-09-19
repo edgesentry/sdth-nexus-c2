@@ -101,7 +101,8 @@ class CandidateEventIngressRequest(BaseModel):
     """Upstream macro intelligence push (assumed CandidateEvent v1.3.0).
 
     Sentinel-Imagery-Analysis (issue #47): ``use_sentinel_fixture``, ``pull_upstream``,
-    or raw ``run_cv`` body. Assumed fixture / ``event`` remain for Pitch-1 (#25).
+    or raw ``run_cv`` body. GLINT Assumed-mock (issue #55): ``pull_glint`` /
+    ``use_glint_fixture``. Assumed fixture / ``event`` remain for Pitch-1 (#25).
     """
 
     event: dict[str, Any] | None = None
@@ -109,6 +110,8 @@ class CandidateEventIngressRequest(BaseModel):
     use_sentinel_fixture: bool = False
     pull_upstream: bool = False
     run_cv: dict[str, Any] | None = None
+    pull_glint: bool = False
+    use_glint_fixture: bool = False
 
 
 class OpenFeedIngressRequest(BaseModel):
@@ -274,21 +277,23 @@ async def ontology_state() -> dict[str, Any]:
 
 @app.post("/api/ingress/candidate-event")
 async def ingress_candidate_event(req: CandidateEventIngressRequest) -> dict[str, Any]:
-    """Ingest CandidateEvent / Sentinel run_cv → Observation (modality=space_sar).
+    """Ingest CandidateEvent / Sentinel / GLINT → Observation (modality=space_sar).
 
     Never seals tokens. Sentinel paths (issue #47) fall back to the Singapore Strait
-    fixture when ``pull_upstream`` cannot reach the sibling upstream.
+    fixture when ``pull_upstream`` cannot reach the sibling upstream. GLINT paths
+    (issue #55) fall back to the assumed CandidateEvent fixture when mock/live is down.
     """
+    from app.adapters.glint_client import resolve_glint_events
     from app.adapters.sar_candidate_event import load_assumed_fixture
     from app.adapters.sentinel_imagery import resolve_sentinel_events
 
     runtime = get_runtime()
-    sentinel_source: str | None = None
+    resolved_source: str | None = None
     events: list[Any]
 
     if req.run_cv is not None or req.pull_upstream or req.use_sentinel_fixture:
         try:
-            mapped, sentinel_source = resolve_sentinel_events(
+            mapped, resolved_source = resolve_sentinel_events(
                 run_cv=req.run_cv,
                 pull_upstream=req.pull_upstream,
                 use_fixture=req.use_sentinel_fixture or req.pull_upstream,
@@ -301,6 +306,15 @@ async def ingress_candidate_event(req: CandidateEventIngressRequest) -> dict[str
                 detail="No uncorrelated (dark vessel) detections to ingest",
             )
         events = mapped
+    elif req.pull_glint or req.use_glint_fixture:
+        try:
+            mapped, resolved_source = resolve_glint_events(
+                pull_upstream=req.pull_glint,
+                use_fixture=req.use_glint_fixture or req.pull_glint,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        events = mapped
     elif req.use_fixture:
         events = [load_assumed_fixture()]
     elif req.event is not None:
@@ -310,7 +324,8 @@ async def ingress_candidate_event(req: CandidateEventIngressRequest) -> dict[str
             status_code=400,
             detail=(
                 "Provide event, use_fixture=true, use_sentinel_fixture=true, "
-                "pull_upstream=true, or run_cv={...}"
+                "pull_upstream=true, run_cv={...}, pull_glint=true, "
+                "or use_glint_fixture=true"
             ),
         )
 
@@ -329,7 +344,7 @@ async def ingress_candidate_event(req: CandidateEventIngressRequest) -> dict[str
                     "modality": obs.modality,
                     "track_id": track.track_id,
                     "event_type": obs.entity_hint,
-                    "ingress_source": sentinel_source or "candidate_event",
+                    "ingress_source": resolved_source or "candidate_event",
                 },
             )
             observations.append(obs.model_dump(mode="json"))
@@ -337,7 +352,7 @@ async def ingress_candidate_event(req: CandidateEventIngressRequest) -> dict[str
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    ingress_source = sentinel_source or ("fixture" if req.use_fixture else "event")
+    ingress_source = resolved_source or ("fixture" if req.use_fixture else "event")
     # Replay log is best-effort — never fail a successful ingest (issue #54).
     runtime.ingress_replay.append(
         source=ingress_source,

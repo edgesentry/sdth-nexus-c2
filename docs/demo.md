@@ -60,6 +60,8 @@ curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/admin/reset"
 
 # After a failed demo, re-POST prior ingress without re-collecting upstream:
 #   uv run python scripts/replay_ingress.py --reset
+# Truncate the replay log between rehearsals (optional):
+#   uv run python scripts/replay_ingress.py --clear
 
 # Optional ingress (skip for minimal S2 handshake — proposals load the scenario)
 curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/ingress/open-feed" \
@@ -70,6 +72,12 @@ curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/ingress/candidate-event" \
 # S3 SAR path (Sentinel Singapore Strait fixture — issue #47):
 curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/ingress/candidate-event" \
   -H 'content-type: application/json' -d '{"use_sentinel_fixture":true}'
+# S3 GLINT macro (Assumed-mock fixture — issue #55):
+curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/ingress/candidate-event" \
+  -H 'content-type: application/json' -d '{"use_glint_fixture":true}'
+# S3 GLINT pull (start mock first: uv run sdth-mock-glint → :5051):
+# curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/ingress/candidate-event" \
+#   -H 'content-type: application/json' -d '{"pull_glint":true}'
 
 # Propose (loads S2 Warning Picture + queues COA). Capture coa_id:
 PROP=$(curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/gate/proposals" \

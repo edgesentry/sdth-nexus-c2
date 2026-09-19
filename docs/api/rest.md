@@ -681,7 +681,9 @@ When ingested (either via upstream REST pull, optional `POST /api/ingress/candid
 
 ### `POST /api/ingress/candidate-event`
 
-Push an assumed CandidateEvent, load the Pitch-1 offline fixture, or ingest **Sentinel-Imagery-Analysis** dark vessels (issue #47):
+Push an assumed CandidateEvent, load the Pitch-1 offline fixture, ingest
+**Sentinel-Imagery-Analysis** dark vessels (issue #47), or pull **GLINT** Assumed-mock
+(issue #55):
 
 ```bash
 # Pitch-1 assumed CandidateEvent fixture
@@ -698,6 +700,17 @@ curl -s -X POST localhost:8080/api/ingress/candidate-event \
 curl -s -X POST localhost:8080/api/ingress/candidate-event \
   -H 'content-type: application/json' \
   -d '{"pull_upstream":true}'
+
+# GLINT Assumed-mock fixture (no HTTP)
+curl -s -X POST localhost:8080/api/ingress/candidate-event \
+  -H 'content-type: application/json' \
+  -d '{"use_glint_fixture":true}'
+
+# GLINT pull (default http://127.0.0.1:5051); assumed fixture if down
+#   uv run sdth-mock-glint   # or: uv run python scripts/mock_glint_server.py
+curl -s -X POST localhost:8080/api/ingress/candidate-event \
+  -H 'content-type: application/json' \
+  -d '{"pull_glint":true}'
 ```
 
 | Field | Role |
@@ -707,13 +720,17 @@ curl -s -X POST localhost:8080/api/ingress/candidate-event \
 | `use_sentinel_fixture` | Map `tests/fixtures/sentinel_run_cv_sg_strait.json` → dark vessels |
 | `pull_upstream` | `POST {SAR_UPSTREAM_URL}/api/run_cv/{SAR_UPSTREAM_SCAN}`; on failure use sentinel fixture |
 | `run_cv` | Raw Sentinel `run_cv` JSON body (push) |
+| `use_glint_fixture` | Load assumed CandidateEvent via GLINT client (tags `ingress=glint`) |
+| `pull_glint` | `GET {GLINT_BASE_URL}/api/candidate-event`; on failure use assumed fixture |
 
-Response `200`: `{ "status": "INGESTED", "observation": {...}, "observations": [...], "track_id": "...", "track_ids": [...], "count": N, "source": "fixture|upstream|run_cv|event" }` — never seals a DecisionToken.
+Response `200`: `{ "status": "INGESTED", "observation": {...}, "observations": [...], "track_id": "...", "track_ids": [...], "count": N, "source": "fixture|upstream|run_cv|event|glint|glint_fixture" }` — never seals a DecisionToken.
 
 On success, the raw request body is also appended to `.audit/ingress.jsonl` (`received_at`, `source`, `endpoint`, `payload`) for demo replay. Write failures are logged as warnings and **do not** fail ingress. This file is **not** the OCSF gate chain (that remains `.audit/gate.jsonl`). Re-run with:
 
 ```bash
 uv run python scripts/replay_ingress.py --reset
+# Optional demo hygiene (truncate jsonl only; does not touch gate.jsonl):
+# uv run python scripts/replay_ingress.py --clear
 ```
 
 ### `POST /api/ingress/open-feed`
