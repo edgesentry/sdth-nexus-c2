@@ -710,6 +710,12 @@ curl -s -X POST localhost:8080/api/ingress/candidate-event \
 
 Response `200`: `{ "status": "INGESTED", "observation": {...}, "observations": [...], "track_id": "...", "track_ids": [...], "count": N, "source": "fixture|upstream|run_cv|event" }` — never seals a DecisionToken.
 
+On success, the raw request body is also appended to `.audit/ingress.jsonl` (`received_at`, `source`, `endpoint`, `payload`) for demo replay. Write failures are logged as warnings and **do not** fail ingress. This file is **not** the OCSF gate chain (that remains `.audit/gate.jsonl`). Re-run with:
+
+```bash
+uv run python scripts/replay_ingress.py --reset
+```
+
 ### `POST /api/ingress/open-feed`
 
 Optional demo-grade open AIS (data.gov.sg-shaped) or open air (ADS-B-style) ingress. Synthetic S1–S3 remain primary; this path is additive. Never seals a DecisionToken.

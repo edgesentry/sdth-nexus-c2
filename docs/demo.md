@@ -1,6 +1,6 @@
 # Demo & benchmarks
 
-Phase 2 demos use **curl / scripts / two laptops**. Phase 3 adds the **verification WebUI** (Next.js harness in `ui/battleplan/`; **not** Johnny’s BattlePlan pitch UI) on the same frozen paths. Contract: [C2 REST API](api/rest.md). Topology: [Topology](architecture/topology.md) · Provenance: [Data provenance](data-provenance.md).
+Phase 2 demos use **curl / scripts / two laptops**. Phase 3 adds the **verification WebUI** (Next.js harness in `ui/battleplan/`; **not** the external BattlePlan pitch UI) on the same frozen paths. Contract: [C2 REST API](api/rest.md). Topology: [Topology](architecture/topology.md) · Provenance: [Data provenance](data-provenance.md).
 
 ## Quick start
 
@@ -54,8 +54,12 @@ AUTH=()
 ### 1. Screen 1 — command (ingress + gate)
 
 ```bash
-# Optional reset between rehearsals (memory only; does not wipe .audit/gate.jsonl)
+# Optional reset between rehearsals (memory only; does not wipe .audit/gate.jsonl
+# or .audit/ingress.jsonl)
 curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/admin/reset"
+
+# After a failed demo, re-POST prior ingress without re-collecting upstream:
+#   uv run python scripts/replay_ingress.py --reset
 
 # Optional ingress (skip for minimal S2 handshake — proposals load the scenario)
 curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/ingress/open-feed" \
@@ -181,7 +185,7 @@ Only `correlation_status == "uncorrelated"` detections become `UNANNOUNCED_DARK_
 
 Without AIS in Sentinel’s DB, every detection stays `uncorrelated`. Pick an **AIS source profile**, re-run `run_cv`, then push only dark vessels to C2.
 
-AIS is ingested **by SIA itself** (`POST /api/ingest_ais` / plugins) into **SIA local SQLite** (`data.db`). C2 never stores raw AIS. **Indago DuckDB is not used** (removed / do not use `--ais-source prod`).
+AIS is ingested **by SIA itself** (`POST /api/ingest_ais` / plugins) into **SIA local SQLite** (`data.db`). C2 never stores raw AIS.
 
 | `--ais-source` | When | What happens |
 |----------------|------|----------------|

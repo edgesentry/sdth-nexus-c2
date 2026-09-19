@@ -10,6 +10,7 @@ build/
 *.egg-info/
 .env
 .audit/
+.tmp/
 *.jsonl
 .DS_Store
 site/

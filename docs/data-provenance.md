@@ -29,17 +29,17 @@ Labels used across this repo. Prefer these over vague “real” / “fake”.
 |------|--------|
 | C2 runtime (tracks, proposals, inbox) | In-memory `C2Runtime` |
 | Decision / Ack evidence | `.audit/gate.jsonl` |
-| Ingress replay (planned) | `.audit/ingress.jsonl` (not gate authority) |
+| Ingress replay | `.audit/ingress.jsonl` (not gate authority; `scripts/replay_ingress.py`) |
 | **AIS history** | **SIA local SQLite** — C2 does not store raw AIS |
 | SAR imagery / chips | SIA `static/output` |
 
-No C2 application RDB. **Indago DuckDB bridge is removed / not used** — AIS enters only via SIA’s own ingest plugins (`demo` / `offline`).
+No C2 application RDB. AIS enters only via SIA’s own ingest plugins (`demo` / `offline`) into SIA local SQLite.
 
 ## UI boundary
 
 | Name | Role | Location |
 |------|------|----------|
-| **BattlePlan** | Pitch UI (Johnny) | **Outside this repo** |
+| **BattlePlan** | External pitch UI | **Outside this repo** |
 | **Verification WebUI** | Inspect Nexus Screen 1/2 (not for pitch) | This repo `ui/` (folder still named `battleplan` — harness only) |
 | TUI / curl / scripts | Automation and cold-start | This repo |
 
