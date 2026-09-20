@@ -6,7 +6,7 @@ SDTH 2026 C2 application: **PS 04 One Picture, Many Eyes** — disagreeing senso
 
 **NexusGate** (`core/`) + venue app (`app/`) in one repo. Venue / defense vocabulary stays in `app/` only.
 
-**Phases:** 1–2 done · **3** verification WebUI (`ui/battleplan/`; external BattlePlan pitch UI is out of repo) · 4 pitch day · 5 post-hackathon → [`docs/plan.md`](docs/plan.md)
+**Phases:** 1–2 (backend + `/verify` (Jinja2/HTMX on `sdth-c2-server`) harness) · **3** external BattlePlan polish (out of repo) · 4 pitch day · 5 post-hackathon → [`docs/plan.md`](docs/plan.md)
 
 **Topology:** Core is local (`uv run sdth-c2-server`) or **Cloudflare Containers**. Ingress / Ack stay on laptops. → [`docs/deploy.md`](docs/deploy.md) · [`docs/architecture/topology.md`](docs/architecture/topology.md)
 
@@ -21,14 +21,11 @@ SCENARIO=S2 ./scripts/demo.sh
 uv run python -m app.main --scenario S3 --stub --yes
 ```
 
-REST Core + verification WebUI (two terminals):
+REST Core + verification WebUI (one process):
 
 ```bash
-# Terminal A — Core
-uv run sdth-c2-server             # http://127.0.0.1:8080  (pitch-day / CI fallback)
-
-# Terminal B — verification WebUI (Screen 1/2 harness; not external pitch UI)
-cd ui/battleplan && npm install && npm run dev
+uv run sdth-c2-server             # http://127.0.0.1:8080
+# open http://127.0.0.1:8080/verify  (Screen 1/2 harness; not external pitch UI)
 ```
 
 Point clients at Cloudflare with the **same REST paths**:
@@ -56,8 +53,7 @@ export C2_API_TOKEN='…'           # shared Worker Bearer — docs/deploy.md
 | Path | Role |
 |------|------|
 | `core/` | NexusGate (no SDTH/Clearbot/Singapore vocabulary) |
-| `app/` | Scenarios, C2 REST, TUI, adapters, policy YAML |
-| `ui/battleplan/` | Phase 3 verification WebUI (Screen 1 / Screen 2); external BattlePlan pitch UI is out of repo |
+| `app/` | Scenarios, C2 REST, TUI, adapters, `/verify` Jinja2/HTMX harness (#65) |
 | `deploy/litellm/` | LiteLLM front door |
 | `deploy/cloudflare/` | Worker + Containers (`sdth-c2-core`) |
 | `scripts/` | `picture_to_tasking`, `stream_events`, `benchmark`, LiteLLM smoke |

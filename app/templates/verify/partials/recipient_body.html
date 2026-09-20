@@ -1,0 +1,33 @@
+<div class="grid">
+  <section class="panel">
+    <h2>Pending taskings</h2>
+    {% if taskings %}
+      <ul class="inbox">
+        {% for item in taskings %}
+          <li>
+            <p class="mono">{{ item.coa.coa_id }}</p>
+            <p>{{ item.coa.intent }} · {{ item.status }}</p>
+            <form method="post" action="/verify/recipient/ack">
+              <input type="hidden" name="coa_id" value="{{ item.coa.coa_id }}" />
+              <input type="hidden" name="unit_id" value="{{ unit_id }}" />
+              <button type="submit" class="btn-ok">Ack</button>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="dim">Inbox empty — approve on Screen 1 first. Auto-refresh 2s (HTMX).</p>
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <h2>Recent audit</h2>
+    <div class="audit">
+      {% for row in audit_rows %}
+        <div>{{ row.get("activity_name") or "?" }} · {{ row.get("severity") or "" }}</div>
+      {% else %}
+        <div>No audit rows yet</div>
+      {% endfor %}
+    </div>
+  </section>
+</div>

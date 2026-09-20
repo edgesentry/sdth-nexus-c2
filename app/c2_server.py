@@ -30,6 +30,7 @@ APP_DIR = Path(__file__).resolve().parent
 ROOT = APP_DIR.parent
 DEFAULT_POLICY = APP_DIR / "config" / "maritime_defense_policy.yaml"
 FIXTURES_DIR = ROOT / "tests" / "fixtures"
+VERIFY_STATIC = APP_DIR / "static" / "verify"
 
 
 def _default_audit_path() -> Path:
@@ -51,7 +52,7 @@ DEFAULT_INGRESS_REPLAY = _default_ingress_replay_path()
 
 app = FastAPI(title="NexusGate C2 Server", version="0.1.0")
 
-# Browser BattlePlan (Phase 3) — local Core. Cloudflare Worker adds CORS separately.
+# Browser NexusGate verify UI (Phase 2 #65) — local Core. Cloudflare Worker adds CORS separately.
 _cors_origins = [
     o.strip()
     for o in os.environ.get(
@@ -74,6 +75,14 @@ if FIXTURES_DIR.is_dir():
         "/static/fixtures",
         StaticFiles(directory=str(FIXTURES_DIR)),
         name="fixtures",
+    )
+
+# NexusGate Verify harness assets (Phase 2 #65) — CSS for Jinja2/HTMX UI.
+if VERIFY_STATIC.is_dir():
+    app.mount(
+        "/static/verify",
+        StaticFiles(directory=str(VERIFY_STATIC)),
+        name="verify_static",
     )
 
 
@@ -736,6 +745,11 @@ async def admin_reset() -> dict[str, str]:
     """Test helper: clear in-memory C2 state (does not wipe audit file)."""
     get_runtime().reset()
     return {"status": "reset"}
+
+
+from app.verify_ui import router as verify_router  # noqa: E402
+
+app.include_router(verify_router)
 
 
 def cli_main() -> None:

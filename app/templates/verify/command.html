@@ -1,0 +1,134 @@
+{% extends "verify/base.html" %}
+{% set active = "command" %}
+{% block title %}NexusGate Verify · Command{% endblock %}
+{% block status %}pending {{ pending_ids|length }} · obs {{ obs_count }} · inbox {{ inbox_depth }}{% endblock %}
+{% block body %}
+<div class="grid">
+  <section class="panel">
+    <h2>Screen 1 · Propose</h2>
+    <form method="post" action="/verify/command/propose" class="controls">
+      <label>Scenario
+        <select name="scenario_id">
+          <option value="S1" {% if scenario_id == "S1" %}selected{% endif %}>S1</option>
+          <option value="S2" {% if scenario_id == "S2" %}selected{% endif %}>S2 (hero amber)</option>
+          <option value="S3" {% if scenario_id == "S3" %}selected{% endif %}>S3 (maritime / SAR)</option>
+        </select>
+      </label>
+      <label>Unit ID
+        <input name="unit_id" value="{{ unit_id }}" />
+      </label>
+      <div class="actions" style="align-self:end">
+        <button type="submit">Propose</button>
+      </div>
+    </form>
+    <div class="actions">
+      <form method="post" action="/verify/command/ingress">
+        <input type="hidden" name="unit_id" value="{{ unit_id }}" />
+        <input type="hidden" name="scenario_id" value="{{ scenario_id }}" />
+        <input type="hidden" name="mode" value="sentinel" />
+        <button type="submit" class="btn-ghost">Ingress SIA only</button>
+      </form>
+      <form method="post" action="/verify/command/ingress">
+        <input type="hidden" name="unit_id" value="{{ unit_id }}" />
+        <input type="hidden" name="scenario_id" value="{{ scenario_id }}" />
+        <input type="hidden" name="mode" value="glint" />
+        <button type="submit" class="btn-ghost">Ingress GLINT only</button>
+      </form>
+      <form method="post" action="/verify/command/ingress">
+        <input type="hidden" name="unit_id" value="{{ unit_id }}" />
+        <input type="hidden" name="scenario_id" value="{{ scenario_id }}" />
+        <input type="hidden" name="mode" value="glint_pull" />
+        <button type="submit" class="btn-ghost">Ingress GLINT pull</button>
+      </form>
+      <form method="post" action="/verify/command/ingress">
+        <input type="hidden" name="unit_id" value="{{ unit_id }}" />
+        <input type="hidden" name="scenario_id" value="{{ scenario_id }}" />
+        <input type="hidden" name="mode" value="dual_sar" />
+        <button type="submit" class="btn-ghost">Ingress Dual-SAR (both)</button>
+      </form>
+      <form method="post" action="/verify/command/reset">
+        <input type="hidden" name="unit_id" value="{{ unit_id }}" />
+        <input type="hidden" name="scenario_id" value="{{ scenario_id }}" />
+        <button type="submit" class="btn-ghost">Reset</button>
+      </form>
+    </div>
+    <p class="dim" style="margin-top:0.75rem">
+      Compare SAR modes then check Ontology / Evidence. Dual-SAR boosts confidence and keeps SIA OBB + chip.
+      UI never seals tokens — Core does on Approve.
+    </p>
+  </section>
+
+  <section class="panel {% if finding and finding.amber_alert %}amber{% endif %}">
+    <h2>Warning Picture</h2>
+    {% if finding %}
+      <p><strong>{{ finding.amber_alert or finding.threat_class }}</strong></p>
+      <p class="dim">{{ finding.picture_summary }}</p>
+      <p class="mono">scenario={{ finding.scenario_id }} · conf={{ '%.2f'|format(finding.confidence) }} · mismatch={{ '%.0f'|format(finding.mismatch_m) }}m</p>
+    {% else %}
+      <p class="dim">No finding yet — Propose a scenario.</p>
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <h2>Operator gate</h2>
+    {% if queued_coa %}
+      <p class="mono">coa_id · {{ queued_coa.coa_id }}</p>
+      <p class="dim">{{ queued_coa.intent }} · unit {{ queued_coa.unit_id }}</p>
+      <div class="actions">
+        <form method="post" action="/verify/command/approve">
+          <input type="hidden" name="coa_id" value="{{ queued_coa.coa_id }}" />
+          <input type="hidden" name="decision" value="y" />
+          <input type="hidden" name="unit_id" value="{{ unit_id }}" />
+          <input type="hidden" name="scenario_id" value="{{ scenario_id }}" />
+          <button type="submit" class="btn-ok">Approve</button>
+        </form>
+        <form method="post" action="/verify/command/approve">
+          <input type="hidden" name="coa_id" value="{{ queued_coa.coa_id }}" />
+          <input type="hidden" name="decision" value="n" />
+          <input type="hidden" name="unit_id" value="{{ unit_id }}" />
+          <input type="hidden" name="scenario_id" value="{{ scenario_id }}" />
+          <button type="submit" class="btn-bad">Deny</button>
+        </form>
+      </div>
+      <p class="dim">Tell Screen 2 the same unit <code>{{ unit_id }}</code>.</p>
+    {% else %}
+      <p class="dim">Queue a proposal to enable Approve / Deny.</p>
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <h2>Evidence chips</h2>
+    {% if evidence %}
+      <div class="chips">
+        {% for url in evidence %}
+          <a href="{{ url }}" target="_blank" rel="noopener"><img src="{{ url }}" alt="evidence" /></a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="dim">No evidence_image_uri yet — try Dual-SAR / SIA ingress (GLINT-only may omit chips).</p>
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <h2>Ontology snapshot</h2>
+    <p class="dim">scenario={{ scenario_runtime or "—" }} · tracks={{ tracks|length }} · observations={{ obs_count }}</p>
+    <ul class="track-list">
+      {% for o in observations %}
+        <li>
+          <strong class="mono">{{ o.source_id }}</strong>
+          <span class="dim">
+            {{ o.modality }} · conf {{ '%.2f'|format(o.confidence) }}
+            · {{ o.entity_hint }}
+            {% if o.attributes.get("ingress") %} · ingress={{ o.attributes.get("ingress") }}{% endif %}
+            {% if o.attributes.get("dual_sar_status") %} · dual={{ o.attributes.get("dual_sar_status") }}{% endif %}
+            {% if o.attributes.get("vessel_length_m") %} · L={{ o.attributes.get("vessel_length_m") }}m{% endif %}
+            {% if o.attributes.get("vessel_count_est") %} · n≈{{ o.attributes.get("vessel_count_est") }}{% endif %}
+          </span>
+        </li>
+      {% else %}
+        <li class="dim">No observations — try Ingress SIA / GLINT / Dual-SAR above (Reset between modes)</li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+{% endblock %}

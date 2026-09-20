@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}NexusGate Verify{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/verify/verify.css" />
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+</head>
+<body>
+  <div class="shell">
+    <header class="header">
+      <div class="brand">
+        <span class="brand-mark">NexusGate</span>
+        <span class="brand-sub">Verify</span>
+      </div>
+      <nav class="nav" aria-label="Screens">
+        <a href="/verify" class="{% if active == 'hub' %}active{% endif %}">Hub</a>
+        <a href="/verify/command" class="{% if active == 'command' %}active{% endif %}">Screen 1 · Command</a>
+        <a href="/verify/recipient" class="{% if active == 'recipient' %}active{% endif %}">Screen 2 · Recipient</a>
+      </nav>
+      <p class="status">{% block status %}Python harness · frozen REST{% endblock %}</p>
+    </header>
+    {% if flash %}<p class="flash">{{ flash }}</p>{% endif %}
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+    {% block body %}{% endblock %}
+  </div>
+</body>
+</html>

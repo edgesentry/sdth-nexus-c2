@@ -7,7 +7,9 @@ requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.115.0",
     "httpx>=0.28.0",
+    "jinja2>=3.1.6",
     "pydantic>=2.10.0",
+    "python-multipart>=0.0.32",
     "pyyaml>=6.0.2",
     "rich>=13.9.0",
     "uvicorn[standard]>=0.34.0",
@@ -27,6 +29,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["core", "app"]
 
+# YAML is outside hatchling's default package-data patterns; HTML/CSS under app/
+# are already picked up with packages=["app"]. Do not force-include directories
+# (duplicates wheel paths and breaks Docker `uv sync --frozen`).
 [tool.hatch.build.targets.wheel.force-include]
 "app/config/maritime_defense_policy.yaml" = "app/config/maritime_defense_policy.yaml"
 

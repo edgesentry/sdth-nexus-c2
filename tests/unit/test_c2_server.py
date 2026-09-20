@@ -132,7 +132,7 @@ def test_health_ok(client: TestClient) -> None:
     assert res.json() == {"status": "ok"}
 
 
-def test_cors_allows_battleplan_origin(client: TestClient) -> None:
+def test_cors_allows_nexusgate_verify_origin(client: TestClient) -> None:
     origin = "http://localhost:3000"
     preflight = client.options(
         "/api/ontology/state",

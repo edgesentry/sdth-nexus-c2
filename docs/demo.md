@@ -1,6 +1,8 @@
 # Demo & benchmarks
 
-Phase 2 demos use **curl / scripts / two laptops**. Phase 3 adds the **verification WebUI** (Next.js harness in `ui/battleplan/`; **not** the external BattlePlan pitch UI) on the same frozen paths. Contract: [C2 REST API](api/rest.md). Topology: [Topology](architecture/topology.md) · Provenance: [Data provenance](data-provenance.md).
+Phase 2 demos use **curl / scripts / two laptops**, plus the optional **NexusGate verification WebUI** ([#65](https://github.com/edgesentry/sdth-nexus-c2/issues/65); Jinja2/HTMX harness at `/verify` on Core; **not** the external BattlePlan pitch UI) on the same frozen paths. Contract: [C2 REST API](api/rest.md). Topology: [Topology](architecture/topology.md) · Provenance: [Data provenance](data-provenance.md).
+
+**Full E2E runbook (fixtures vs live SIA/GLINT):** [E2E verification](verify-e2e.md).
 
 ## Quick start
 
@@ -138,26 +140,23 @@ Endpoint table: [C2 REST API](api/rest.md).
 
 ---
 
-## Demo Path F: Verification WebUI (Phase 3 harness — not pitch UI)
+## Demo Path F: NexusGate Verification WebUI (Phase 2 — issue #65; not pitch UI) {#demo-path-f-nexusgate-verification-webui-phase-2--issue-65-not-pitch-ui}
 
-Browser Screen 1 / Screen 2 against local or Cloudflare Core. App: [`ui/battleplan/`](../ui/battleplan/) (folder name historical; **BattlePlan pitch UI is out of repo**).
+Browser Screen 1 / Screen 2 served by Core itself (Jinja2/HTMX at `/verify`). **Not** the external BattlePlan pitch UI. No Node/Next.js required.
+
+**SIA server is not required** for this path — Screen 1 “Ingress Sentinel / Dual-SAR fixture” uses repo fixtures. Live SIA (`:5050`) / GLINT mock (`:5051`) are optional. Details: [E2E verification](verify-e2e.md).
 
 ```bash
-# Terminal A — Core (CORS defaults allow localhost:3000)
 uv run sdth-c2-server
-
-# Terminal B — verification WebUI
-cd ui/battleplan && npm install && npm run dev
-# open http://127.0.0.1:3000 → Screen 1 + Screen 2 (two tabs)
+# open http://127.0.0.1:8080/verify
+# Screen 1: /verify/command · Screen 2: /verify/recipient (two tabs)
 ```
 
 | Step | Where | Action |
 |------|-------|--------|
-| 1 | Screen 1 | Propose `S2` → Approve |
-| 2 | Screen 2 | Poll inbox (or auto-poll) → Ack |
-| 3 | Optional | Screen 1 → Ingress Sentinel fixture → open evidence chip modal |
-
-Cloudflare: set `NEXT_PUBLIC_C2_BASE_URL` + `NEXT_PUBLIC_C2_API_TOKEN` in `ui/battleplan/.env.local` (same Bearer as [deploy.md](deploy.md)).
+| 1 | Screen 1 `/verify/command` | Propose `S2` → Approve |
+| 2 | Screen 2 `/verify/recipient` | Auto-poll inbox (HTMX 2s) → Ack |
+| 3 | Optional | Screen 1 → **Ingress SIA only** / **GLINT only** / **Dual-SAR (both)** → compare Ontology + evidence (expected diffs: [verify-e2e.md](verify-e2e.md#compare-sar-ingress-modes-results-must-differ)) |
 
 Invariant: the UI never seals tokens — only Core `POST /api/gate/approve` does.
 
@@ -165,9 +164,11 @@ Invariant: the UI never seals tokens — only Core `POST /api/gate/approve` does
 
 ## Demo Path: Sentinel-Imagery-Analysis → C2 (issue #47)
 
-In-house SAR × AIS dark-vessel ingress. Architecture: [SAR Pipeline](architecture/sar_pipeline.md). Upstream is a **sibling checkout** (`~/work/Sentinel-Imagery-Analysis`) — not a submodule.
+In-house SAR × AIS dark-vessel **ingress** (HTTP / fixture payloads into C2). Architecture: [SAR Pipeline](architecture/sar_pipeline.md). Upstream is a **sibling checkout** (`~/work/Sentinel-Imagery-Analysis`) — not a submodule.
 
-**Pattern A (CI / venue primary)** — recorded Singapore Strait `run_cv` fixture:
+**SIA is data linkage, not a required always-on C2 service.** Default demos use the Singapore Strait fixture (no SIA process). Live pull uses sibling `uv run sia-server` on `:5050`. Full matrix: [E2E verification](verify-e2e.md).
+
+**Pattern A (CI / venue primary)** — recorded Singapore Strait `run_cv` fixture (**no SIA server**):
 
 ```bash
 uv run sdth-c2-server
@@ -181,7 +182,7 @@ curl -s -X POST http://127.0.0.1:8080/api/ingress/candidate-event \
 
 ```bash
 # Terminal A (sibling repo)
-cd ~/work/Sentinel-Imagery-Analysis && python app.py   # PORT=5050
+cd ~/work/Sentinel-Imagery-Analysis && uv sync && uv run sia-server   # PORT=5050
 
 # Terminal B
 export SAR_UPSTREAM_URL=http://127.0.0.1:5050
@@ -208,7 +209,7 @@ AIS is ingested **by SIA itself** (`POST /api/ingest_ais` / plugins) into **SIA 
 
 ```bash
 # Prerequisites
-#   Terminal A: cd ~/work/Sentinel-Imagery-Analysis && python app.py   # :5050, COP_* in .env
+#   Terminal A: cd ~/work/Sentinel-Imagery-Analysis && uv run sia-server   # :5050, COP_* in .env
 #   Terminal B: uv run sdth-c2-server                                   # :8080
 
 # Demo (recommended for pitch)

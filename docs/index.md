@@ -24,8 +24,7 @@ flowchart LR
 | Path | Role |
 |------|------|
 | **`core/`** | NexusGate — spatial graph, deterministic interlocks, latency-bounded gate, OCSF audit |
-| **`app/`** | Venue C2 — S1–S3 scenarios, REST server, Warning Picture TUI, adapters |
-| **`ui/battleplan/`** | Verification WebUI (Screen 1 / Screen 2) — **not** the external pitch UI |
+| **`app/`** | Venue C2 — S1–S3 scenarios, REST server, Warning Picture TUI, adapters, `/verify` harness |
 | **`deploy/`** | LiteLLM proxy + Cloudflare Containers Worker |
 | **`scripts/`** | Picture→Tasking, streamer, benchmarks, LiteLLM smoke |
 
@@ -40,6 +39,7 @@ flowchart LR
 - **[LiteLLM](litellm.md)** — probabilistic interpret + proxy keys
 - **[Scenarios](scenarios.md)** — S1–S3 + optional open feeds
 - **[Demo & benchmarks](demo.md)** — two-laptop I/O (#17), verification WebUI (Path F), streamer, Picture→Tasking, gate/latency benchmarks (pitch Slide 11), tests
+- **[E2E verification](verify-e2e.md)** — `/verify` Path F; SIA/GLINT optional (fixtures default)
 - **[Roadmap](roadmap.md)** — Phase 0–5
 - **[Plan](plan.md)** — full planning source
 
@@ -54,14 +54,11 @@ SCENARIO=S2 ./scripts/demo.sh
 uv run python -m app.main --scenario S3 --stub --yes
 ```
 
-REST Core + verification WebUI (two terminals):
+REST Core + verification WebUI (one process):
 
 ```bash
-# Terminal A — Core
 uv run sdth-c2-server             # http://127.0.0.1:8080
-
-# Terminal B — verification WebUI (not the external pitch UI)
-cd ui/battleplan && npm install && npm run dev
+# open http://127.0.0.1:8080/verify  (Screen 1/2 — not the external pitch UI)
 ```
 
 Optional live LLM: [litellm.md](litellm.md) + [demo.md](demo.md) Path D.
@@ -78,7 +75,7 @@ uv run python scripts/benchmark.py   # gate / ack / audit proof (pitch Slide 11)
 
 - Probabilistic proposes; **deterministic gate** alone seals tokens
 - Scenario detectors remain deterministic rules (LLM is optional overlay)
-- **UI Boundary:** `ui/battleplan/` and console TUI are **verification harnesses only**. **BattlePlan** (external pitch UI) lives **outside this repository**. In-repo WebUI is demo-grade (no full map / GIS); dual-key Tier 2 not implemented
+- **UI Boundary:** `/verify` (Jinja2/HTMX on Core) and console TUI are **verification harnesses only**. **BattlePlan** (external pitch UI) lives **outside this repository**. In-repo WebUI is demo-grade (no full map / GIS); dual-key Tier 2 not implemented
 - Kinetic intercept is **not** claimed (S2 cues identify only)
 - C2 has **no application DB** — runtime is in-memory; audit is jsonl; AIS history stays in [Sentinel-Imagery-Analysis](architecture/sar_pipeline.md) (SIA) SQLite
 
