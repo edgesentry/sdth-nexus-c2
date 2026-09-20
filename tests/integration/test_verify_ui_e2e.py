@@ -104,7 +104,9 @@ def test_verify_ui_lead_poi_card_s3(c2_client: TestClient) -> None:
     # Formatted lat/lon appear as four-decimal degrees
     body = proposed.text
     assert "Lat" in body and "Lon" in body
-    assert any(token for token in body.split() if token.replace(".", "", 1).isdigit() and "." in token)
+    assert any(
+        token for token in body.split() if token.replace(".", "", 1).isdigit() and "." in token
+    )
 
 
 def test_verify_ui_lead_poi_card_also_on_s2(c2_client: TestClient) -> None:
