@@ -9,6 +9,7 @@ import {
   approve,
   collectEvidenceUris,
   getC2BaseUrl,
+  ingressDualSarFixture,
   ingressSentinelFixture,
   interpret,
   ontologyState,
@@ -153,6 +154,19 @@ export default function CommandPage() {
               }
             >
               Ingress Sentinel fixture
+            </button>
+            <button
+              type="button"
+              className="bp-btn ghost"
+              disabled={busy}
+              onClick={() =>
+                void run("Dual-SAR fixture ingested", async () => {
+                  await ingressDualSarFixture();
+                  await refresh();
+                })
+              }
+            >
+              Ingress Dual-SAR fixture
             </button>
             <button
               type="button"

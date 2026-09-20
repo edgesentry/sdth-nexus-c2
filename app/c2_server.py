@@ -51,7 +51,7 @@ DEFAULT_INGRESS_REPLAY = _default_ingress_replay_path()
 
 app = FastAPI(title="NexusGate C2 Server", version="0.1.0")
 
-# Browser BattlePlan (Phase 3) — local Core. Cloudflare Worker adds CORS separately.
+# Browser NexusGate verify UI (Phase 2 #65) — local Core. Cloudflare Worker adds CORS separately.
 _cors_origins = [
     o.strip()
     for o in os.environ.get(

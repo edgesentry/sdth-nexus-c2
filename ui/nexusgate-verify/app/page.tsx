@@ -7,12 +7,12 @@ export default function HubPage() {
   return (
     <ScreenChrome role="hub" status={`Core ${getC2BaseUrl()}`}>
       <section className="bp-hero">
-        <p className="bp-kicker">Phase 3 · frozen REST</p>
-        <h1>BattlePlan</h1>
+        <p className="bp-kicker">Phase 2 · NexusGate verification · frozen REST</p>
+        <h1>NexusGate Verify</h1>
         <p className="bp-lede">
-          Two-screen Picture→Tasking over the same C2 paths as curl / TUI.
-          Screen 1 proposes and approves; Screen 2 acks. Core alone seals
-          DecisionTokens.
+          In-repo harness for Picture→Tasking over the same C2 paths as curl /
+          TUI. Screen 1 proposes and approves; Screen 2 acks. Core alone seals
+          DecisionTokens. External BattlePlan pitch UI is out of this repo.
         </p>
         <div className="bp-actions">
           <Link className="bp-btn" href="/command">
@@ -27,7 +27,7 @@ export default function HubPage() {
             Start Core: <code>uv run sdth-c2-server</code>
           </li>
           <li>
-            Run UI: <code>cd ui/battleplan && npm run dev</code>
+            Run UI: <code>cd ui/nexusgate-verify && npm run dev</code>
           </li>
           <li>Propose S2 on Screen 1 → Approve → Ack on Screen 2</li>
         </ol>

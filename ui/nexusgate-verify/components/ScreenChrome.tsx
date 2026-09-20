@@ -12,7 +12,7 @@ export function ScreenChrome({ role, children, status }: Props) {
       <header className="bp-header">
         <div className="bp-brand">
           <span className="bp-brand-mark">NexusGate</span>
-          <span className="bp-brand-sub">BattlePlan</span>
+          <span className="bp-brand-sub">Verify</span>
         </div>
         <nav className="bp-nav" aria-label="Screens">
           <Link

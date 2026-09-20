@@ -1,6 +1,6 @@
 # Demo & benchmarks
 
-Phase 2 demos use **curl / scripts / two laptops**, plus the optional **NexusGate verification WebUI** ([#65](https://github.com/edgesentry/sdth-nexus-c2/issues/65); Next.js harness in `ui/battleplan/`; **not** the external BattlePlan pitch UI) on the same frozen paths. Contract: [C2 REST API](api/rest.md). Topology: [Topology](architecture/topology.md) · Provenance: [Data provenance](data-provenance.md).
+Phase 2 demos use **curl / scripts / two laptops**, plus the optional **NexusGate verification WebUI** ([#65](https://github.com/edgesentry/sdth-nexus-c2/issues/65); Next.js harness in `ui/nexusgate-verify/`; **not** the external BattlePlan pitch UI) on the same frozen paths. Contract: [C2 REST API](api/rest.md). Topology: [Topology](architecture/topology.md) · Provenance: [Data provenance](data-provenance.md).
 
 ## Quick start
 
@@ -140,14 +140,14 @@ Endpoint table: [C2 REST API](api/rest.md).
 
 ## Demo Path F: NexusGate Verification WebUI (Phase 2 — issue #65; not pitch UI) {#demo-path-f-nexusgate-verification-webui-phase-2--issue-65-not-pitch-ui}
 
-Browser Screen 1 / Screen 2 against local or Cloudflare Core. App: [`ui/battleplan/`](../ui/battleplan/) (folder name historical; **BattlePlan pitch UI is out of repo**).
+Browser Screen 1 / Screen 2 against local or Cloudflare Core. App: [`ui/nexusgate-verify/`](../ui/nexusgate-verify/) (**not** the external BattlePlan pitch UI).
 
 ```bash
 # Terminal A — Core (CORS defaults allow localhost:3000)
 uv run sdth-c2-server
 
 # Terminal B — verification WebUI
-cd ui/battleplan && npm install && npm run dev
+cd ui/nexusgate-verify && npm install && npm run dev
 # open http://127.0.0.1:3000 → Screen 1 + Screen 2 (two tabs)
 ```
 
@@ -157,7 +157,7 @@ cd ui/battleplan && npm install && npm run dev
 | 2 | Screen 2 | Poll inbox (or auto-poll) → Ack |
 | 3 | Optional | Screen 1 → Ingress Sentinel fixture → open evidence chip modal |
 
-Cloudflare: set `NEXT_PUBLIC_C2_BASE_URL` + `NEXT_PUBLIC_C2_API_TOKEN` in `ui/battleplan/.env.local` (same Bearer as [deploy.md](deploy.md)).
+Cloudflare: set `NEXT_PUBLIC_C2_BASE_URL` + `NEXT_PUBLIC_C2_API_TOKEN` in `ui/nexusgate-verify/.env.local` (same Bearer as [deploy.md](deploy.md)).
 
 Invariant: the UI never seals tokens — only Core `POST /api/gate/approve` does.
 

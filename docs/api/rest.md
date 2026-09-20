@@ -1,6 +1,6 @@
 # C2 REST API (frozen contract)
 
-**Status:** Phase 2 freeze · source of truth for curl / TUI / scripts and Phase 3 BattlePlan (`BASE_URL` / `C2_BASE_URL` swap only — **paths do not change**).
+**Status:** Phase 2 freeze · source of truth for curl / TUI / scripts and NexusGate verify UI (`ui/nexusgate-verify/`; `BASE_URL` / `C2_BASE_URL` swap only — **paths do not change**).
 
 | Item | Value |
 |------|--------|
@@ -28,7 +28,7 @@ Screen 1 = command · Screen 2 = recipient. No BattlePlan required for Phase 2 d
 
 Operational (not frozen handshake): `GET /health`, `PUT /api/admin/audit/snapshot`, `GET /static/fixtures/*` (demo evidence chips for BattlePlan) — see [Cloudflare Containers](../deploy.md) · [Demo Path F](../demo.md#demo-path-f-nexusgate-verification-webui-phase-2--issue-65-not-pitch-ui).
 
-Local Core enables CORS for BattlePlan (`C2_CORS_ORIGINS`, default `localhost:3000`). Cloudflare Worker attaches CORS headers on all responses (including Bearer `401`).
+Local Core enables CORS for NexusGate verify UI (`C2_CORS_ORIGINS`, default `localhost:3000`). Cloudflare Worker attaches CORS headers on all responses (including Bearer `401`).
 
 ## Handshake (curl)
 

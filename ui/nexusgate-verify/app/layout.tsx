@@ -16,9 +16,9 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NexusGate BattlePlan",
+  title: "NexusGate Verify",
   description:
-    "Phase 3 Screen 1 / Screen 2 client for the frozen NexusGate C2 REST contract.",
+    "Phase 2 Screen 1 / Screen 2 verification harness for the frozen NexusGate C2 REST contract.",
 };
 
 export default function RootLayout({

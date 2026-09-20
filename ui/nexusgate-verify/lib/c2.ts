@@ -91,7 +91,7 @@ export function approve(opts: {
     json: {
       coa_id: opts.coa_id,
       decision: opts.decision,
-      operator_id: opts.operator_id ?? "battleplan-screen1",
+      operator_id: opts.operator_id ?? "nexusgate-verify-screen1",
     },
   });
 }
@@ -107,6 +107,13 @@ export function ingressSentinelFixture(): Promise<Record<string, unknown>> {
   return c2Fetch("/api/ingress/candidate-event", {
     method: "POST",
     json: { use_sentinel_fixture: true },
+  });
+}
+
+export function ingressDualSarFixture(): Promise<Record<string, unknown>> {
+  return c2Fetch("/api/ingress/candidate-event", {
+    method: "POST",
+    json: { dual_sar: true },
   });
 }
 
@@ -127,7 +134,7 @@ export function ack(opts: {
       coa_id: opts.coa_id,
       unit_id: opts.unit_id,
       status: "ACKED",
-      message: opts.message ?? "battleplan-screen2",
+      message: opts.message ?? "nexusgate-verify-screen2",
     },
   });
 }
