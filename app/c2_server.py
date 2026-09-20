@@ -180,6 +180,8 @@ class C2Runtime:
         self.proposals.clear()
         self.inbox.clear()
         self.acked.clear()
+        # Drop soft-duplicate keys so the same scenario can be re-proposed after reset.
+        self.policy.interlock.active_coa_ids.clear()
 
 
 _runtime = C2Runtime()
