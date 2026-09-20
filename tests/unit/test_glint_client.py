@@ -22,8 +22,8 @@ from app.adapters.sar_candidate_event import (
     parse_candidate_event,
 )
 from app.c2_server import app
-from app.mock_glint_server import app as glint_mock_app
 from fastapi.testclient import TestClient
+from mocks.glint import app as glint_mock_app
 
 
 @pytest.fixture()

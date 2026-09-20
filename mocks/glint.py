@@ -6,15 +6,12 @@ on ``http://127.0.0.1:5051`` until Team 02 live schema handover (Phase 4).
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 import uvicorn
+from app.adapters.sar_candidate_event import load_assumed_fixture
 from fastapi import FastAPI
 
-from app.adapters.sar_candidate_event import load_assumed_fixture
-
-ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_PORT = 5051
 
 app = FastAPI(title="GLINT Assumed-mock", version="0.1.0")
@@ -32,7 +29,7 @@ async def candidate_event() -> dict[str, Any]:
 
 
 def cli_main() -> None:
-    uvicorn.run("app.mock_glint_server:app", host="127.0.0.1", port=DEFAULT_PORT, reload=False)
+    uvicorn.run("mocks.glint:app", host="127.0.0.1", port=DEFAULT_PORT, reload=False)
 
 
 if __name__ == "__main__":

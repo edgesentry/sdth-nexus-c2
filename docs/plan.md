@@ -2,7 +2,7 @@
 
 > Canonical planning source for this repo (MkDocs / GitHub Pages).
 
-**Status:** Phase 2 **active (partial)** — SIA #47 / Cloudflare / gate loop / ingress replay (#54) / AIS via SIA only (#60) / GLINT Assumed-mock (#55) / Dual-SAR (#56) / **NexusGate verification WebUI (#65)** done; kinematics, OSINT parser, POI **open** · Phase 3 = external BattlePlan polish · Phase 5 = post-hackathon sovereign PoC · **2026-09-20 Updated** · Provenance: [data-provenance.md](data-provenance.md)  
+**Status:** Phase 2 **active (partial)** — SIA #47 / Cloudflare / gate loop / ingress replay (#54) / AIS via SIA only (#60) / GLINT Assumed-mock (#55) / Dual-SAR (#56) / **NexusGate verification WebUI (#65)** / **SAR kinematics (#57)** done; OSINT parser, POI **open** · Phase 3 = external BattlePlan polish · Phase 5 = post-hackathon sovereign PoC · **2026-09-20 Updated** · Provenance: [data-provenance.md](data-provenance.md)  
 **Challenge:** SDTH 2026 **PS 04 — One Picture, Many Eyes** (From Picture to Tasking)  
 **Product face:** Project NexusGate (core gate) + venue Command and Control (C2) app  
 **Target Reviewers:** DSTA, MINDEF/SAF C4I, EDTH, NUS Defense Tech Venture Lab  
@@ -230,9 +230,9 @@ Phase 2 delivers thin / demo-fidelity slices of the pitch pillars (backend close
 **Remaining (track via GitHub `phase-2` issues):**
 
 - [x] **Ingress event replay log** (#54): append-only `.audit/ingress.jsonl` + `scripts/replay_ingress.py` (not gate authority).
-- [x] **GLINT Assumed-mock HTTP stub + client** (#55): `:5051` / `scripts/mock_glint_server.py` + `app/adapters/glint_client.py`; schema swap on Team 02 handover (live = Phase 4).
+- [x] **GLINT Assumed-mock HTTP stub + client** (#55): `:5051` / `mocks/glint.py` + `scripts/mock_glint_server.py` + `app/adapters/glint_client.py`; schema swap on Team 02 handover (live = Phase 4).
 - [x] **Dual-SAR Multi-Fidelity Corroborator** (#56): `app/adapters/dual_sar.py` — GLINT macro × SIA micro; fail-safe to SIA/fixture.
-- [ ] **Temporal Kinematic Dead-Reckoning** (#57): `core/kinematics.py` — SAR $T-\Delta t$ → coastal radar $T-0$.
+- [x] **Temporal Kinematic Dead-Reckoning** (#57): `core/kinematics.py` — SAR $T-\Delta t$ → coastal radar $T-0$.
 - [ ] **Dynamic Intercept POI** (#58): lead-pursuit waypoint + ETA in `core/coa.py` / `app/agent.py`.
 - [ ] **OSINT text parser** (#59): `app/adapters/osint_text.py` — Synthetic social text → count/bearing for S2 (no SNS API).
 - [x] **AIS via SIA ingest only** (#60): `demo` / `offline` plugins → SIA local SQLite (no alternate AIS bridge).

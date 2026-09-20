@@ -14,9 +14,9 @@ import uvicorn
 from app import c2_server
 from app.c2_server import app as c2_app
 from app.main import run_c2_cycle
-from app.mock_server import app as mock_app
 from core.coa import GateVerdict
 from fastapi.testclient import TestClient
+from mocks.usv import app as mock_app
 
 pytestmark = pytest.mark.integration
 

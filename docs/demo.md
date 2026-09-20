@@ -16,7 +16,7 @@ uv run python -m app.main --scenario S3 --stub --yes
 ### Manual CLI (effector mock)
 
 ```bash
-uv run uvicorn app.mock_server:app --port 8000 &
+uv run uvicorn mocks.usv:app --port 8000 &
 EFFECTOR_BASE_URL=http://127.0.0.1:8000 uv run python -m app.main --scenario S1 --yes
 uv run python -m app.main --scenario S2            # interactive y/n
 uv run python -m app.main --scenario S3 --stub --yes
@@ -336,7 +336,7 @@ Cloudflare down → `uv run sdth-c2-server` (do not set `C2_BASE_URL` / `C2_API_
 
 ## Effector levels
 
-1. **Mock REST** — `app/mock_server.py` (`EFFECTOR_BASE_URL`, default `http://127.0.0.1:8000`; `CLEARBOT_BASE_URL` still accepted)
+1. **Mock REST** — `mocks/usv.py` (`EFFECTOR_BASE_URL`, default `http://127.0.0.1:8000`; `CLEARBOT_BASE_URL` still accepted)
 2. **2D kinematics** — lat/lon toward waypoint after approve
 3. **RasPi GPIO** — optional secondary proof on Ack (issue #20)
 
