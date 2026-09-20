@@ -235,6 +235,7 @@ Phase 2 delivers thin / demo-fidelity slices of the pitch pillars (backend close
 - [x] **Temporal Kinematic Dead-Reckoning** (#57): `core/kinematics.py` — SAR $T-\Delta t$ → coastal radar $T-0$.
 - [x] **Dynamic Intercept POI** (#58): lead-pursuit waypoint + ETA in `core/kinematics.py` / `core/coa.py` / `app/agent.py`.
 - [ ] **OSINT text parser** (#59): `app/adapters/osint_text.py` — Synthetic social text → count/bearing for S2 (no SNS API).
+- [ ] **Live open-feed AIS / ADS-B adapter** ([#70](https://github.com/edgesentry/sdth-nexus-c2/issues/70)): `app/adapters/open_feed.py` (Indago DuckDB / live poll / fixture fallback) for Singapore Strait pitch realism.
 - [x] **AIS via SIA ingest only** (#60): `demo` / `offline` plugins → SIA local SQLite (no alternate AIS bridge).
 - [x] **NexusGate verification WebUI** (#65): `/verify` (Jinja2/HTMX on `sdth-c2-server`) Screen 1/2 harness on frozen REST (not external BattlePlan pitch UI).
 

@@ -28,23 +28,23 @@ Provenance labels (**Synthetic** / **Real-processed** / **Assumed-mock**): [Data
 | RF | S1, S2 | **Synthetic** | Silent / emitter cue |
 | ADS-B | S2 | **Synthetic** (+ optional open air fixture) | Empty sector |
 
-## Optional open feeds (issue #16)
+## Optional open feeds (issues #16, #70)
 
-Synthetic S1–S3 remain the primary demo. Opt in to **demo-grade** open AIS (data.gov.sg-shaped) and/or open air (ADS-B-style) fixtures — no live coastal poll in Phase 2.
+Synthetic S1–S3 remain the primary demo. Opt in to open AIS (data.gov.sg-shaped) and/or open air (ADS-B-style) feeds for pitch realism. Phase 2 introduces optional live polling ([#70](https://github.com/edgesentry/sdth-nexus-c2/issues/70)) with automated deterministic fallback to fixtures.
 
 ```bash
-# CLI (additive on top of --scenario)
+# CLI (additive on top of --scenario; fixture-backed)
 uv run python -m app.main --scenario S2 --stub --yes --open-feed ais,air
 # or: OPEN_FEED=all uv run python -m app.main --scenario S2 --stub --yes
 
-# REST (does not replace scenario ingest)
+# REST (does not replace scenario ingest; use_fixture=true or false with live polling)
 curl -s -X POST localhost:8080/api/ingress/open-feed \
   -H 'content-type: application/json' \
   -d '{"feed":"all","use_fixture":true}'
 ```
 
 Fixtures: `tests/fixtures/open_ais_datagovsg.json`, `tests/fixtures/open_air_traffic.json`.  
-Also: `OPEN_FEED=ais,air` / `--open-feed` / `POST /api/ingress/open-feed` — additive only. Live Singapore coastal harness is Phase 5.
+Also: `OPEN_FEED=ais,air` / `--open-feed` / `POST /api/ingress/open-feed` — additive only. Live military coastal radar / tactical EO remain Phase 5.
 
 ## Temporal streamer
 

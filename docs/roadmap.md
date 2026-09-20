@@ -3,8 +3,7 @@
 | Phase | Focus | Status |
 |-------|--------|--------|
 | **0** | Core foundations (graph, interlock, gate, audit) | Done |
-| **1** | S1–S3, C2 REST, streamer, benchmarks | Done |
-| **2** | Backend closed loop & operational core (+ NexusGate verify UI) | **Active (partial)** — #47 / #54 / #55 / #56 / #57 / #58 / #60 / #65 done; open: [#59](https://github.com/edgesentry/sdth-nexus-c2/issues/59) |
+| **2** | Backend closed loop & operational core (+ NexusGate verify UI) | **Active (partial)** — #47 / #54 / #55 / #56 / #57 / #58 / #60 / #65 done; open: [#59](https://github.com/edgesentry/sdth-nexus-c2/issues/59), [#70](https://github.com/edgesentry/sdth-nexus-c2/issues/70) |
 | **3** | Pitch-facing UI polish (external BattlePlan) | Planned — in-repo verify harness = Phase 2 [#65](https://github.com/edgesentry/sdth-nexus-c2/issues/65) (`/verify`) |
 | **4** | Pitch-day polish, Team 02 GLINT **live** integration & fallback | Planned (Sep 25–27) |
 | **5** | Post-hackathon sovereign PoC (live sensors, field USV) | Planned |
@@ -31,7 +30,8 @@ In **SDTH 2026 PS 04 ("One Picture, Many Eyes")**, a C2 system dies if it only r
 | **GLINT mock** | Team 02 schema not final | ✅ HTTP stub `:5051` + `glint_client`; swap on handover |
 | **Dual-SAR** | GLINT and SIA ingested without joint rules | ✅ `app/adapters/dual_sar.py` (#56) |
 | **SAR Time-Delta** | Static SAR coords fail on moving ships | ✅ `core/kinematics.py` (#57) |
-| **OSINT parse** | S2 social counts hardcoded beside the text | `app/adapters/osint_text.py` |
+| **OSINT parse** | S2 social counts hardcoded beside the text | `app/adapters/osint_text.py` (#59) |
+| **Live open feeds** | Fixtures lack live realism for Singapore Strait pitch | `app/adapters/open_feed.py` (Indago DuckDB / live poll / fixture fallback) ([#70](https://github.com/edgesentry/sdth-nexus-c2/issues/70)) |
 | **Tasking geometry** | Effector sent to static historical coords | ✅ lead-pursuit POI + ETA (#58) |
 | **NexusGate verify UI** | Curl-only loop is hard to rehearse live | ✅ `/verify` Jinja2/HTMX on Core (#65) |
 
@@ -39,7 +39,7 @@ In **SDTH 2026 PS 04 ("One Picture, Many Eyes")**, a C2 system dies if it only r
 
 | Point | Phase 2 implementation | Phase 5 raise |
 |-------|------------------------|---------------|
-| Multimodal & Kinematics | Synthetic tactical sensors + Real-processed SIA(+AIS) + Assumed-mock GLINT + Dual-SAR (#56) + kinematics (#57) | Live coastal + multi-constellation SAR |
+| Multimodal & Kinematics | Synthetic tactical sensors + Real-processed SIA(+AIS) + Assumed-mock GLINT + Dual-SAR (#56) + kinematics (#57) + optional live open-feed ([#70](https://github.com/edgesentry/sdth-nexus-c2/issues/70)) | Live coastal + multi-constellation SAR |
 | Probabilistic | LLM / heuristic → hypotheses + COA; LiteLLM (#32, done) | Production CV + hardened LLM |
 | Deterministic gate | Stress 100+ tracks; p95 < 50ms, unauthorized=0 (done) | Air-gap, dual-key Tier-2 |
 | Picture→Tasking | Closed loop + POI (#58) + Screen 2 Ack <3.0s | Field USV |
