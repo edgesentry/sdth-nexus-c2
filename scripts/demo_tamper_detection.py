@@ -72,26 +72,34 @@ def _inject_one_char_tamper(records: list[dict[str, Any]], index: int = 1) -> li
     meta = tampered[index].setdefault("metadata", {})
     if not isinstance(meta, dict):
         raise TypeError("record metadata must be a dict")
-    status = meta.get("status")
-    if isinstance(status, str) and status == "APPROVED":
-        # 1-char flip: APPROVED → XPPROVED (detectable content digests diverge).
-        meta["status"] = "XPPROVED"
-    elif isinstance(status, str) and len(status) >= 1:
-        meta["status"] = ("X" if status[0] != "X" else "Y") + status[1:]
+
+    def _flip_approved(key: str) -> bool:
+        value = meta.get(key)
+        if isinstance(value, str) and value == "APPROVED":
+            # 1-char flip: APPROVED → XPPROVED (content digests diverge).
+            meta[key] = "XPPROVED"
+            return True
+        if isinstance(value, str) and len(value) >= 1:
+            meta[key] = ("X" if value[0] != "X" else "Y") + value[1:]
+            return True
+        return False
+
+    # C2 gate_decision seals ``verdict``; demo logger uses ``status``.
+    if _flip_approved("status") or _flip_approved("verdict"):
+        return tampered
+
+    # Fallback: flip one digit in the timestamp string.
+    ts = str(tampered[index].get("time") or "")
+    if not ts:
+        raise ValueError("no status/verdict or time field to tamper")
+    chars = list(ts)
+    for i, ch in enumerate(chars):
+        if ch.isdigit():
+            chars[i] = "0" if ch != "0" else "1"
+            break
     else:
-        # Fallback: flip one digit in the timestamp string.
-        ts = str(tampered[index].get("time") or "")
-        if not ts:
-            raise ValueError("no status or time field to tamper")
-        # Prefer changing a digit if present.
-        chars = list(ts)
-        for i, ch in enumerate(chars):
-            if ch.isdigit():
-                chars[i] = "0" if ch != "0" else "1"
-                break
-        else:
-            chars[0] = "X" if chars[0] != "X" else "Y"
-        tampered[index]["time"] = "".join(chars)
+        chars[0] = "X" if chars[0] != "X" else "Y"
+    tampered[index]["time"] = "".join(chars)
     return tampered
 
 
@@ -122,8 +130,11 @@ def run_demo(*, path: Path, quiet: bool = False) -> int:
     # 3) Inject 1-character tamper into record[1]
     tampered = _inject_one_char_tamper(original, index=1)
     write_audit_records(path, tampered)
-    flipped = tampered[1].get("metadata", {}).get("status")
-    say(f"[3] Injected 1-char tamper into record[1] (status → {flipped!r})")
+    flipped_meta = tampered[1].get("metadata", {})
+    flipped = None
+    if isinstance(flipped_meta, dict):
+        flipped = flipped_meta.get("status") or flipped_meta.get("verdict")
+    say(f"[3] Injected 1-char tamper into record[1] (decision field → {flipped!r})")
 
     # 4) Detect + halt tasking
     after = verify_audit_chain(load_audit_records(path))
