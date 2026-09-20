@@ -87,7 +87,7 @@ flowchart TD
 
 | Dimension | What Changes | Why Complexity Does NOT Explode | Where Code Is Added |
 |---|---|---|---|
-| **1. Sensor Inputs ($N$)** | Acoustic sonar, satellite optical, cyber signal | **Ingress Normalization ($\mathcal{O}(N)$)**: An adapter maps the feed into the canonical [`Observation`](../api/rest.md) structure. The core graph handles spatial and temporal correlation automatically via physics (Haversine & Dead-Reckoning); zero cross-sensor mapping matrices ($N \times M$) are needed. | `app/adapters/<sensor>.py` |
+| **1. Sensor Inputs ($N$)** | Acoustic sonar, satellite optical, cyber signal, OSINT text | **Ingress Normalization ($\mathcal{O}(N)$)**: An adapter maps the feed into the canonical [`Observation`](../api/rest.md) structure. The core graph handles spatial and temporal correlation automatically via physics (Haversine & Dead-Reckoning); zero cross-sensor mapping matrices ($N \times M$) are needed. Upstream crawling and CV inference remain strictly externalized. | `app/adapters/<sensor>.py` |
 | **2. Actions ($A$)** | Warning flare, jamming, civilian evacuation cue | **COA Primitives ($\mathcal{O}(A)$)**: Actions are modeled as standard tactical intents (`target_coordinates`, `action_type`, `tier`, `vectoring`). Intercept geometry is resolved centrally by [`core/kinematics.py`](sar_pipeline.md#23-dual-sar-synergy-temporal-kinematic-bridge) rather than re-engineered per action. | [`core/coa.py`](../api/rest.md#post-apigateproposals) |
 | **3. Field Effectors ($E$)** | USV, MPA aircraft, shore battery, municipal police | **Recipient Ack Contract ($\mathcal{O}(E)$)**: Core never communicates directly with hardware actuators. It delivers cryptographically sealed `DecisionTokens` via a pull-based inbox (`GET /api/recipient/inbox`) and awaits signed Ack (`POST /api/recipient/ack`). Physical actuation protocol conversion lives at the edge. | Edge effector client |
 | **4. Use Cases ($U$)** | Counter-piracy, illegal fishing, contested airspace | **Discrepancy Archetypes ($\mathcal{O}(U)$)**: Operational contradictions naturally reduce to 4 mathematical primitives (*Presence vs Silence*, *Kinematic Velocity*, *Count*, and *Spatial Offset*). New scenarios simply map these primitives to COA intents via declarative policies or probabilistic proposers ([`app/llm_interpreter.py`](../litellm.md)). | `app/scenarios/` or declarative policy |
@@ -105,7 +105,44 @@ flowchart TD
 
 ---
 
+### Ingress Boundaries: Why C2 Does Not Scrape Raw OSINT / Social Media
+
+A fundamental tenet of NexusGate is the strict separation between **Intelligence Collection/Filtering** (upstream services) and **Tactical Action Gating** (C2 Core):
+
+```mermaid
+flowchart LR
+    subgraph External ["External Intelligence Layer (Public Internet / Cloud)"]
+        SM["Public Social Media<br/>(Telegram, X, Civil Apps)"] --> CRAWL["Crawler & NLP Pipeline<br/>(Deduplication / Geocoding / LLM)"]
+        CRAWL --> LAKE[("Threat Intel Store<br/>(Elasticsearch / OpenSearch)")]
+    end
+
+    subgraph Boundary ["Cross-Domain Boundary"]
+        DIODE["Data Diode / TLS API Gateway<br/>POST /api/ingress/candidate-event"]
+    end
+
+    subgraph C2 ["NexusGate C2 Enclave (Tactical / Air-Gapped)"]
+        ADAPT["OSINT Adapter<br/>(app/adapters/osint_text.py)"]
+        GRAPH[("SpatialEntityGraph<br/>(In-Memory Correlation)")]
+        GATE{"Deterministic Gate<br/>(<50ms Interlock)"}
+
+        ADAPT --> GRAPH
+        GRAPH --> GATE
+    end
+
+    LAKE -->|Structured Event JSON| DIODE
+    DIODE --> ADAPT
+```
+
+| Question | Architectural Decision | Operational Rationale |
+|---|---|---|
+| **Does C2 crawl social media directly?** | **No.** Social media crawling is strictly externalized to specialized threat intelligence platforms. | **Air-gap & Enclave Security**: Military C2 cores run inside restricted or air-gapped enclaves (e.g. SIPRNet, tactical edge servers) that prohibit direct outbound internet scraping. |
+| **Why not run scrapers / full NLP in C2?** | Heavy multi-modal NLP, video OCR, and bot-mitigation pipelines run asynchronously upstream. | **Deterministic Latency Budget**: 99.9% of social chatter is noise, spam, or disinfo. Crawling firehoses would destroy C2's sub-50ms deterministic gate guarantee. |
+| **How does OSINT enter C2?** | Via normalized ingress adapters ([`app/adapters/osint_text.py`](../data-provenance.md#inventory)). | **Canonical Contract**: Upstream services distill raw chatter into structured claims (`timestamp`, `lat/lon`, `count=3`, `confidence=0.72`) which map into canonical `Observation` objects. |
+| **Current Mock vs. Production Reality** | Current repo uses synthetic text fixtures and regex/NLP parsers ([#59](https://github.com/edgesentry/sdth-nexus-c2/issues/59)). | In production, the adapter ingests structured event JSON from external feeds (e.g., Dataminr, Primer, or civil defense intake apps like Ukraine's *єВорог*). See [Data Provenance](../data-provenance.md) and [Scenarios (S2)](../scenarios.md). |
+
+---
+
 ### Key Architectural Invariants Under Scale
 1. **No Data Fusion Loss**: Because observations remain discrete in the graph, new use cases can leverage raw modality claims without being blinded by premature track blending.
 2. **Immutable Gate Rules**: Adding 50 new sensors or 20 new effectors does not alter the deterministic fast-reject safety rules (<50ms geofence, velocity clamps, duplicate suppression). Safety constraints remain constant regardless of operational scale.
-3. **Decoupled Data Storage**: Ingestion scaling is absorbed by external streaming and storage planes ([Indago / ClickHouse](sar_pipeline.md#24-decoupled-3-tier-architecture-cognitive-load-compression)), keeping the C2 decision engine strictly in-memory and state-bounded.
+3. **Decoupled Data Storage & Ingestion**: Heavy historical persistence ([Indago / ClickHouse](sar_pipeline.md#24-decoupled-3-tier-architecture-cognitive-load-compression)) and raw intelligence gathering (social media web scraping, raster CV) are absorbed by external upstream systems. The C2 decision engine remains strictly in-memory, state-bounded, and deterministic.

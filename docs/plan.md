@@ -2,7 +2,7 @@
 
 > Canonical planning source for this repo (MkDocs / GitHub Pages).
 
-**Status:** Phase 2 **active (partial)** — SIA #47 / Cloudflare / gate loop / ingress replay (#54) / AIS via SIA only (#60) / GLINT Assumed-mock (#55) / Dual-SAR (#56) / **NexusGate verification WebUI (#65)** / **SAR kinematics (#57)** / **Dynamic Intercept POI (#58)** done; OSINT parser **open** · Phase 3 = external BattlePlan polish · Phase 5 = post-hackathon sovereign PoC · **2026-09-20 Updated** · Provenance: [data-provenance.md](data-provenance.md)  
+**Status:** Phase 2 **active (partial)** — SIA #47 / Cloudflare / gate loop / ingress replay (#54) / AIS via SIA only (#60) / GLINT Assumed-mock (#55) / Dual-SAR (#56) / **NexusGate verification WebUI (#65)** / **SAR kinematics (#57)** / **Dynamic Intercept POI (#58)** / **OSINT text parser (#59)** done · Phase 3 = external BattlePlan polish · Phase 5 = post-hackathon sovereign PoC · **2026-09-20 Updated** · Provenance: [data-provenance.md](data-provenance.md)  
 **Challenge:** SDTH 2026 **PS 04 — One Picture, Many Eyes** (From Picture to Tasking)  
 **Product face:** Project NexusGate (core gate) + venue Command and Control (C2) app  
 **Target Reviewers:** DSTA, MINDEF/SAF C4I, EDTH, NUS Defense Tech Venture Lab  
@@ -234,7 +234,7 @@ Phase 2 delivers thin / demo-fidelity slices of the pitch pillars (backend close
 - [x] **Dual-SAR Multi-Fidelity Corroborator** (#56): `app/adapters/dual_sar.py` — GLINT macro × SIA micro; fail-safe to SIA/fixture.
 - [x] **Temporal Kinematic Dead-Reckoning** (#57): `core/kinematics.py` — SAR $T-\Delta t$ → coastal radar $T-0$.
 - [x] **Dynamic Intercept POI** (#58): lead-pursuit waypoint + ETA in `core/kinematics.py` / `core/coa.py` / `app/agent.py`.
-- [ ] **OSINT text parser** (#59): `app/adapters/osint_text.py` — Synthetic social text → count/bearing for S2 (no SNS API).
+- [x] **OSINT text parser** (#59): `app/adapters/osint_text.py` — Synthetic social text → count/bearing for S2 (no SNS API).
 - [x] **Live open-feed AIS / ADS-B adapter** ([#70](https://github.com/edgesentry/sdth-nexus-c2/issues/70)): `app/adapters/open_feed.py` (Indago DuckDB / live poll / fixture fallback) for Singapore Strait pitch realism.
 - [x] **AIS via SIA ingest only** (#60): `demo` / `offline` plugins → SIA local SQLite (no alternate AIS bridge).
 - [x] **NexusGate verification WebUI** (#65): `/verify` (Jinja2/HTMX on `sdth-c2-server`) Screen 1/2 harness on frozen REST (not external BattlePlan pitch UI).
