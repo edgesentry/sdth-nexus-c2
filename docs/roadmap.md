@@ -4,8 +4,8 @@
 |-------|--------|--------|
 | **0** | Core foundations (graph, interlock, gate, audit) | Done |
 | **1** | S1–S3, C2 REST, streamer, benchmarks | Done |
-| **2** | Backend closed loop & operational core | **Active (partial)** — #47 / #54 / #55 / #56 / #60 done; open: [#57](https://github.com/edgesentry/sdth-nexus-c2/issues/57)–[#59](https://github.com/edgesentry/sdth-nexus-c2/issues/59) |
-| **3** | Verification WebUI on frozen REST (not pitch UI) | Active (`ui/battleplan/` harness) |
+| **2** | Backend closed loop & operational core (+ NexusGate verify UI) | **Active (partial)** — #47 / #54 / #55 / #56 / #60 done; open: [#57](https://github.com/edgesentry/sdth-nexus-c2/issues/57)–[#59](https://github.com/edgesentry/sdth-nexus-c2/issues/59), [#65](https://github.com/edgesentry/sdth-nexus-c2/issues/65) |
+| **3** | Pitch-facing UI polish (external BattlePlan) | Planned — in-repo verify harness tracked under Phase 2 [#65](https://github.com/edgesentry/sdth-nexus-c2/issues/65) |
 | **4** | Pitch-day polish, Team 02 GLINT **live** integration & fallback | Planned (Sep 25–27) |
 | **5** | Post-hackathon sovereign PoC (live sensors, field USV) | Planned |
 
@@ -33,6 +33,7 @@ In **SDTH 2026 PS 04 ("One Picture, Many Eyes")**, a C2 system dies if it only r
 | **SAR Time-Delta** | Static SAR coords fail on moving ships | `core/kinematics.py` |
 | **OSINT parse** | S2 social counts hardcoded beside the text | `app/adapters/osint_text.py` |
 | **Tasking geometry** | Effector sent to static historical coords | POI in `core/coa.py` / `app/agent.py` |
+| **NexusGate verify UI** | Curl-only loop is hard to rehearse live | [#65](https://github.com/edgesentry/sdth-nexus-c2/issues/65) `ui/battleplan/` Screen 1/2 harness (not pitch UI) |
 
 ## Phase 2 pitch cores (demo fidelity)
 

@@ -1,6 +1,6 @@
 # Demo & benchmarks
 
-Phase 2 demos use **curl / scripts / two laptops**. Phase 3 adds the **verification WebUI** (Next.js harness in `ui/battleplan/`; **not** the external BattlePlan pitch UI) on the same frozen paths. Contract: [C2 REST API](api/rest.md). Topology: [Topology](architecture/topology.md) · Provenance: [Data provenance](data-provenance.md).
+Phase 2 demos use **curl / scripts / two laptops**, plus the optional **NexusGate verification WebUI** ([#65](https://github.com/edgesentry/sdth-nexus-c2/issues/65); Next.js harness in `ui/battleplan/`; **not** the external BattlePlan pitch UI) on the same frozen paths. Contract: [C2 REST API](api/rest.md). Topology: [Topology](architecture/topology.md) · Provenance: [Data provenance](data-provenance.md).
 
 ## Quick start
 
@@ -138,7 +138,7 @@ Endpoint table: [C2 REST API](api/rest.md).
 
 ---
 
-## Demo Path F: Verification WebUI (Phase 3 harness — not pitch UI)
+## Demo Path F: NexusGate Verification WebUI (Phase 2 — issue #65; not pitch UI) {#demo-path-f-nexusgate-verification-webui-phase-2--issue-65-not-pitch-ui}
 
 Browser Screen 1 / Screen 2 against local or Cloudflare Core. App: [`ui/battleplan/`](../ui/battleplan/) (folder name historical; **BattlePlan pitch UI is out of repo**).
 

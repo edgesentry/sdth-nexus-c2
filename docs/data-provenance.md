@@ -40,7 +40,7 @@ No C2 application RDB. AIS enters only via SIA’s own ingest plugins (`demo` / 
 | Name | Role | Location |
 |------|------|----------|
 | **BattlePlan** | External pitch UI | **Outside this repo** |
-| **Verification WebUI** | Inspect Nexus Screen 1/2 (not for pitch) | This repo `ui/` (folder still named `battleplan` — harness only) |
+| **Verification WebUI** | Inspect NexusGate Screen 1/2 (not for pitch); Phase 2 [#65](https://github.com/edgesentry/sdth-nexus-c2/issues/65) | This repo `ui/` (folder still named `battleplan` — harness only) |
 | TUI / curl / scripts | Automation and cold-start | This repo |
 
 Pitch screens can be fed by: Synthetic (OSINT + tactical sensors) + Real-processed (AIS / SIA SAR) + Assumed-mock GLINT (swap to live on Day 1). Live coastal radar / EO are Phase 5 — not required for the pitch narrative.

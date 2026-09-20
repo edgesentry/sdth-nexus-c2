@@ -2,7 +2,7 @@
 
 > Canonical planning source for this repo (MkDocs / GitHub Pages).
 
-**Status:** Phase 2 **active (partial)** — SIA #47 / Cloudflare / gate loop / ingress replay (#54) / AIS via SIA only (#60) / GLINT Assumed-mock (#55) / Dual-SAR (#56) done; kinematics, OSINT parser, POI **open** · Phase 3 verification WebUI harness (`ui/battleplan/`; **BattlePlan pitch UI is out of repo**) · Phase 5 = post-hackathon sovereign PoC · **2026-09-20 Updated** · Provenance: [data-provenance.md](data-provenance.md)  
+**Status:** Phase 2 **active (partial)** — SIA #47 / Cloudflare / gate loop / ingress replay (#54) / AIS via SIA only (#60) / GLINT Assumed-mock (#55) / Dual-SAR (#56) done; kinematics, OSINT parser, POI, **NexusGate verification WebUI (#65)** **open** · Phase 3 = external BattlePlan polish (in-repo harness owned by Phase 2 #65) · Phase 5 = post-hackathon sovereign PoC · **2026-09-20 Updated** · Provenance: [data-provenance.md](data-provenance.md)  
 **Challenge:** SDTH 2026 **PS 04 — One Picture, Many Eyes** (From Picture to Tasking)  
 **Product face:** Project NexusGate (core gate) + venue Command and Control (C2) app  
 **Target Reviewers:** DSTA, MINDEF/SAF C4I, EDTH, NUS Defense Tech Venture Lab  
@@ -236,12 +236,15 @@ Phase 2 delivers thin / demo-fidelity slices of the pitch pillars (backend close
 - [ ] **Dynamic Intercept POI** (#58): lead-pursuit waypoint + ETA in `core/coa.py` / `app/agent.py`.
 - [ ] **OSINT text parser** (#59): `app/adapters/osint_text.py` — Synthetic social text → count/bearing for S2 (no SNS API).
 - [x] **AIS via SIA ingest only** (#60): `demo` / `offline` plugins → SIA local SQLite (no alternate AIS bridge).
+- [ ] **NexusGate verification WebUI** (#65): `ui/battleplan/` Screen 1/2 harness on frozen REST (not external BattlePlan pitch UI).
 
-### Phase 3: Verification WebUI on Frozen REST (Active — Not Pitch UI)
-> **UI Boundary:** **BattlePlan** = external pitch UI (**outside this repo**). In-repo `ui/battleplan/` + TUI = verification harness for Screen 1 / Screen 2 only.
+### Phase 3: External BattlePlan polish (Not in-repo pitch UI)
+> **UI Boundary:** **BattlePlan** = external pitch UI (**outside this repo**). In-repo NexusGate verification harness is **Phase 2** ([#65](https://github.com/edgesentry/sdth-nexus-c2/issues/65)).
 
-- [x] Integrate verification WebUI with `app/c2_server.py` — Screen 1 `/command` + Screen 2 `/recipient`; CORS.
-- [x] Radar / SAR image chip preview modal (`evidence_image_uri`).
+Baseline harness (may already exist under `ui/battleplan/`; close #65 when Path F acceptance is green):
+
+- [ ] Integrate / harden verification WebUI with `app/c2_server.py` — Screen 1 `/command` + Screen 2 `/recipient`; CORS (#65).
+- [ ] Radar / SAR image chip preview modal (`evidence_image_uri`) (#65).
 - [x] Optional open feeds (Phase 2 / issue #16).
 - [x] RasPi GPIO blink stretch (issue #20).
 
