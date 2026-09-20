@@ -154,7 +154,10 @@ class OpenFeedIngressRequest(BaseModel):
     limit: int = Field(default=80, ge=1, le=500, description="Max Indago vessels to ingest")
     duckdb_path: str | None = Field(
         default=None,
-        description="Override INDAGO_DUCKDB_PATH for this request",
+        description=(
+            "Relative path under .data/open_feed/ (API jail). "
+            "Prefer INDAGO_DUCKDB_PATH env for absolute Indago DuckDB paths."
+        ),
     )
 
 
@@ -430,8 +433,6 @@ async def ingress_candidate_event(req: CandidateEventIngressRequest) -> dict[str
 @app.post("/api/ingress/open-feed")
 async def ingress_open_feed(req: OpenFeedIngressRequest) -> dict[str, Any]:
     """Ingest optional open AIS / open air snapshots. Never seals tokens; S1-S3 stay primary."""
-    from pathlib import Path
-
     from app.adapters.open_feed import (
         open_feed_to_observations,
         parse_open_feed_selection,

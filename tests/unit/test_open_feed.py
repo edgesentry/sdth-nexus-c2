@@ -205,12 +205,16 @@ def test_indago_duckdb_latest_per_mmsi(tmp_path: Path) -> None:
     assert all(o.attributes.get("ingress") == "open_feed" for o in obs)
 
 
-def test_ingress_open_feed_indago(client: TestClient, tmp_path: Path) -> None:
+def test_ingress_open_feed_indago(
+    client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """API duckdb_path is jailed; production Indago uses INDAGO_DUCKDB_PATH."""
     db = tmp_path / "singapore.duckdb"
     _write_mini_indago_db(db)
+    monkeypatch.setenv("INDAGO_DUCKDB_PATH", str(db))
     resp = client.post(
         "/api/ingress/open-feed",
-        json={"feed": "ais", "source": "indago", "duckdb_path": str(db), "limit": 10},
+        json={"feed": "ais", "source": "indago", "limit": 10},
     )
     assert resp.status_code == 200, resp.text
     body = resp.json()
@@ -219,3 +223,17 @@ def test_ingress_open_feed_indago(client: TestClient, tmp_path: Path) -> None:
     assert body["count"] == 2
     state = client.get("/api/ontology/state").json()
     assert any(o["modality"] == "ais" for o in state["observations"])
+
+
+def test_ingress_open_feed_rejects_absolute_duckdb_path(client: TestClient) -> None:
+    resp = client.post(
+        "/api/ingress/open-feed",
+        json={
+            "feed": "ais",
+            "source": "indago",
+            "duckdb_path": "/tmp/evil.duckdb",
+            "limit": 10,
+        },
+    )
+    assert resp.status_code == 400
+    assert "relative path" in resp.json()["detail"]

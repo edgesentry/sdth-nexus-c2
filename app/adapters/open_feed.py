@@ -16,7 +16,7 @@ import logging
 import os
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, assert_never
 
 from core.schema import Observation
 
@@ -69,8 +69,9 @@ def parse_open_feed_source(raw: str | None) -> OpenFeedSource:
     if raw is None or not str(raw).strip():
         return "auto"
     text = str(raw).strip().lower()
-    if text in SOURCE_CHOICES:
-        return text  # type: ignore[return-value]
+    known: dict[str, OpenFeedSource] = {name: name for name in SOURCE_CHOICES}
+    if text in known:
+        return known[text]
     if text in {"duckdb", "indago_duckdb", "local"}:
         return "indago"
     raise ValueError(f"Unknown open-feed source '{raw}' (expected auto|indago|live|fixture)")
@@ -163,35 +164,20 @@ def load_open_ais_from_indago(
         where.append(f"timestamp >= (CURRENT_TIMESTAMP - INTERVAL '{hours}' HOUR)")
 
     where_sql = (" WHERE " + " AND ".join(where)) if where else ""
-    sql = f"""
-        WITH ranked AS (
-            SELECT
-                mmsi,
-                timestamp,
-                lat,
-                lon,
-                sog,
-                cog,
-                ship_type,
-                ROW_NUMBER() OVER (PARTITION BY mmsi ORDER BY timestamp DESC) AS rn
-            FROM ais_positions
-            {where_sql}
-        )
-        SELECT
-            r.mmsi,
-            r.timestamp,
-            r.lat,
-            r.lon,
-            r.sog,
-            r.cog,
-            r.ship_type,
-            vm.name AS vessel_name
-        FROM ranked r
-        LEFT JOIN vessel_meta vm ON vm.mmsi = r.mmsi
-        WHERE r.rn = 1
-        ORDER BY r.timestamp DESC
-        LIMIT ?
-    """
+    sql = (  # nosec B608
+        "WITH ranked AS ("
+        " SELECT mmsi, timestamp, lat, lon, sog, cog, ship_type,"
+        " ROW_NUMBER() OVER (PARTITION BY mmsi ORDER BY timestamp DESC) AS rn"
+        " FROM ais_positions"
+        + where_sql  # nosec B608
+        + ") SELECT r.mmsi, r.timestamp, r.lat, r.lon, r.sog, r.cog, r.ship_type,"  # nosec B608
+        " vm.name AS vessel_name"
+        " FROM ranked r"
+        " LEFT JOIN vessel_meta vm ON vm.mmsi = r.mmsi"
+        " WHERE r.rn = 1"
+        " ORDER BY r.timestamp DESC"
+        " LIMIT ?"
+    )
     params.append(int(limit))
 
     con = duckdb.connect(str(db_path), read_only=True)
@@ -267,8 +253,10 @@ def load_open_ais_from_live(*, timeout_sec: float = 8.0) -> dict[str, Any]:
     for idx, feat in enumerate(features):
         if not isinstance(feat, dict):
             continue
-        props = feat.get("properties") if isinstance(feat.get("properties"), dict) else {}
-        geom = feat.get("geometry") if isinstance(feat.get("geometry"), dict) else {}
+        raw_props = feat.get("properties")
+        raw_geom = feat.get("geometry")
+        props: dict[str, Any] = raw_props if isinstance(raw_props, dict) else {}
+        geom: dict[str, Any] = raw_geom if isinstance(raw_geom, dict) else {}
         coords = geom.get("coordinates") if isinstance(geom.get("coordinates"), list) else None
         if not coords or len(coords) < 2:
             continue
@@ -325,7 +313,7 @@ def resolve_open_ais_payload(
         order = ["live"]
         allow_fallback = False
     else:
-        order = ["fixture"]
+        assert_never(source)
 
     for step in order:
         try:
