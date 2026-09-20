@@ -400,6 +400,15 @@ uv run python scripts/sentinel_ais_correlate.py --help  # AIS → run_cv → opt
 ./scripts/litellm_interpret_smoke.sh                # live LiteLLM (optional; not in CI)
 ```
 
+### Zero-internet rehearsal (issue #76)
+
+Venue Wi-Fi dropouts must not break the pitch. This suite blocks non-loopback sockets and checks that S1–S3 stubs, `/verify`, Indago DuckDB, SIA Sentinel fixture, GLINT loopback mock, and pull→fixture fail-safes all run offline. Same fixture-first paths as [Demo Path A](#demo-path-a-two-laptop--two-terminal-io-issue-17).
+
+```bash
+# Venue / zero-internet rehearsal (#76) — no outbound network required
+uv run pytest tests/integration/test_zero_internet_resilience.py -v -m integration
+```
+
 CI runs unit, integration, benchmark, and streamer (`--fast`) jobs on every push/PR.
 
 ## Local docs preview
