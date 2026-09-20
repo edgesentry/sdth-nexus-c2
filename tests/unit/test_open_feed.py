@@ -46,7 +46,8 @@ def test_open_feeds_from_env_default_off() -> None:
 
 def test_ais_fixture_maps_via_southbound() -> None:
     payload = load_open_ais_fixture()
-    obs = open_feed_to_observations("ais", payload)
+    obs, resolved = open_feed_to_observations("ais", payload)
+    assert resolved == "payload"
     assert len(obs) == 2
     assert {o.modality for o in obs} == {"ais"}
     assert obs[0].source_id.startswith("OPEN_AIS_")
@@ -58,7 +59,8 @@ def test_ais_fixture_maps_via_southbound() -> None:
 
 def test_air_fixture_maps_via_southbound() -> None:
     payload = load_open_air_fixture()
-    obs = open_feed_to_observations("air", payload)
+    obs, resolved = open_feed_to_observations("air", payload)
+    assert resolved == "payload"
     assert len(obs) == 2
     assert {o.modality for o in obs} == {"adsb"}
     assert obs[0].source_id.startswith("OPEN_AIR_")
@@ -85,7 +87,8 @@ def test_open_feed_additive_to_scenario_graph() -> None:
     base = [normalize_sensor_event(e) for e in scenario.build_events()]
     graph.ingest_many(base)
     before = len(graph.observations)
-    extra = open_feed_to_observations("ais", use_fixture=True)
+    extra, resolved = open_feed_to_observations("ais", use_fixture=True)
+    assert resolved == "fixture"
     graph.ingest_many(extra)
     assert len(graph.observations) == before + len(extra)
     modalities = {o.modality for o in graph.observations}
@@ -153,3 +156,66 @@ def test_ingress_open_feed_rejects_unknown_feed(client: TestClient) -> None:
         json={"feed": "satellite", "use_fixture": True},
     )
     assert resp.status_code == 400
+
+
+def _write_mini_indago_db(path: Path) -> None:
+    import duckdb
+
+    con = duckdb.connect(str(path))
+    con.execute(
+        """
+        CREATE TABLE ais_positions (
+            mmsi VARCHAR, timestamp TIMESTAMPTZ, lat DOUBLE, lon DOUBLE,
+            sog FLOAT, cog FLOAT, nav_status TINYINT, ship_type TINYINT
+        );
+        CREATE TABLE vessel_meta (
+            mmsi VARCHAR PRIMARY KEY, imo VARCHAR, name VARCHAR,
+            flag VARCHAR, ship_type TINYINT, gross_tonnage FLOAT
+        );
+        """
+    )
+    con.execute(
+        """
+        INSERT INTO ais_positions VALUES
+          ('563000001', CURRENT_TIMESTAMP, 1.26, 103.82, 8.5, 210, 0, 70),
+          ('563000001', CURRENT_TIMESTAMP - INTERVAL '10 minutes', 1.25, 103.81, 7.0, 200, 0, 70),
+          ('563000002', CURRENT_TIMESTAMP, 1.27, 103.83, 4.2, 95, 0, 52);
+        INSERT INTO vessel_meta VALUES
+          ('563000001', NULL, 'TEST CARGO', 'SG', 70, 1000),
+          ('563000002', NULL, 'TEST TUG', 'SG', 52, 200);
+        """
+    )
+    con.close()
+
+
+def test_indago_duckdb_latest_per_mmsi(tmp_path: Path) -> None:
+    from app.adapters.open_feed import load_open_ais_from_indago
+
+    db = tmp_path / "singapore.duckdb"
+    _write_mini_indago_db(db)
+    payload = load_open_ais_from_indago(db, limit=10, bbox=None, max_age_hours=24)
+    assert payload["source"].startswith("indago:")
+    assert len(payload["vessels"]) == 2
+    by_mmsi = {v["mmsi"]: v for v in payload["vessels"]}
+    assert by_mmsi["563000001"]["name"] == "TEST CARGO"
+    assert by_mmsi["563000001"]["speed_kt"] == pytest.approx(8.5)
+    obs, resolved = open_feed_to_observations("ais", source="indago", duckdb_path=db, limit=10)
+    assert resolved == "indago"
+    assert len(obs) == 2
+    assert all(o.attributes.get("ingress") == "open_feed" for o in obs)
+
+
+def test_ingress_open_feed_indago(client: TestClient, tmp_path: Path) -> None:
+    db = tmp_path / "singapore.duckdb"
+    _write_mini_indago_db(db)
+    resp = client.post(
+        "/api/ingress/open-feed",
+        json={"feed": "ais", "source": "indago", "duckdb_path": str(db), "limit": 10},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["status"] == "INGESTED"
+    assert body["resolved_sources"]["ais"] == "indago"
+    assert body["count"] == 2
+    state = client.get("/api/ontology/state").json()
+    assert any(o["modality"] == "ais" for o in state["observations"])
