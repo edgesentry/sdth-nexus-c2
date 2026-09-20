@@ -31,6 +31,21 @@ ROOT = APP_DIR.parent
 DEFAULT_POLICY = APP_DIR / "config" / "maritime_defense_policy.yaml"
 FIXTURES_DIR = ROOT / "tests" / "fixtures"
 VERIFY_STATIC = APP_DIR / "static" / "verify"
+OPEN_FEED_DATA_DIR = ROOT / ".data" / "open_feed"
+
+
+def _safe_duckdb_path(raw_path: str) -> Path:
+    candidate = Path(raw_path).expanduser()
+    if candidate.is_absolute():
+        raise ValueError("duckdb_path must be a relative path within the open-feed data directory")
+
+    base = OPEN_FEED_DATA_DIR.resolve()
+    resolved = (base / candidate).resolve()
+    try:
+        resolved.relative_to(base)
+    except ValueError as exc:
+        raise ValueError("duckdb_path escapes allowed open-feed data directory") from exc
+    return resolved
 
 
 def _default_audit_path() -> Path:
@@ -449,7 +464,10 @@ async def ingress_open_feed(req: OpenFeedIngressRequest) -> dict[str, Any]:
             detail="Provide payload, use_fixture=true, or source=auto|indago|live|fixture",
         )
 
-    duckdb_path = Path(req.duckdb_path).expanduser() if req.duckdb_path else None
+    try:
+        duckdb_path = _safe_duckdb_path(req.duckdb_path) if req.duckdb_path else None
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     ingested: list[dict[str, Any]] = []
     resolved_sources: dict[str, str] = {}
     for feed in feeds:
