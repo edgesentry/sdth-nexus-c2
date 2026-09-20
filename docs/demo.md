@@ -13,6 +13,28 @@ SCENARIO=S2 ./scripts/demo.sh
 uv run python -m app.main --scenario S3 --stub --yes
 ```
 
+### Pitch-day all-in-one runner (issue #75)
+
+3-minute VIP narrative in one terminal — no curl orchestration. In-process Core by default (no `sdth-c2-server` required). Auto mode target: **under 15 seconds**.
+
+```bash
+# Automated (projector / screen recording)
+./scripts/demo_pitch_run.sh
+# or: uv run python scripts/demo_pitch_run.py --auto
+
+# Interactive step-through (Enter between beats)
+./scripts/demo_pitch_run.sh --step
+
+# Against a live Core instead of in-process
+uv run python scripts/demo_pitch_run.py --base-url http://127.0.0.1:8080
+```
+
+| Scene | Narrative |
+|-------|-----------|
+| **1 Air (S2)** | OSINT 3 vs radar 1 → Amber → kinetic `ENGAGE_KINETIC` fast-reject → approve `CUE_AND_IDENTIFY` → Ack under 3 s |
+| **2 Maritime (S3)** | Dual-SAR ingress → dark vessel kinematics + Lead POI → `APPROACH_PATROL` → Ack |
+| **3 Slide 11** | Gate p95 under 50 ms · unauthorized = 0 · OCSF integrity 100% |
+
 ### Manual CLI (effector mock)
 
 ```bash
@@ -395,6 +417,7 @@ uv run pytest tests/unit/ -q                        # unit
 uv run pytest tests/integration/ -v -m integration  # S2 + C2 two-screen / live HTTP
 uv run python scripts/stream_events.py --fast       # 19-step temporal playback
 uv run python scripts/benchmark.py                  # Slide 11 proof
+uv run python scripts/demo_pitch_run.py --auto      # Pitch all-in-one (#75; <15s)
 uv run python scripts/sentinel_ingress_smoke.py     # Sentinel fixture ingress (#47)
 uv run python scripts/sentinel_ais_correlate.py --help  # AIS → run_cv → optional C2
 ./scripts/litellm_interpret_smoke.sh                # live LiteLLM (optional; not in CI)

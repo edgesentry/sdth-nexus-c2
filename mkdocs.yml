@@ -51,6 +51,7 @@ nav:
   - Home: index.md
   - Executive Brief (1-Pager): one-pager.md
   - Defense FAQ & Pitch Q&A: faq.md
+  - Research & Gap Analysis: research-maritime-cop-to-tasking-gap.md
   - Architecture:
     - Closed loop: architecture/index.md
     - Topology: architecture/topology.md
