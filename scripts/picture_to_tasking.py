@@ -91,22 +91,57 @@ def _print_warning_picture(finding: dict[str, Any] | None) -> None:
     print("  └────────────────────────────────────────────")
 
 
+def _coa_id_in_record(rec: dict[str, Any], coa_id: str) -> bool:
+    meta = rec.get("metadata") or {}
+    if not isinstance(meta, dict):
+        return False
+    if meta.get("coa_id") == coa_id:
+        return True
+    coa = meta.get("coa")
+    if isinstance(coa, dict) and coa.get("coa_id") == coa_id:
+        return True
+    token = meta.get("token")
+    return isinstance(token, dict) and token.get("coa_id") == coa_id
+
+
 def _verify_ack_in_trail(trail: dict[str, Any], coa_id: str) -> tuple[bool, str]:
+    """Confirm this coa's recipient_ack is sealed on a contiguous hash segment.
+
+    Full-trail genesis checks can fail when an old ``gate.jsonl`` was truncated
+    at the head (orphan ``prev_hash`` on record[0]). In that case we still
+    require the handshake segment for *this* ``coa_id`` to link correctly.
+    """
     records = trail.get("records") or []
-    prev = "0" * 64
-    ack_hits = 0
-    for i, rec in enumerate(records):
-        if rec.get("prev_hash") != prev:
-            return False, f"broken hash chain at record[{i}]"
-        prev = rec.get("hash") or ""
-        if rec.get("activity_name") != "recipient_ack":
-            continue
-        meta = rec.get("metadata") or {}
-        if isinstance(meta, dict) and meta.get("coa_id") == coa_id:
-            ack_hits += 1
+    if not records:
+        return False, "audit trail empty"
+
+    related = [i for i, rec in enumerate(records) if _coa_id_in_record(rec, coa_id)]
+    ack_hits = sum(1 for i in related if records[i].get("activity_name") == "recipient_ack")
     if ack_hits < 1:
         return False, f"no recipient_ack for coa_id={coa_id} in audit trail"
-    return True, f"recipient_ack sealed ({ack_hits} record(s)); chain ok ({len(records)} links)"
+
+    # Prefer a clean full chain from genesis.
+    prev = "0" * 64
+    full_ok = True
+    for rec in records:
+        if rec.get("prev_hash") != prev:
+            full_ok = False
+            break
+        prev = rec.get("hash") or ""
+    if full_ok:
+        return True, f"recipient_ack sealed ({ack_hits} record(s)); chain ok ({len(records)} links)"
+
+    # Session segment: consecutive links covering this coa's events.
+    start, end = min(related), max(related)
+    for i in range(start, end + 1):
+        expected = "0" * 64 if i == 0 else records[i - 1].get("hash")
+        if records[i].get("prev_hash") != expected:
+            return False, f"broken hash chain at record[{i}] (session segment)"
+    return (
+        True,
+        f"recipient_ack sealed ({ack_hits} record(s)); "
+        f"session chain ok (records[{start}:{end + 1}]; older trail has a break)",
+    )
 
 
 def run_demo(

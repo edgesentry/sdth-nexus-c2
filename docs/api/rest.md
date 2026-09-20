@@ -479,7 +479,7 @@ No body.
 { "status": "reset" }
 ```
 
-Clears in-memory ontology, findings, proposals, inbox, and ack sets. **Does not** wipe disk audit (`.audit/gate.jsonl`).
+Clears in-memory ontology, findings, proposals, inbox, ack sets, and soft-duplicate interlock keys. **Does not** wipe disk audit (`.audit/gate.jsonl`). If that file’s hash chain is broken (e.g. head truncated), Core quarantines it to `gate.jsonl.broken-<UTC>` on startup and starts a fresh genesis chain.
 
 ---
 
