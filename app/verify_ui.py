@@ -74,7 +74,7 @@ def _ocsf_health(runtime: Any) -> dict[str, Any]:
     if broke is None:
         return {"verified": True, "pct": 100, "count": count}
     intact = broke
-    pct = int(round(100.0 * intact / count)) if count else 0
+    pct = round(100.0 * intact / count) if count else 0
     return {"verified": False, "pct": pct, "count": count}
 
 
