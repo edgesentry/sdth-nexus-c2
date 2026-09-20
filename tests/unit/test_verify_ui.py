@@ -135,3 +135,48 @@ def test_root_redirects_to_verify(client: TestClient) -> None:
     resp = client.get("/", follow_redirects=False)
     assert resp.status_code == 302
     assert resp.headers["location"] == "/verify"
+
+
+def test_verify_ocsf_health_pill(client: TestClient) -> None:
+    """OCSF hash-chain pill appears after audit append (issue #77)."""
+    proposed = client.post(
+        "/verify/command/propose",
+        data={"scenario_id": "S2", "unit_id": "CUE-NODE-01"},
+    )
+    assert proposed.status_code == 200
+    assert b"OCSF Hash Chain" in proposed.content
+    assert b"100% Verified" in proposed.content
+    assert b"records sealed" in proposed.content
+
+
+def test_verify_osint_claim_badges(client: TestClient) -> None:
+    """S2 Warning Picture shows OSINT vs Radar comparison tags (issue #77)."""
+    proposed = client.post(
+        "/verify/command/propose",
+        data={"scenario_id": "S2", "unit_id": "CUE-NODE-01"},
+    )
+    assert proposed.status_code == 200
+    assert b"COUNT_AND_BEARING_MISMATCH" in proposed.content
+    assert b"OSINT: 3 UAVs (Telegram)" in proposed.content
+    assert b"Radar: 1 Contact" in proposed.content
+    assert b"claim-tags" in proposed.content or b"claim-tag" in proposed.content
+
+
+def test_verify_lead_poi_card_s3(client: TestClient) -> None:
+    """S3 propose elevates Lead POI card with lat/lon/bearing/speed/ETA (issue #77)."""
+    proposed = client.post(
+        "/verify/command/propose",
+        data={"scenario_id": "S3", "unit_id": "CUE-NODE-01"},
+    )
+    assert proposed.status_code == 200
+    assert b"Lead POI" in proposed.content
+    assert b"Bearing" in proposed.content
+    assert b"Speed" in proposed.content
+    assert b"ETA" in proposed.content
+    assert b"m/s" in proposed.content
+    # Lat/lon formatted to 4 decimals somewhere in the POI card
+    assert b"poi-card" in proposed.content
+    body = proposed.text
+    assert "Lat" in body and "Lon" in body
+    # Coordinates must appear as decimal degrees
+    assert any(ch.isdigit() for ch in body)

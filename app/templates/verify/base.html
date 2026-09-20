@@ -22,6 +22,12 @@
         <a href="/verify/command" class="{% if active == 'command' %}active{% endif %}">Screen 1 · Command</a>
         <a href="/verify/recipient" class="{% if active == 'recipient' %}active{% endif %}">Screen 2 · Recipient</a>
       </nav>
+      {% if ocsf_health %}
+      <span class="pill {% if ocsf_health.verified %}pill-ok{% else %}pill-warn{% endif %}" title="OCSF append-only hash chain">
+        OCSF Hash Chain: {{ ocsf_health.pct }}% {% if ocsf_health.verified %}Verified{% else %}Broken{% endif %}
+        ({{ ocsf_health.count }} records sealed)
+      </span>
+      {% endif %}
       <p class="status">{% block status %}Python harness · frozen REST{% endblock %}</p>
     </header>
     {% if flash %}<p class="flash">{{ flash }}</p>{% endif %}

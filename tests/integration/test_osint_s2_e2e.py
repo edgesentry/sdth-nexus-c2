@@ -84,7 +84,7 @@ def test_osint_fallback_when_intel_unparseable() -> None:
 
 
 def test_osint_s2_verify_ui_propose_approve_ack(c2_client: TestClient) -> None:
-    """Screen 1/2 harness: Propose S2 → Approve → Ack with OSINT-backed amber."""
+    """Screen 1/2 harness: Propose S2 → Approve → Ack with OSINT-backed amber (#59/#77)."""
     proposed = c2_client.post(
         "/verify/command/propose",
         data={"scenario_id": "S2", "unit_id": "CUE-NODE-01"},
@@ -92,6 +92,9 @@ def test_osint_s2_verify_ui_propose_approve_ack(c2_client: TestClient) -> None:
     assert proposed.status_code == 200
     assert b"COUNT_AND_BEARING_MISMATCH" in proposed.content
     assert b"Queued" in proposed.content
+    assert b"OSINT: 3 UAVs (Telegram)" in proposed.content
+    assert b"Radar: 1 Contact" in proposed.content
+    assert b"OCSF Hash Chain: 100% Verified" in proposed.content
 
     body = proposed.text
     marker = 'name="coa_id" value="'
@@ -109,11 +112,13 @@ def test_osint_s2_verify_ui_propose_approve_ack(c2_client: TestClient) -> None:
     )
     assert approved.status_code == 200
     assert b"APPROVED" in approved.content
+    assert b"OCSF Hash Chain: 100% Verified" in approved.content
 
     inbox = c2_client.get("/verify/recipient", params={"unit_id": "CUE-NODE-01"})
     assert inbox.status_code == 200
     assert coa_id.encode() in inbox.content
     assert b"CUE_AND_IDENTIFY" in inbox.content or b"PENDING_ACK" in inbox.content
+    assert b"OCSF Hash Chain: 100% Verified" in inbox.content
 
     acked = c2_client.post(
         "/verify/recipient/ack",

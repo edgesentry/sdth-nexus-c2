@@ -69,6 +69,15 @@
     {% if finding %}
       <p><strong>{{ finding.amber_alert or finding.threat_class }}</strong></p>
       <p class="dim">{{ finding.picture_summary }}</p>
+      {% set social = (finding.source_breakdown or {}).get("social") or {} %}
+      {% set radar = (finding.source_breakdown or {}).get("radar") or {} %}
+      {% if social.get("claimed_count") is not none and radar.get("contact_count") is not none %}
+      <div class="claim-tags" aria-label="OSINT vs radar count claim">
+        <span class="claim-tag">OSINT: {{ social.claimed_count }} UAVs (Telegram)</span>
+        <span class="claim-vs">vs</span>
+        <span class="claim-tag">Radar: {{ radar.contact_count }} Contact{% if radar.contact_count != 1 %}s{% endif %}</span>
+      </div>
+      {% endif %}
       <p class="mono">scenario={{ finding.scenario_id }} · conf={{ '%.2f'|format(finding.confidence) }} · mismatch={{ '%.0f'|format(finding.mismatch_m) }}m</p>
     {% else %}
       <p class="dim">No finding yet — Propose a scenario.</p>
@@ -80,13 +89,20 @@
     {% if queued_coa %}
       <p class="mono">coa_id · {{ queued_coa.coa_id }}</p>
       <p class="dim">{{ queued_coa.intent }} · unit {{ queued_coa.unit_id }}</p>
-      {% if queued_coa.metadata and queued_coa.metadata.get("poi") %}
-      <p class="mono">
-        POI {{ '%.4f'|format(queued_coa.metadata.poi.latitude) }},
-        {{ '%.4f'|format(queued_coa.metadata.poi.longitude) }}
-        · ETA {{ '%.0f'|format(queued_coa.metadata.eta_sec) }}s
-        · {{ queued_coa.metadata.poi.method }}
-      </p>
+      {% if poi_card %}
+      <div class="poi-card" aria-label="Lead pursuit Point of Interception">
+        <h3>Lead POI</h3>
+        <dl class="poi-grid">
+          <div><dt>Lat</dt><dd class="mono">{{ '%.4f'|format(poi_card.latitude) }}</dd></div>
+          <div><dt>Lon</dt><dd class="mono">{{ '%.4f'|format(poi_card.longitude) }}</dd></div>
+          <div><dt>Bearing</dt><dd class="mono">{{ '%.0f'|format(poi_card.bearing_deg) }}°</dd></div>
+          <div><dt>Speed</dt><dd class="mono">{{ '%.1f'|format(poi_card.speed_mps) }} m/s</dd></div>
+          <div><dt>ETA</dt><dd class="mono">{{ '%.0f'|format(poi_card.eta_sec) }}s</dd></div>
+          {% if poi_card.method %}
+          <div><dt>Method</dt><dd class="mono">{{ poi_card.method }}</dd></div>
+          {% endif %}
+        </dl>
+      </div>
       {% endif %}
       <div class="actions">
         <form method="post" action="/verify/command/approve">
