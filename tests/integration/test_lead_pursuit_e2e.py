@@ -82,3 +82,18 @@ def test_s1_proposal_has_no_poi(c2_client: TestClient) -> None:
     meta = propose.json()["coa"]["metadata"]
     assert "poi" not in meta
     assert "eta_sec" not in meta
+
+
+def test_verify_ui_s3_renders_lead_poi_card(c2_client: TestClient) -> None:
+    """REST POI metadata surfaces as Lead POI card on /verify Screen 1 (#58/#77)."""
+    c2_client.post("/api/admin/reset")
+    proposed = c2_client.post(
+        "/verify/command/propose",
+        data={"scenario_id": "S3", "unit_id": "USV-02"},
+    )
+    assert proposed.status_code == 200
+    assert b"Lead POI" in proposed.content
+    assert b"Bearing" in proposed.content
+    assert b"Speed" in proposed.content
+    assert b"ETA" in proposed.content
+    assert b"poi-card" in proposed.content
