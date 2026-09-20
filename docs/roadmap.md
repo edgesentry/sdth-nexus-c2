@@ -5,11 +5,11 @@
 | **0** | Core foundations (graph, interlock, gate, audit) | Done |
 | **1** | S1–S3, C2 REST, streamer, benchmarks | Done |
 | **2** | Backend closed loop & operational core (+ NexusGate verify UI) | **Active (partial)** — #47 / #54 / #55 / #56 / #60 / #65 done; open: [#57](https://github.com/edgesentry/sdth-nexus-c2/issues/57)–[#59](https://github.com/edgesentry/sdth-nexus-c2/issues/59) |
-| **3** | Pitch-facing UI polish (external BattlePlan) | Planned — in-repo verify harness = Phase 2 [#65](https://github.com/edgesentry/sdth-nexus-c2/issues/65) (`ui/nexusgate-verify/`) |
+| **3** | Pitch-facing UI polish (external BattlePlan) | Planned — in-repo verify harness = Phase 2 [#65](https://github.com/edgesentry/sdth-nexus-c2/issues/65) (`/verify`) |
 | **4** | Pitch-day polish, Team 02 GLINT **live** integration & fallback | Planned (Sep 25–27) |
 | **5** | Post-hackathon sovereign PoC (live sensors, field USV) | Planned |
 
-> **UI Boundary:** **BattlePlan** = external **pitch UI** (outside this repo). This repo’s `ui/nexusgate-verify/` + TUI are a **verification harness** only. Pitch deliverable = deterministic gate + interlock, not a presentation chrome in-tree.
+> **UI Boundary:** **BattlePlan** = external **pitch UI** (outside this repo). This repo’s `/verify` (Jinja2/HTMX on Core) + TUI are a **verification harness** only. Pitch deliverable = deterministic gate + interlock, not a presentation chrome in-tree.
 
 > **Data provenance:** See [Data provenance](data-provenance.md) (Synthetic / Real-processed / Assumed-mock).
 
@@ -33,7 +33,7 @@ In **SDTH 2026 PS 04 ("One Picture, Many Eyes")**, a C2 system dies if it only r
 | **SAR Time-Delta** | Static SAR coords fail on moving ships | `core/kinematics.py` |
 | **OSINT parse** | S2 social counts hardcoded beside the text | `app/adapters/osint_text.py` |
 | **Tasking geometry** | Effector sent to static historical coords | POI in `core/coa.py` / `app/agent.py` |
-| **NexusGate verify UI** | Curl-only loop is hard to rehearse live | ✅ `ui/nexusgate-verify/` Screen 1/2 (#65) |
+| **NexusGate verify UI** | Curl-only loop is hard to rehearse live | ✅ `/verify` Jinja2/HTMX on Core (#65) |
 
 ## Phase 2 pitch cores (demo fidelity)
 

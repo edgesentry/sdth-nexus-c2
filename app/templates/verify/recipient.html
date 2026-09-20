@@ -1,0 +1,23 @@
+{% extends "verify/base.html" %}
+{% set active = "recipient" %}
+{% block title %}NexusGate Verify · Recipient{% endblock %}
+{% block status %}inbox {{ taskings|length }} · unit {{ unit_id }}{% endblock %}
+{% block body %}
+<form class="controls" method="get" action="/verify/recipient">
+  <label>Unit ID
+    <input name="unit_id" value="{{ unit_id }}" />
+  </label>
+  <div class="actions" style="align-self:end">
+    <button type="submit">Set unit</button>
+  </div>
+</form>
+
+<div
+  id="recipient-body"
+  hx-get="/verify/recipient/poll?unit_id={{ unit_id }}"
+  hx-trigger="every 2s"
+  hx-swap="innerHTML"
+>
+  {% include "verify/partials/recipient_body.html" %}
+</div>
+{% endblock %}

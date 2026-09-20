@@ -1,0 +1,23 @@
+{% extends "verify/base.html" %}
+{% set active = "hub" %}
+{% block title %}NexusGate Verify · Hub{% endblock %}
+{% block body %}
+<section class="panel hero">
+  <p class="kicker">Phase 2 · FastAPI + Jinja2/HTMX · frozen REST</p>
+  <h1>NexusGate Verify</h1>
+  <p class="dim">
+    In-repo harness for Picture→Tasking. Screen 1 proposes and approves;
+    Screen 2 acks. Core alone seals DecisionTokens. External BattlePlan pitch UI
+    is out of this repo.
+  </p>
+  <div class="actions" style="margin-top:1rem">
+    <a class="btn-ok" href="/verify/command" style="padding:0.55rem 0.85rem;border:1px solid var(--line);border-radius:8px">Open Screen 1 · Command</a>
+    <a class="btn-ghost" href="/verify/recipient" style="padding:0.55rem 0.85rem;border:1px solid var(--line);border-radius:8px">Open Screen 2 · Recipient</a>
+  </div>
+  <ol class="steps">
+    <li>Start Core: <code>uv run sdth-c2-server</code></li>
+    <li>Open <code>http://127.0.0.1:8080/verify</code></li>
+    <li>Propose S2 on Screen 1 → Approve → Ack on Screen 2 (second tab)</li>
+  </ol>
+</section>
+{% endblock %}

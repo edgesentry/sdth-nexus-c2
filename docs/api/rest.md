@@ -1,6 +1,6 @@
 # C2 REST API (frozen contract)
 
-**Status:** Phase 2 freeze · source of truth for curl / TUI / scripts and NexusGate verify UI (`ui/nexusgate-verify/`; `BASE_URL` / `C2_BASE_URL` swap only — **paths do not change**).
+**Status:** Phase 2 freeze · source of truth for curl / TUI / scripts and NexusGate verify UI (`/verify` (Jinja2/HTMX on `sdth-c2-server`); `BASE_URL` / `C2_BASE_URL` swap only — **paths do not change**).
 
 | Item | Value |
 |------|--------|
