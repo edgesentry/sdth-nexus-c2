@@ -27,7 +27,7 @@ Provenance labels (**Synthetic** / **Real-processed** / **Assumed-mock**): [Data
 |----------|-----------|------------|------------------------|
 | Space-based SAR (SIA micro) | S3 | Real-processed or fixture | Dark vessels, OBB + chip |
 | Space-based SAR (GLINT macro) | S3 | Assumed-mock → live Phase 4 | Corridor-scale anomaly |
-| Social / recon text | S2 | **Synthetic** | Exaggerated count claims |
+| Social / recon text | S2 | **Synthetic** (`osint_text` parser #59) | Exaggerated then filtered count claims |
 | Gap-filler radar | S1–S3 | **Synthetic** | Count / bearing disagree |
 | EO / optical | S1, S2 | **Synthetic** | Low-confidence blur |
 | AIS | S1, S3 | S1 Synthetic; S3 via **SIA** Real-processed (`demo`) or MockAIS | Spoof / dark-vessel filter |

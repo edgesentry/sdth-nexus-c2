@@ -9,6 +9,7 @@ from core.coa import CourseOfAction
 from core.ontology import SpatialEntityGraph, haversine_m
 from core.schema import Observation
 
+from app.adapters.osint_text import enrich_social_event, parse_osint_text
 from app.agent import make_tier1_coa
 from app.scenarios.base import Finding, Scenario
 
@@ -20,11 +21,13 @@ _INTEL_TEXT = (
     "Telegram/Instagram recon: ~20 cheap drones inbound — filtered OSINT estimate "
     "3 Shahed-136 class airframes toward Objective Bravo, T+4 min."
 )
+# Hardcoded fallback if OSINT parse fails (issue #59).
+_FALLBACK_CLAIMED_COUNT = 3
 
 
 def _build_events() -> list[dict[str, Any]]:
     now = datetime.now(UTC)
-    return [
+    social = enrich_social_event(
         {
             "source_id": "CIVILIAN_SOCIAL_RECON",
             "entity_id": "OSINT-SWARM-CLAIM",
@@ -36,10 +39,13 @@ def _build_events() -> list[dict[str, Any]]:
             "modality": "social",
             "note": "exaggerated_then_filtered_swarm_claim",
             "intel_text": _INTEL_TEXT,
-            "claimed_count": 3,
             "objective": "Objective Bravo",
             "vendor_track": "OSINT-SWARM-CLAIM",
         },
+        fallback_count=_FALLBACK_CLAIMED_COUNT,
+    )
+    return [
+        social,
         {
             "source_id": "ADS_B_SECTOR_EMPTY",
             "entity_id": "ADSB-NULL-SECTOR",
@@ -101,12 +107,16 @@ def _build_events() -> list[dict[str, Any]]:
 
 def _claimed_count(obs: Observation) -> int:
     raw = obs.attributes.get("claimed_count")
-    if raw is None:
-        return 0
-    try:
-        return int(raw)
-    except (TypeError, ValueError):
-        return 0
+    if raw is not None:
+        try:
+            return int(raw)
+        except (TypeError, ValueError):
+            pass
+    parsed = parse_osint_text(
+        obs.attributes.get("intel_text"),
+        fallback_count=_FALLBACK_CLAIMED_COUNT,
+    )
+    return int(parsed.claimed_count or 0)
 
 
 def _detect(graph: SpatialEntityGraph) -> Finding | None:
