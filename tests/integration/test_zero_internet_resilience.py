@@ -1,7 +1,7 @@
 """Zero-internet offline resilience suite (issue #76).
 
-Blocks non-loopback outbound sockets and verifies S1–S3, /verify WebUI,
-Indago DuckDB, SIA Sentinel fixture, GLINT mock, and pull→fixture fail-safes
+Blocks non-loopback outbound sockets and verifies S1-S3, /verify WebUI,
+Indago DuckDB, SIA Sentinel fixture, GLINT mock, and pull-to-fixture fail-safes
 run without external network access.
 """
 
