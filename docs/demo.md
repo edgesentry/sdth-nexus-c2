@@ -166,7 +166,7 @@ Invariant: the UI never seals tokens — only Core `POST /api/gate/approve` does
 
 In-house SAR × AIS dark-vessel **ingress** (HTTP / fixture payloads into C2). Architecture: [SAR Pipeline](architecture/sar_pipeline.md). Upstream is a **sibling checkout** (`~/work/Sentinel-Imagery-Analysis`) — not a submodule.
 
-**SIA is data linkage, not a required always-on C2 service.** Default demos use the Singapore Strait fixture (no SIA process). Running `python app.py` on `:5050` is only for live `pull_upstream`. Full matrix: [E2E verification](verify-e2e.md).
+**SIA is data linkage, not a required always-on C2 service.** Default demos use the Singapore Strait fixture (no SIA process). Live pull uses sibling `uv run sia-server` on `:5050`. Full matrix: [E2E verification](verify-e2e.md).
 
 **Pattern A (CI / venue primary)** — recorded Singapore Strait `run_cv` fixture (**no SIA server**):
 
@@ -182,7 +182,7 @@ curl -s -X POST http://127.0.0.1:8080/api/ingress/candidate-event \
 
 ```bash
 # Terminal A (sibling repo)
-cd ~/work/Sentinel-Imagery-Analysis && python app.py   # PORT=5050
+cd ~/work/Sentinel-Imagery-Analysis && uv sync && uv run sia-server   # PORT=5050
 
 # Terminal B
 export SAR_UPSTREAM_URL=http://127.0.0.1:5050
@@ -209,7 +209,7 @@ AIS is ingested **by SIA itself** (`POST /api/ingest_ais` / plugins) into **SIA 
 
 ```bash
 # Prerequisites
-#   Terminal A: cd ~/work/Sentinel-Imagery-Analysis && python app.py   # :5050, COP_* in .env
+#   Terminal A: cd ~/work/Sentinel-Imagery-Analysis && uv run sia-server   # :5050, COP_* in .env
 #   Terminal B: uv run sdth-c2-server                                   # :8080
 
 # Demo (recommended for pitch)

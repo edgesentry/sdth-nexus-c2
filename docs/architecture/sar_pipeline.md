@@ -191,7 +191,7 @@ flowchart TD
    ```
 2. **Pattern B pull with fixture fail-safe** (upstream optional on `:5050`):
    ```bash
-   # Sibling checkout: ~/work/Sentinel-Imagery-Analysis → python app.py (PORT=5050)
+   # Sibling checkout: ~/work/Sentinel-Imagery-Analysis → uv run sia-server (PORT=5050)
    curl -s -X POST http://127.0.0.1:8080/api/ingress/candidate-event \
      -H 'content-type: application/json' \
      -d '{"pull_upstream":true}'

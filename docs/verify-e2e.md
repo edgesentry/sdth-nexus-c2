@@ -114,8 +114,7 @@ Only if you want a real `run_cv` HTTP pull instead of the recorded fixture.
 ```bash
 # Terminal A — sibling checkout (not a git submodule)
 cd ~/work/Sentinel-Imagery-Analysis
-# install that repo's deps (Flask, etc.), then:
-python app.py                 # default :5050
+uv sync && uv run sia-server   # default http://127.0.0.1:5050
 
 # Terminal B
 export SAR_UPSTREAM_URL=http://127.0.0.1:5050
