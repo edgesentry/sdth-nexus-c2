@@ -4,7 +4,7 @@
 |-------|--------|--------|
 | **0** | Core foundations (graph, interlock, gate, audit) | Done |
 | **1** | S1–S3, C2 REST, streamer, benchmarks | Done |
-| **2** | Backend closed loop & operational core (+ NexusGate verify UI) | **Active (partial)** — #47 / #54 / #55 / #56 / #57 / #60 / #65 done; open: [#58](https://github.com/edgesentry/sdth-nexus-c2/issues/58)–[#59](https://github.com/edgesentry/sdth-nexus-c2/issues/59) |
+| **2** | Backend closed loop & operational core (+ NexusGate verify UI) | **Active (partial)** — #47 / #54 / #55 / #56 / #57 / #58 / #60 / #65 done; open: [#59](https://github.com/edgesentry/sdth-nexus-c2/issues/59) |
 | **3** | Pitch-facing UI polish (external BattlePlan) | Planned — in-repo verify harness = Phase 2 [#65](https://github.com/edgesentry/sdth-nexus-c2/issues/65) (`/verify`) |
 | **4** | Pitch-day polish, Team 02 GLINT **live** integration & fallback | Planned (Sep 25–27) |
 | **5** | Post-hackathon sovereign PoC (live sensors, field USV) | Planned |
@@ -21,7 +21,7 @@ In **SDTH 2026 PS 04 ("One Picture, Many Eyes")**, a C2 system dies if it only r
 2. **Dual-SAR Multi-Fidelity Arbitration (`app/adapters/dual_sar.py`)** — **done** [#56](https://github.com/edgesentry/sdth-nexus-c2/issues/56): fuse **GLINT** macro (Assumed-mock → live) with **SIA** micro OBB metrology.
 3. **OSINT Text Parser (`app/adapters/osint_text.py`)** — *planned Phase 2*: extract counts/bearings from Synthetic social text (S2); not a live SNS API.
 4. **Deterministic Interlocks (<5ms Fast-Reject)** — **done**: geofence, speed, duplicate suppression.
-5. **Dynamic Intercept Vectoring & Cryptographic Audit** — audit **done**; lead-pursuit **POI** *planned Phase 2*.
+5. **Dynamic Intercept Vectoring & Cryptographic Audit** — audit **done**; lead-pursuit **POI** **done** [#58](https://github.com/edgesentry/sdth-nexus-c2/issues/58).
 
 ## Operational Gaps & Phase 2 (remaining)
 
@@ -32,7 +32,7 @@ In **SDTH 2026 PS 04 ("One Picture, Many Eyes")**, a C2 system dies if it only r
 | **Dual-SAR** | GLINT and SIA ingested without joint rules | ✅ `app/adapters/dual_sar.py` (#56) |
 | **SAR Time-Delta** | Static SAR coords fail on moving ships | ✅ `core/kinematics.py` (#57) |
 | **OSINT parse** | S2 social counts hardcoded beside the text | `app/adapters/osint_text.py` |
-| **Tasking geometry** | Effector sent to static historical coords | POI in `core/coa.py` / `app/agent.py` |
+| **Tasking geometry** | Effector sent to static historical coords | ✅ lead-pursuit POI + ETA (#58) |
 | **NexusGate verify UI** | Curl-only loop is hard to rehearse live | ✅ `/verify` Jinja2/HTMX on Core (#65) |
 
 ## Phase 2 pitch cores (demo fidelity)
@@ -42,7 +42,7 @@ In **SDTH 2026 PS 04 ("One Picture, Many Eyes")**, a C2 system dies if it only r
 | Multimodal & Kinematics | Synthetic tactical sensors + Real-processed SIA(+AIS) + Assumed-mock GLINT + Dual-SAR (#56) + kinematics (#57) | Live coastal + multi-constellation SAR |
 | Probabilistic | LLM / heuristic → hypotheses + COA; LiteLLM (#32, done) | Production CV + hardened LLM |
 | Deterministic gate | Stress 100+ tracks; p95 < 50ms, unauthorized=0 (done) | Air-gap, dual-key Tier-2 |
-| Picture→Tasking | Closed loop + POI (open) + Screen 2 Ack <3.0s | Field USV |
+| Picture→Tasking | Closed loop + POI (#58) + Screen 2 Ack <3.0s | Field USV |
 | Sovereign interlock | OCSF + Cloudflare Containers (done) | Stronger seal (Ed25519) |
 
 ## Demo-day & Hackathon Execution (Phase 4: Sep 25–27)

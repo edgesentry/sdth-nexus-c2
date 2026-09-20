@@ -1,7 +1,9 @@
-"""SAR dead-reckoning projection and reachability envelopes (issue #57).
+"""SAR dead-reckoning projection, reachability envelopes, and lead-pursuit POI.
 
 Bridge historical space-based SAR (T - dt) to coastal radar at t_now without
-shared MMSI. See docs/architecture/sar_pipeline.md.
+shared MMSI (#57). Replace static tasking coords with lead-pursuit intercept
+waypoints + ETA for APPROACH_PATROL / CUE_AND_IDENTIFY (#58).
+See docs/architecture/sar_pipeline.md and docs/roadmap.md.
 """
 
 from __future__ import annotations
@@ -245,3 +247,175 @@ def projected_separation_m(a: Observation, b: Observation) -> float | None:
     sar, radar = pair
     projected = project_observation(sar, radar.observed_at)
     return haversine_m(projected.latitude, projected.longitude, radar.latitude, radar.longitude)
+
+
+# ---------------------------------------------------------------------------
+# Lead-pursuit Point of Interception (issue #58)
+# ---------------------------------------------------------------------------
+
+# Demo own-platform defaults (matches UsvRestAdapter kinematics start + cruise).
+DEFAULT_OWN_LATITUDE = 1.2300
+DEFAULT_OWN_LONGITUDE = 103.8500
+DEFAULT_OWN_SPEED_MPS = 15.0
+# Cap lead-along-track fallback so cue waypoints stay inside the pitch window.
+MAX_LEAD_FALLBACK_SEC = 600.0
+
+
+@dataclass(frozen=True, slots=True)
+class LeadPursuitPOI:
+    """Intercept waypoint + ETA for effector / cue tasking."""
+
+    latitude: float
+    longitude: float
+    eta_sec: float
+    method: str
+    contact_latitude: float
+    contact_longitude: float
+    contact_heading_deg: float | None
+    contact_speed_mps: float
+    own_latitude: float
+    own_longitude: float
+    own_speed_mps: float
+    range_at_intercept_m: float
+
+    def as_metadata(self) -> dict[str, Any]:
+        return {
+            "latitude": self.latitude,
+            "longitude": self.longitude,
+            "eta_sec": round(self.eta_sec, 3),
+            "method": self.method,
+            "range_at_intercept_m": round(self.range_at_intercept_m, 1),
+            "contact_snapshot": {
+                "latitude": self.contact_latitude,
+                "longitude": self.contact_longitude,
+                "heading_deg": self.contact_heading_deg,
+                "speed_mps": round(self.contact_speed_mps, 3),
+            },
+            "own_platform": {
+                "latitude": self.own_latitude,
+                "longitude": self.own_longitude,
+                "speed_mps": self.own_speed_mps,
+            },
+        }
+
+
+def _collision_course_eta_sec(
+    range_north_m: float,
+    range_east_m: float,
+    vt_north_mps: float,
+    vt_east_mps: float,
+    own_speed_mps: float,
+) -> float | None:
+    """Smallest t > 0 where |R + Vt t| = Vo t (constant-speed collision course)."""
+    r2 = range_north_m * range_north_m + range_east_m * range_east_m
+    if r2 < 1.0:
+        return 0.0
+    if own_speed_mps <= 1e-9:
+        return None
+
+    dot = range_north_m * vt_north_mps + range_east_m * vt_east_mps
+    vt2 = vt_north_mps * vt_north_mps + vt_east_mps * vt_east_mps
+    a = vt2 - own_speed_mps * own_speed_mps
+    b = 2.0 * dot
+    c = r2
+
+    if abs(a) < 1e-9:
+        # |Vt| ≈ Vo → linear: 2 (R·Vt) t + |R|² = 0
+        if abs(b) < 1e-9:
+            return None
+        t = -c / b
+        return t if t > 1e-9 else None
+
+    disc = b * b - 4.0 * a * c
+    if disc < 0.0:
+        return None
+    sqrt_disc = disc**0.5
+    candidates = [(-b + sqrt_disc) / (2.0 * a), (-b - sqrt_disc) / (2.0 * a)]
+    positive = [t for t in candidates if t > 1e-9]
+    return min(positive) if positive else None
+
+
+def compute_lead_pursuit_poi(
+    contact_latitude: float,
+    contact_longitude: float,
+    *,
+    contact_heading_deg: float | None,
+    contact_speed_mps: float,
+    own_latitude: float = DEFAULT_OWN_LATITUDE,
+    own_longitude: float = DEFAULT_OWN_LONGITUDE,
+    own_speed_mps: float = DEFAULT_OWN_SPEED_MPS,
+    max_lead_sec: float = MAX_LEAD_FALLBACK_SEC,
+) -> LeadPursuitPOI:
+    """Replace static historical coords with a lead-pursuit intercept waypoint.
+
+    Prefer a constant-speed collision-course solution. When the own platform
+    cannot catch the contact (or heading is unknown), fall back to projecting
+    the contact along-track for ``min(range/Vo, max_lead_sec)``.
+    """
+    range_m = haversine_m(own_latitude, own_longitude, contact_latitude, contact_longitude)
+    own_speed = max(own_speed_mps, 1e-6)
+
+    if contact_heading_deg is None or contact_speed_mps <= 1e-9:
+        eta = range_m / own_speed
+        return LeadPursuitPOI(
+            latitude=contact_latitude,
+            longitude=contact_longitude,
+            eta_sec=eta,
+            method="static_contact",
+            contact_latitude=contact_latitude,
+            contact_longitude=contact_longitude,
+            contact_heading_deg=contact_heading_deg,
+            contact_speed_mps=contact_speed_mps,
+            own_latitude=own_latitude,
+            own_longitude=own_longitude,
+            own_speed_mps=own_speed_mps,
+            range_at_intercept_m=range_m,
+        )
+
+    r_north, r_east = enu_offset_m(own_latitude, own_longitude, contact_latitude, contact_longitude)
+    heading = radians(contact_heading_deg)
+    vt_north = contact_speed_mps * cos(heading)
+    vt_east = contact_speed_mps * sin(heading)
+
+    eta_cc = _collision_course_eta_sec(r_north, r_east, vt_north, vt_east, own_speed)
+    if eta_cc is not None and eta_cc <= max_lead_sec:
+        poi_lat, poi_lon = displace_m(
+            contact_latitude, contact_longitude, contact_heading_deg, contact_speed_mps * eta_cc
+        )
+        return LeadPursuitPOI(
+            latitude=poi_lat,
+            longitude=poi_lon,
+            eta_sec=eta_cc,
+            method="collision_course",
+            contact_latitude=contact_latitude,
+            contact_longitude=contact_longitude,
+            contact_heading_deg=contact_heading_deg,
+            contact_speed_mps=contact_speed_mps,
+            own_latitude=own_latitude,
+            own_longitude=own_longitude,
+            own_speed_mps=own_speed_mps,
+            range_at_intercept_m=own_speed * eta_cc,
+        )
+
+    lead_sec = min(range_m / own_speed, max_lead_sec)
+    poi_lat, poi_lon = displace_m(
+        contact_latitude,
+        contact_longitude,
+        contact_heading_deg,
+        contact_speed_mps * lead_sec,
+    )
+    intercept_range = haversine_m(own_latitude, own_longitude, poi_lat, poi_lon)
+    return LeadPursuitPOI(
+        latitude=poi_lat,
+        longitude=poi_lon,
+        eta_sec=intercept_range / own_speed,
+        method="lead_along_track",
+        contact_latitude=contact_latitude,
+        contact_longitude=contact_longitude,
+        contact_heading_deg=contact_heading_deg,
+        contact_speed_mps=contact_speed_mps,
+        own_latitude=own_latitude,
+        own_longitude=own_longitude,
+        own_speed_mps=own_speed_mps,
+        range_at_intercept_m=intercept_range,
+    )
