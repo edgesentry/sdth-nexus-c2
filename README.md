@@ -179,6 +179,9 @@ uv run pytest tests/integration/ -v -m integration
 
 # Latency & gate verification benchmark (Slide 11 proof: <50ms gate + Ack audit)
 uv run python scripts/benchmark.py
+
+# Pitch-day all-in-one narrative (S2 → S3 → Slide 11; issue #75)
+./scripts/demo_pitch_run.sh
 ```
 
 *Continuous Integration (CI) runs unit, integration, benchmark, temporal streamer, and container smoke checks on every pull request.*
