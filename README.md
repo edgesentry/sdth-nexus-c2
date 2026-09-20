@@ -85,9 +85,14 @@ Laptop Screen 1: Command Cockpit             NexusGate C2 Core (Local / Cloudfla
 * **NexusGate Core:** High-speed deterministic core (graph, kinematics, interlocks, token sealing, audit).
 * **Screen 2 (Field Recipient / Effector):** Tactical edge node that polls the inbox, receives sealed tokens, executes orders, and returns an authenticated `Ack`.
 
-### UI Boundary
+### UI Boundary & Live Verification Harness
 * **In-Repo Verification Harness (`/verify`):** Embedded Jinja2/HTMX web harness served directly on Core (`:8080`) providing live Screen 1 (`/verify/command`) and Screen 2 (`/verify/recipient`) interfaces for functional verification.
 * **BattlePlan Pitch UI:** The external presentation-grade Next.js tactical interface resides in a **separate repository** and consumes this Core's frozen REST contract.
+
+| Screen 1: Command Cockpit (`/verify/command`) | Screen 2: Field Recipient (`/verify/recipient`) |
+|:---:|:---:|
+| ![Screen 1 Command](docs/assets/screen1_command.png) | ![Screen 2 Recipient](docs/assets/screen2_recipient.png) |
+| *Amber Warning Picture & Human Operator Approval* | *Field Effector Tasking Inbox & Authenticated Ack* |
 
 Topology details: [`docs/architecture/topology.md`](docs/architecture/topology.md) · REST API contract: [`docs/api/rest.md`](docs/api/rest.md).
 

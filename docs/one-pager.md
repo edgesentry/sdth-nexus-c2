@@ -79,6 +79,11 @@ uv run sdth-c2-server
 # Result: OCSF audit log confirms tamper-proof closed loop.
 ```
 
+| Screen 1: Command Cockpit | Screen 2: Field Recipient |
+|:---:|:---:|
+| ![Screen 1 Command](assets/screen1_command.png) | ![Screen 2 Recipient](assets/screen2_recipient.png) |
+| *Amber Warning Picture & Human Operator Approval* | *Field Effector Tasking Inbox & Authenticated Ack* |
+
 ---
 
 * **Docs Site:** [https://edgesentry.github.io/sdth-nexus-c2](https://edgesentry.github.io/sdth-nexus-c2/)  
