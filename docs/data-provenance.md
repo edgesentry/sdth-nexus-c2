@@ -12,7 +12,7 @@ Labels used across this repo. Prefer these over vague “real” / “fake”.
 
 | Data | Provenance | Path | Pitch role |
 |------|------------|------|------------|
-| Social / OSINT text | **Synthetic** | S2 scenario (± `osint_text` count/bearing extract) | S2 “3 vs 1” side |
+| Social / OSINT text | **Synthetic** (Phase 2 `osint_text` #59) or **External Service** (production target) | S2 scenario (`app/adapters/osint_text.py`) | S2 “3 vs 1” contradiction; early cueing |
 | Gap-filler radar | **Synthetic** | S1–S3 scenarios | Count / bearing mismatch |
 | EO / blur | **Synthetic** | S1, S2 scenarios | Low-confidence visual |
 | RF / ADS-B | **Synthetic** | S1, S2 scenarios | Silent / empty sector |
@@ -31,9 +31,10 @@ Labels used across this repo. Prefer these over vague “real” / “fake”.
 | Decision / Ack evidence | `.audit/gate.jsonl` |
 | Ingress replay | `.audit/ingress.jsonl` (not gate authority; `scripts/replay_ingress.py`) |
 | **AIS history & persistence** | **Indago (DuckDB/Parquet)** or **SIA local SQLite** — C2 does not store raw AIS |
+| **OSINT raw text & feeds** | **External Threat Intel / Social Lake** — C2 does not crawl or store raw social text |
 | SAR imagery / chips | SIA `static/output` |
 
-No C2 application RDB. Persistent AIS data is decoupled to Indago (DuckDB) and SIA (local SQLite); C2 consumes only normalized Observation tracks via adapters.
+No C2 application RDB. Persistent AIS is decoupled to Indago/SIA, and raw OSINT ingestion/crawling is decoupled to external Threat Intel pipelines. C2 consumes only normalized Observation tracks and structured event claims via adapters.
 
 ## UI boundary
 
