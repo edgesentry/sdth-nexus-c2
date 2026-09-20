@@ -767,9 +767,10 @@ curl -s -X POST localhost:8080/api/ingress/open-feed \
 | `feed` | `ais`, `air`, `all`, or comma list |
 | `use_fixture` | Load `tests/fixtures/open_ais_datagovsg.json` / `open_air_traffic.json` |
 | `source` | AIS ladder: `auto` → Indago DuckDB → live → fixture; or force `indago` / `live` / `fixture` |
-| `duckdb_path` | Optional override for `INDAGO_DUCKDB_PATH` |
 | `limit` | Max vessels from Indago (default 80) |
 | `payload` | Raw snapshot for a **single** feed (`ais` or `air`) |
+
+Indago DuckDB path is configured via env `INDAGO_DUCKDB_PATH` only (not a request field — avoids path injection).
 
 Response `200`: `{ "status": "INGESTED", "feeds": [...], "resolved_sources": {...}, "count": N, "items": [{ "feed", "source", "observation", "track_id" }, ...] }`.
 

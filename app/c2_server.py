@@ -31,21 +31,6 @@ ROOT = APP_DIR.parent
 DEFAULT_POLICY = APP_DIR / "config" / "maritime_defense_policy.yaml"
 FIXTURES_DIR = ROOT / "tests" / "fixtures"
 VERIFY_STATIC = APP_DIR / "static" / "verify"
-OPEN_FEED_DATA_DIR = ROOT / ".data" / "open_feed"
-
-
-def _safe_duckdb_path(raw_path: str) -> Path:
-    candidate = Path(raw_path).expanduser()
-    if candidate.is_absolute():
-        raise ValueError("duckdb_path must be a relative path within the open-feed data directory")
-
-    base = OPEN_FEED_DATA_DIR.resolve()
-    resolved = (base / candidate).resolve()
-    try:
-        resolved.relative_to(base)
-    except ValueError as exc:
-        raise ValueError("duckdb_path escapes allowed open-feed data directory") from exc
-    return resolved
 
 
 def _default_audit_path() -> Path:
@@ -152,13 +137,6 @@ class OpenFeedIngressRequest(BaseModel):
         description="auto | indago | live | fixture (AIS ladder; default auto when unset)",
     )
     limit: int = Field(default=80, ge=1, le=500, description="Max Indago vessels to ingest")
-    duckdb_path: str | None = Field(
-        default=None,
-        description=(
-            "Relative path under .data/open_feed/ (API jail). "
-            "Prefer INDAGO_DUCKDB_PATH env for absolute Indago DuckDB paths."
-        ),
-    )
 
 
 class ApproveRequest(BaseModel):
@@ -465,10 +443,7 @@ async def ingress_open_feed(req: OpenFeedIngressRequest) -> dict[str, Any]:
             detail="Provide payload, use_fixture=true, or source=auto|indago|live|fixture",
         )
 
-    try:
-        duckdb_path = _safe_duckdb_path(req.duckdb_path) if req.duckdb_path else None
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    # Indago path is env-only (INDAGO_DUCKDB_PATH) — never accept client filesystem paths.
     ingested: list[dict[str, Any]] = []
     resolved_sources: dict[str, str] = {}
     for feed in feeds:
@@ -478,7 +453,6 @@ async def ingress_open_feed(req: OpenFeedIngressRequest) -> dict[str, Any]:
                 req.payload,
                 use_fixture=req.use_fixture,
                 source=source,
-                duckdb_path=duckdb_path,
                 limit=req.limit,
             )
         except (ValueError, FileNotFoundError, OSError) as exc:
