@@ -86,7 +86,6 @@ if VERIFY_STATIC.is_dir():
     )
 
 
-
 class ProposalRequest(BaseModel):
     """Submit a raw COA and/or build one from a defense scenario."""
 

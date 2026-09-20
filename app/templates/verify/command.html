@@ -26,13 +26,25 @@
         <input type="hidden" name="unit_id" value="{{ unit_id }}" />
         <input type="hidden" name="scenario_id" value="{{ scenario_id }}" />
         <input type="hidden" name="mode" value="sentinel" />
-        <button type="submit" class="btn-ghost">Ingress Sentinel fixture</button>
+        <button type="submit" class="btn-ghost">Ingress SIA only</button>
+      </form>
+      <form method="post" action="/verify/command/ingress">
+        <input type="hidden" name="unit_id" value="{{ unit_id }}" />
+        <input type="hidden" name="scenario_id" value="{{ scenario_id }}" />
+        <input type="hidden" name="mode" value="glint" />
+        <button type="submit" class="btn-ghost">Ingress GLINT only</button>
+      </form>
+      <form method="post" action="/verify/command/ingress">
+        <input type="hidden" name="unit_id" value="{{ unit_id }}" />
+        <input type="hidden" name="scenario_id" value="{{ scenario_id }}" />
+        <input type="hidden" name="mode" value="glint_pull" />
+        <button type="submit" class="btn-ghost">Ingress GLINT pull</button>
       </form>
       <form method="post" action="/verify/command/ingress">
         <input type="hidden" name="unit_id" value="{{ unit_id }}" />
         <input type="hidden" name="scenario_id" value="{{ scenario_id }}" />
         <input type="hidden" name="mode" value="dual_sar" />
-        <button type="submit" class="btn-ghost">Ingress Dual-SAR fixture</button>
+        <button type="submit" class="btn-ghost">Ingress Dual-SAR (both)</button>
       </form>
       <form method="post" action="/verify/command/reset">
         <input type="hidden" name="unit_id" value="{{ unit_id }}" />
@@ -40,7 +52,10 @@
         <button type="submit" class="btn-ghost">Reset</button>
       </form>
     </div>
-    <p class="dim" style="margin-top:0.75rem">UI never seals tokens — Core does on Approve.</p>
+    <p class="dim" style="margin-top:0.75rem">
+      Compare SAR modes then check Ontology / Evidence. Dual-SAR boosts confidence and keeps SIA OBB + chip.
+      UI never seals tokens — Core does on Approve.
+    </p>
   </section>
 
   <section class="panel {% if finding and finding.amber_alert %}amber{% endif %}">
@@ -90,7 +105,7 @@
         {% endfor %}
       </div>
     {% else %}
-      <p class="dim">No evidence_image_uri yet — try Dual-SAR / Sentinel ingress.</p>
+      <p class="dim">No evidence_image_uri yet — try Dual-SAR / SIA ingress (GLINT-only may omit chips).</p>
     {% endif %}
   </section>
 
@@ -98,10 +113,20 @@
     <h2>Ontology snapshot</h2>
     <p class="dim">scenario={{ scenario_runtime or "—" }} · tracks={{ tracks|length }} · observations={{ obs_count }}</p>
     <ul class="track-list">
-      {% for t in tracks %}
-        <li><strong>{{ t.track_id }}</strong> <span class="dim">{{ t.modalities|join("+") }} · conf {{ '%.2f'|format(t.confidence) }}</span></li>
+      {% for o in observations %}
+        <li>
+          <strong class="mono">{{ o.source_id }}</strong>
+          <span class="dim">
+            {{ o.modality }} · conf {{ '%.2f'|format(o.confidence) }}
+            · {{ o.entity_hint }}
+            {% if o.attributes.get("ingress") %} · ingress={{ o.attributes.get("ingress") }}{% endif %}
+            {% if o.attributes.get("dual_sar_status") %} · dual={{ o.attributes.get("dual_sar_status") }}{% endif %}
+            {% if o.attributes.get("vessel_length_m") %} · L={{ o.attributes.get("vessel_length_m") }}m{% endif %}
+            {% if o.attributes.get("vessel_count_est") %} · n≈{{ o.attributes.get("vessel_count_est") }}{% endif %}
+          </span>
+        </li>
       {% else %}
-        <li class="dim">No tracks</li>
+        <li class="dim">No observations — try Ingress SIA / GLINT / Dual-SAR above (Reset between modes)</li>
       {% endfor %}
     </ul>
   </section>

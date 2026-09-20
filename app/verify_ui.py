@@ -14,6 +14,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from app.adapters.dual_sar import resolve_dual_sar_events
+from app.adapters.glint_client import resolve_glint_events
 from app.adapters.sar_candidate_event import candidate_event_to_observation
 from app.adapters.sentinel_imagery import resolve_sentinel_events
 
@@ -89,6 +90,7 @@ def _ctx(
         "queued_coa": queued_coa,
         "taskings": taskings,
         "tracks": list(runtime.graph.all_tracks())[:12],
+        "observations": list(runtime.graph.observations)[:12],
         "obs_count": len(runtime.graph.observations),
         "inbox_depth": len([k for k in runtime.inbox if k not in runtime.acked]),
         "evidence": _evidence_urls(runtime),
@@ -217,20 +219,32 @@ async def verify_ingress(
     unit_id: str = Form(DEFAULT_UNIT),
     scenario_id: str = Form(DEFAULT_SCENARIO),
 ) -> HTMLResponse:
+    """Ingest SAR evidence for side-by-side compare: SIA / GLINT / Dual-SAR."""
     runtime = _c2().get_runtime()
     flash = ""
     error = ""
     try:
+        label = mode
         if mode == "dual_sar":
             events, source = resolve_dual_sar_events(use_fixture=True)
-        else:
+            label = "Dual-SAR (GLINT x SIA)"
+        elif mode in {"glint", "glint_fixture"}:
+            events, source = resolve_glint_events(use_fixture=True)
+            label = "GLINT only (fixture)"
+        elif mode == "glint_pull":
+            events, source = resolve_glint_events(pull_upstream=True, use_fixture=True)
+            label = "GLINT only (pull→fixture fail-safe)"
+        elif mode in {"sentinel", "sia"}:
             events, source = resolve_sentinel_events(use_fixture=True)
+            label = "SIA only (Sentinel fixture)"
+        else:
+            raise ValueError(f"Unknown ingress mode: {mode}")
         if not events:
             raise ValueError("No detections to ingest")
         for payload in events:
             obs = candidate_event_to_observation(payload)
             runtime.graph.ingest(obs)
-        flash = f"Ingested {len(events)} via {source}"
+        flash = f"{label}: ingested {len(events)} · source={source}"
     except (ValueError, OSError, TypeError) as exc:
         error = str(exc)
     return _page(

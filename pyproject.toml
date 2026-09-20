@@ -29,10 +29,11 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["core", "app"]
 
+# YAML is outside hatchling's default package-data patterns; HTML/CSS under app/
+# are already picked up with packages=["app"]. Do not force-include directories
+# (duplicates wheel paths and breaks Docker `uv sync --frozen`).
 [tool.hatch.build.targets.wheel.force-include]
 "app/config/maritime_defense_policy.yaml" = "app/config/maritime_defense_policy.yaml"
-"app/templates" = "app/templates"
-"app/static/verify" = "app/static/verify"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

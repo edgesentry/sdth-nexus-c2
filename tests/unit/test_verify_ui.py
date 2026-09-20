@@ -79,8 +79,32 @@ def test_verify_dual_sar_ingress(client: TestClient) -> None:
         data={"mode": "dual_sar", "unit_id": "CUE-NODE-01", "scenario_id": "S3"},
     )
     assert resp.status_code == 200
-    assert b"Ingested" in resp.content
-    assert b"dual_sar" in resp.content or b"evidence" in resp.content.lower()
+    assert b"Ingested" in resp.content or b"ingested" in resp.content
+    assert b"dual_sar" in resp.content.lower() or b"Dual-SAR" in resp.content
+
+
+def test_verify_glint_and_sia_ingress_modes(client: TestClient) -> None:
+    cmd = client.get("/verify/command")
+    assert b"Ingress SIA only" in cmd.content
+    assert b"Ingress GLINT only" in cmd.content
+    assert b"Ingress Dual-SAR" in cmd.content
+
+    sia = client.post(
+        "/verify/command/ingress",
+        data={"mode": "sentinel", "unit_id": "CUE-NODE-01", "scenario_id": "S3"},
+    )
+    assert sia.status_code == 200
+    assert b"SIA only" in sia.content
+    assert b"SENTINEL_IMAGERY_ANALYSIS" in sia.content
+
+    client.post("/verify/command/reset", data={"unit_id": "CUE-NODE-01", "scenario_id": "S3"})
+    glint = client.post(
+        "/verify/command/ingress",
+        data={"mode": "glint", "unit_id": "CUE-NODE-01", "scenario_id": "S3"},
+    )
+    assert glint.status_code == 200
+    assert b"GLINT only" in glint.content
+    assert b"glint" in glint.content.lower()
 
 
 def test_root_redirects_to_verify(client: TestClient) -> None:

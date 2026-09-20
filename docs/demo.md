@@ -156,7 +156,7 @@ uv run sdth-c2-server
 |------|-------|--------|
 | 1 | Screen 1 `/verify/command` | Propose `S2` → Approve |
 | 2 | Screen 2 `/verify/recipient` | Auto-poll inbox (HTMX 2s) → Ack |
-| 3 | Optional | Screen 1 → Ingress Dual-SAR / Sentinel fixture → evidence chips |
+| 3 | Optional | Screen 1 → **Ingress SIA only** / **GLINT only** / **Dual-SAR (both)** → compare Ontology + evidence (expected diffs: [verify-e2e.md](verify-e2e.md#compare-sar-ingress-modes-results-must-differ)) |
 
 Invariant: the UI never seals tokens — only Core `POST /api/gate/approve` does.
 
