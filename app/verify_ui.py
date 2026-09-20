@@ -101,7 +101,8 @@ def _poi_card(queued_coa: Any) -> dict[str, Any] | None:
         eta_sec = float(poi.get("eta_sec", meta.get("eta_sec", 0.0)))
     except (KeyError, TypeError, ValueError):
         return None
-    own = poi.get("own_platform") if isinstance(poi.get("own_platform"), dict) else {}
+    raw_own = poi.get("own_platform")
+    own: dict[str, Any] = raw_own if isinstance(raw_own, dict) else {}
     try:
         own_lat = float(own.get("latitude", lat))
         own_lon = float(own.get("longitude", lon))
