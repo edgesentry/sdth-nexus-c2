@@ -3,7 +3,7 @@
 | Phase | Focus | Status |
 |-------|--------|--------|
 | **0** | Core foundations (graph, interlock, gate, audit) | Done |
-| **2** | Backend closed loop & operational core (+ NexusGate verify UI) | **Active (partial)** — #47 / #54 / #55 / #56 / #57 / #58 / #60 / #65 done; open: [#59](https://github.com/edgesentry/sdth-nexus-c2/issues/59), [#70](https://github.com/edgesentry/sdth-nexus-c2/issues/70) |
+| **2** | Backend closed loop & operational core (+ NexusGate verify UI) | **Active (partial)** — #47 / #54 / #55 / #56 / #57 / #58 / #60 / #65 / #70 done; open: [#59](https://github.com/edgesentry/sdth-nexus-c2/issues/59) |
 | **3** | Pitch-facing UI polish (external BattlePlan) | Planned — in-repo verify harness = Phase 2 [#65](https://github.com/edgesentry/sdth-nexus-c2/issues/65) (`/verify`) |
 | **4** | Pitch-day polish, Team 02 GLINT **live** integration & fallback | Planned (Sep 25–27) |
 | **5** | Post-hackathon sovereign PoC (live sensors, field USV) | Planned |
@@ -31,7 +31,7 @@ In **SDTH 2026 PS 04 ("One Picture, Many Eyes")**, a C2 system dies if it only r
 | **Dual-SAR** | GLINT and SIA ingested without joint rules | ✅ `app/adapters/dual_sar.py` (#56) |
 | **SAR Time-Delta** | Static SAR coords fail on moving ships | ✅ `core/kinematics.py` (#57) |
 | **OSINT parse** | S2 social counts hardcoded beside the text | `app/adapters/osint_text.py` (#59) |
-| **Live open feeds** | Fixtures lack live realism for Singapore Strait pitch | `app/adapters/open_feed.py` (Indago DuckDB / live poll / fixture fallback) ([#70](https://github.com/edgesentry/sdth-nexus-c2/issues/70)) |
+| **Live open feeds** | Fixtures lack live realism for Singapore Strait pitch | ✅ Indago DuckDB / live / fixture ladder (#70) |
 | **Tasking geometry** | Effector sent to static historical coords | ✅ lead-pursuit POI + ETA (#58) |
 | **NexusGate verify UI** | Curl-only loop is hard to rehearse live | ✅ `/verify` Jinja2/HTMX on Core (#65) |
 

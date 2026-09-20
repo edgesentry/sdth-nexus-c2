@@ -78,6 +78,9 @@ def _ctx(
         if cid not in runtime.acked and t.get("unit_id") == unit_id
     ]
     queued_coa = runtime.proposals[pending[0]]["coa"] if pending else None
+    observations = list(runtime.graph.observations)
+    # Newest first so Dual-SAR / Indago just ingested stay visible after large AIS loads.
+    recent_obs = list(reversed(observations))[:12]
     return {
         "request": request,
         "flash": flash,
@@ -90,8 +93,8 @@ def _ctx(
         "queued_coa": queued_coa,
         "taskings": taskings,
         "tracks": list(runtime.graph.all_tracks())[:12],
-        "observations": list(runtime.graph.observations)[:12],
-        "obs_count": len(runtime.graph.observations),
+        "observations": recent_obs,
+        "obs_count": len(observations),
         "inbox_depth": len([k for k in runtime.inbox if k not in runtime.acked]),
         "evidence": _evidence_urls(runtime),
         "audit_rows": list(reversed(runtime.audit.records()[-12:])),
@@ -219,33 +222,48 @@ async def verify_ingress(
     unit_id: str = Form(DEFAULT_UNIT),
     scenario_id: str = Form(DEFAULT_SCENARIO),
 ) -> HTMLResponse:
-    """Ingest SAR evidence for side-by-side compare: SIA / GLINT / Dual-SAR."""
+    """Ingest SAR / open-AIS evidence: SIA / GLINT / Dual-SAR / Indago."""
+    from app.adapters.open_feed import open_feed_to_observations
+
     runtime = _c2().get_runtime()
     flash = ""
     error = ""
     try:
-        label = mode
-        if mode == "dual_sar":
-            events, source = resolve_dual_sar_events(use_fixture=True)
-            label = "Dual-SAR (GLINT x SIA)"
-        elif mode in {"glint", "glint_fixture"}:
-            events, source = resolve_glint_events(use_fixture=True)
-            label = "GLINT only (fixture)"
-        elif mode == "glint_pull":
-            events, source = resolve_glint_events(pull_upstream=True, use_fixture=True)
-            label = "GLINT only (pull→fixture fail-safe)"
-        elif mode in {"sentinel", "sia"}:
-            events, source = resolve_sentinel_events(use_fixture=True)
-            label = "SIA only (Sentinel fixture)"
+        if mode in {"indago", "open_ais", "indago_ais"}:
+            # Prefer Indago DuckDB; ladder falls back to live → fixture (venue-safe).
+            observations, source = open_feed_to_observations(
+                "ais",
+                source="auto",
+                limit=40,
+            )
+            if not observations:
+                raise ValueError("No AIS vessels to ingest")
+            for obs in observations:
+                runtime.graph.ingest(obs)
+            flash = f"Indago AIS (open-feed): ingested {len(observations)} · source={source}"
         else:
-            raise ValueError(f"Unknown ingress mode: {mode}")
-        if not events:
-            raise ValueError("No detections to ingest")
-        for payload in events:
-            obs = candidate_event_to_observation(payload)
-            runtime.graph.ingest(obs)
-        flash = f"{label}: ingested {len(events)} · source={source}"
-    except (ValueError, OSError, TypeError) as exc:
+            label = mode
+            if mode == "dual_sar":
+                events, source = resolve_dual_sar_events(use_fixture=True)
+                label = "Dual-SAR (GLINT x SIA)"
+            elif mode in {"glint", "glint_fixture"}:
+                events, source = resolve_glint_events(use_fixture=True)
+                label = "GLINT only (fixture)"
+            elif mode == "glint_pull":
+                events, source = resolve_glint_events(pull_upstream=True, use_fixture=True)
+                label = "GLINT only (pull→fixture fail-safe)"
+            elif mode in {"sentinel", "sia"}:
+                events, source = resolve_sentinel_events(use_fixture=True)
+                label = "SIA only (Sentinel fixture)"
+            else:
+                raise ValueError(f"Unknown ingress mode: {mode}")
+            if not events:
+                raise ValueError("No detections to ingest")
+            for payload in events:
+                obs = candidate_event_to_observation(payload)
+                runtime.graph.ingest(obs)
+            flash = f"{label}: ingested {len(events)} · source={source}"
+    except (ValueError, OSError, TypeError, FileNotFoundError) as exc:
         error = str(exc)
     return _page(
         request,

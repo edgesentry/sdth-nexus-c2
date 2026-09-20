@@ -127,11 +127,16 @@ class CandidateEventIngressRequest(BaseModel):
 
 
 class OpenFeedIngressRequest(BaseModel):
-    """Optional demo-grade open AIS / open air ingress (issue #16)."""
+    """Optional open AIS / open air ingress (issues #16, #70)."""
 
     feed: str = Field(description="ais | air | all (or comma list)")
     payload: dict[str, Any] | None = None
     use_fixture: bool = False
+    source: str | None = Field(
+        default=None,
+        description="auto | indago | live | fixture (AIS ladder; default auto when unset)",
+    )
+    limit: int = Field(default=80, ge=1, le=500, description="Max Indago vessels to ingest")
 
 
 class ApproveRequest(BaseModel):
@@ -409,6 +414,7 @@ async def ingress_open_feed(req: OpenFeedIngressRequest) -> dict[str, Any]:
     from app.adapters.open_feed import (
         open_feed_to_observations,
         parse_open_feed_selection,
+        parse_open_feed_source,
     )
 
     runtime = get_runtime()
@@ -422,21 +428,36 @@ async def ingress_open_feed(req: OpenFeedIngressRequest) -> dict[str, Any]:
     if req.payload is not None and len(feeds) != 1:
         raise HTTPException(
             status_code=400,
-            detail="payload requires a single feed (ais or air); use use_fixture for all",
+            detail="payload requires a single feed (ais or air); use use_fixture/source for all",
         )
-    if not req.use_fixture and req.payload is None:
-        raise HTTPException(status_code=400, detail="Provide payload or use_fixture=true")
 
+    try:
+        source = parse_open_feed_source(req.source) if req.source is not None else None
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    # Backward compatible: no payload / no source / no fixture → still require explicit opt-in.
+    if req.payload is None and not req.use_fixture and req.source is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Provide payload, use_fixture=true, or source=auto|indago|live|fixture",
+        )
+
+    # Indago path is env-only (INDAGO_DUCKDB_PATH) — never accept client filesystem paths.
     ingested: list[dict[str, Any]] = []
+    resolved_sources: dict[str, str] = {}
     for feed in feeds:
         try:
-            observations = open_feed_to_observations(
+            observations, resolved = open_feed_to_observations(
                 feed,
                 req.payload,
                 use_fixture=req.use_fixture,
+                source=source,
+                limit=req.limit,
             )
-        except ValueError as exc:
+        except (ValueError, FileNotFoundError, OSError) as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+        resolved_sources[feed] = resolved
         for obs in observations:
             track = runtime.graph.ingest(obs)
             runtime.audit.append(
@@ -444,6 +465,7 @@ async def ingress_open_feed(req: OpenFeedIngressRequest) -> dict[str, Any]:
                 "Info",
                 {
                     "feed": feed,
+                    "source": resolved,
                     "observation_id": obs.observation_id,
                     "source_id": obs.source_id,
                     "modality": obs.modality,
@@ -453,6 +475,7 @@ async def ingress_open_feed(req: OpenFeedIngressRequest) -> dict[str, Any]:
             ingested.append(
                 {
                     "feed": feed,
+                    "source": resolved,
                     "observation": obs.model_dump(mode="json"),
                     "track_id": track.track_id,
                 }
@@ -468,6 +491,7 @@ async def ingress_open_feed(req: OpenFeedIngressRequest) -> dict[str, Any]:
     return {
         "status": "INGESTED",
         "feeds": list(feeds),
+        "resolved_sources": resolved_sources,
         "count": len(ingested),
         "items": ingested,
     }

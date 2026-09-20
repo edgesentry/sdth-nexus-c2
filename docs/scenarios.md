@@ -9,7 +9,13 @@ App-layer scenarios under `app/scenarios/`. Each run builds synthetic multi-vend
 | **S3** | Shipping Lane & Coastal Anomaly — SAR Difference vs AIS | Space-based SAR anomaly diff (unannounced dark cluster with length/beam/heading metrology) vs thin AIS; coastal radar joined via dead-reckoned reachability envelope (#57), not a shared MMSI | `APPROACH_PATROL` |
 
 **S2** is the air hero (Slide 04): do not fuse into one hallucinated track — cue identify only.  
-**S3** is the maritime hero: connects macro space-based SAR scene-difference alerts and OBB metrology to tactical C2 tasking via dead-reckoning (#57) (see [SAR Pipeline Architecture](architecture/sar_pipeline.md)).
+**S3** is the maritime hero: connects macro space-based SAR scene-difference alerts (GLINT) and micro OBB metrology (SIA) to tactical C2 tasking via dead-reckoning kinematics ([#57](https://github.com/edgesentry/sdth-nexus-c2/issues/57)) and lead-pursuit interception ([#58](https://github.com/edgesentry/sdth-nexus-c2/issues/58)) (see [SAR Pipeline Architecture](architecture/sar_pipeline.md)).
+
+> **S3 Cognitive Load Compression (Dual-SAR × Dual-AIS):**  
+> Resolves the core maritime dilemma (*"SAR detects returns, AIS indicates normal traffic: is it clutter, a dark vessel, or latency?"*) across three decoupled tiers:
+> 1. **GLINT (Macro SAR)**: Cues anomalous corridor sectors without requiring AIS.
+> 2. **SIA (Micro SAR × AIS)**: Correlates with pass-time AIS snapshot ($T - \Delta t$) to isolate dark vessels and extract OBB metrology ($L/B/\theta$).
+> 3. **NexusGate $\leftarrow$ Indago (Tactical C2)**: Overlays live background traffic ($T \approx 0$) and computes dynamic lead-pursuit POI, allowing the Commander to authorize a mathematically verified Amber Warning Picture rather than manually cross-referencing raw sensor feeds.
 
 Each CLI / TUI run prints a **WARNING PICTURE** (threat class, minutes of warning, sources, “if false collapses when…”) before the gate.
 

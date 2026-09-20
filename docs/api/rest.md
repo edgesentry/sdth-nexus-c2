@@ -747,21 +747,32 @@ uv run python scripts/replay_ingress.py --reset
 
 ### `POST /api/ingress/open-feed`
 
-Optional demo-grade open AIS (data.gov.sg-shaped) or open air (ADS-B-style) ingress. Synthetic S1–S3 remain primary; this path is additive. Never seals a DecisionToken.
+Optional open AIS (Indago DuckDB / live / fixture) or open air (ADS-B-style) ingress
+(issues #16, #70). Synthetic S1–S3 remain primary; this path is additive. Never seals a DecisionToken.
 
 ```bash
+# Golden fixture (deterministic CI / default demo)
 curl -s -X POST localhost:8080/api/ingress/open-feed \
   -H 'content-type: application/json' \
   -d '{"feed":"all","use_fixture":true}'
+
+# Indago DuckDB (Singapore/Malacca stream → ~/.indago/data/raw/ais/singapore.duckdb)
+curl -s -X POST localhost:8080/api/ingress/open-feed \
+  -H 'content-type: application/json' \
+  -d '{"feed":"ais","source":"indago","limit":80}'
 ```
 
 | Field | Role |
 |-------|------|
 | `feed` | `ais`, `air`, `all`, or comma list |
 | `use_fixture` | Load `tests/fixtures/open_ais_datagovsg.json` / `open_air_traffic.json` |
+| `source` | AIS ladder: `auto` → Indago DuckDB → live → fixture; or force `indago` / `live` / `fixture` |
+| `limit` | Max vessels from Indago (default 80) |
 | `payload` | Raw snapshot for a **single** feed (`ais` or `air`) |
 
-Response `200`: `{ "status": "INGESTED", "feeds": [...], "count": N, "items": [{ "feed", "observation", "track_id" }, ...] }`.
+Indago DuckDB path is configured via env `INDAGO_DUCKDB_PATH` only (not a request field — avoids path injection).
+
+Response `200`: `{ "status": "INGESTED", "feeds": [...], "resolved_sources": {...}, "count": N, "items": [{ "feed", "source", "observation", "track_id" }, ...] }`.
 
 | Open AIS field | Observation |
 |----------------|-------------|

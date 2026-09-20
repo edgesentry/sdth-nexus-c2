@@ -5,11 +5,13 @@ description = "SDTH C2 app powered by NexusGate core (Phase 1: colocated Python)
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "duckdb>=1.5.5",
     "fastapi>=0.115.0",
     "httpx>=0.28.0",
     "jinja2>=3.1.6",
     "pydantic>=2.10.0",
     "python-multipart>=0.0.32",
+    "pytz>=2026.3.post1",
     "pyyaml>=6.0.2",
     "rich>=13.9.0",
     "uvicorn[standard]>=0.34.0",

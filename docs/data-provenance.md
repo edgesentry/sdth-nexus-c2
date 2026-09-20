@@ -30,10 +30,10 @@ Labels used across this repo. Prefer these over vague “real” / “fake”.
 | C2 runtime (tracks, proposals, inbox) | In-memory `C2Runtime` |
 | Decision / Ack evidence | `.audit/gate.jsonl` |
 | Ingress replay | `.audit/ingress.jsonl` (not gate authority; `scripts/replay_ingress.py`) |
-| **AIS history** | **SIA local SQLite** — C2 does not store raw AIS |
+| **AIS history & persistence** | **Indago (DuckDB/Parquet)** or **SIA local SQLite** — C2 does not store raw AIS |
 | SAR imagery / chips | SIA `static/output` |
 
-No C2 application RDB. AIS enters only via SIA’s own ingest plugins (`demo` / `offline`) into SIA local SQLite.
+No C2 application RDB. Persistent AIS data is decoupled to Indago (DuckDB) and SIA (local SQLite); C2 consumes only normalized Observation tracks via adapters.
 
 ## UI boundary
 
