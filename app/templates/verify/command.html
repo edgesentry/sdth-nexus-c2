@@ -74,6 +74,14 @@
     {% if queued_coa %}
       <p class="mono">coa_id · {{ queued_coa.coa_id }}</p>
       <p class="dim">{{ queued_coa.intent }} · unit {{ queued_coa.unit_id }}</p>
+      {% if queued_coa.metadata and queued_coa.metadata.get("poi") %}
+      <p class="mono">
+        POI {{ '%.4f'|format(queued_coa.metadata.poi.latitude) }},
+        {{ '%.4f'|format(queued_coa.metadata.poi.longitude) }}
+        · ETA {{ '%.0f'|format(queued_coa.metadata.eta_sec) }}s
+        · {{ queued_coa.metadata.poi.method }}
+      </p>
+      {% endif %}
       <div class="actions">
         <form method="post" action="/verify/command/approve">
           <input type="hidden" name="coa_id" value="{{ queued_coa.coa_id }}" />

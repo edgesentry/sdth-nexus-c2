@@ -2,11 +2,21 @@
 
 from __future__ import annotations
 
-from core.coa import ActionTier, CourseOfAction
+from typing import TYPE_CHECKING
+
+from core.coa import LEAD_PURSUIT_INTENTS, ActionTier, CourseOfAction
+from core.kinematics import (
+    DEFAULT_OWN_LATITUDE,
+    DEFAULT_OWN_LONGITUDE,
+    DEFAULT_OWN_SPEED_MPS,
+    KT_TO_MPS,
+    compute_lead_pursuit_poi,
+)
 from core.ontology import SpatialEntityGraph, haversine_m
 from core.schema import Observation
 
-from app.scenarios.base import Finding
+if TYPE_CHECKING:
+    from app.scenarios.base import Finding
 
 
 def speed_kt(obs: Observation) -> float:
@@ -35,18 +45,34 @@ def preferred_tasking_coords(
     prefer_fast: bool = True,
 ) -> tuple[float, float, float]:
     """Return lat, lon, speed_kt for tasking."""
+    lat, lon, skt, _heading = preferred_tasking_kinematics(graph, finding, prefer_fast=prefer_fast)
+    return lat, lon, skt
+
+
+def preferred_tasking_kinematics(
+    graph: SpatialEntityGraph,
+    finding: Finding,
+    *,
+    prefer_fast: bool = True,
+) -> tuple[float, float, float, float | None]:
+    """Return lat, lon, speed_kt, heading_deg for tasking / lead-pursuit."""
     track = graph.get_track(finding.track_id)
     assert track is not None
     obs = observations_for_track(graph, finding.track_id)
+    chosen: Observation | None = None
     if prefer_fast:
         fast = [o for o in obs if speed_kt(o) >= 5.0]
         if fast:
-            best = max(fast, key=lambda o: o.confidence)
-            return best.latitude, best.longitude, speed_kt(best)
-    if obs:
-        best = max(obs, key=lambda o: o.confidence)
-        return best.latitude, best.longitude, speed_kt(best)
-    return track.latitude, track.longitude, track.speed_mps / 0.514444
+            chosen = max(fast, key=lambda o: o.confidence)
+    if chosen is None and obs:
+        chosen = max(obs, key=lambda o: o.confidence)
+    if chosen is not None:
+        heading = chosen.heading_deg
+        if heading is None:
+            raw = chosen.attributes.get("heading_deg", chosen.attributes.get("angle"))
+            heading = float(raw) if raw is not None and raw != "" else None
+        return chosen.latitude, chosen.longitude, speed_kt(chosen), heading
+    return track.latitude, track.longitude, track.speed_mps / KT_TO_MPS, None
 
 
 def make_tier1_coa(
@@ -57,10 +83,13 @@ def make_tier1_coa(
     timeout_seconds: float = 5.0,
     speed_kt_override: float | None = None,
     apply_contact_speed: bool = True,
+    own_latitude: float = DEFAULT_OWN_LATITUDE,
+    own_longitude: float = DEFAULT_OWN_LONGITUDE,
+    own_speed_mps: float = DEFAULT_OWN_SPEED_MPS,
 ) -> CourseOfAction:
     track = graph.get_track(finding.track_id)
     assert track is not None
-    lat, lon, contact_speed = preferred_tasking_coords(graph, finding)
+    lat, lon, contact_speed, heading_deg = preferred_tasking_kinematics(graph, finding)
     skt: float | None
     if speed_kt_override is not None:
         skt = speed_kt_override
@@ -68,7 +97,7 @@ def make_tier1_coa(
         skt = None
     else:
         skt = contact_speed
-    return CourseOfAction(
+    coa = CourseOfAction(
         tier=ActionTier.TIER_1_HITL,
         target_entity_id=finding.track_id,
         target_coordinates=(lat, lon),
@@ -91,8 +120,21 @@ def make_tier1_coa(
             "picture_summary": finding.picture_summary,
             "adversarial_hypothesis": finding.adversarial_hypothesis,
             "finding": finding.message or finding.picture_summary,
-            "contact_speed_kt": preferred_tasking_coords(graph, finding)[2],
+            "contact_speed_kt": contact_speed,
             "amber_alert": finding.amber_alert,
             "source_breakdown": finding.source_breakdown,
+            "contact_coordinates": [lat, lon],
         },
     )
+    if intent in LEAD_PURSUIT_INTENTS:
+        poi = compute_lead_pursuit_poi(
+            lat,
+            lon,
+            contact_heading_deg=heading_deg,
+            contact_speed_mps=contact_speed * KT_TO_MPS,
+            own_latitude=own_latitude,
+            own_longitude=own_longitude,
+            own_speed_mps=own_speed_mps,
+        )
+        coa.apply_lead_pursuit(poi)
+    return coa

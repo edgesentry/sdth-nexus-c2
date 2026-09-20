@@ -8,6 +8,11 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
+from core.kinematics import LeadPursuitPOI
+
+# Intents that replace static historical coords with a lead-pursuit POI (#58).
+LEAD_PURSUIT_INTENTS = frozenset({"APPROACH_PATROL", "CUE_AND_IDENTIFY"})
+
 
 class ActionTier(int, Enum):
     TIER_0_AUTONOMOUS = 0
@@ -39,3 +44,13 @@ class CourseOfAction(BaseModel):
     raw_input_digest: str = ""
     speed_kt: float | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+    def apply_lead_pursuit(self, poi: LeadPursuitPOI) -> None:
+        """Set ``target_coordinates`` to the POI and expose ETA in metadata."""
+        self.target_coordinates = (poi.latitude, poi.longitude)
+        self.metadata["poi"] = poi.as_metadata()
+        self.metadata["contact_coordinates"] = [
+            poi.contact_latitude,
+            poi.contact_longitude,
+        ]
+        self.metadata["eta_sec"] = round(poi.eta_sec, 3)
