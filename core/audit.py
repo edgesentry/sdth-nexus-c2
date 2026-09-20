@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -25,6 +26,83 @@ def chain_break_index(records: list[dict[str, Any]]) -> int | None:
     return None
 
 
+@dataclass(frozen=True, slots=True)
+class ChainVerifyResult:
+    """Full hash-chain walk: prev_hash links + recomputed content digests."""
+
+    ok: bool
+    total: int
+    break_index: int | None = None
+    reason: str | None = None
+    errors: list[str] = field(default_factory=list)
+
+    def summary(self) -> str:
+        if self.ok:
+            return f"PASS: {self.total} records sealed (100% integrity)"
+        idx = self.break_index if self.break_index is not None else "?"
+        why = self.reason or "unknown"
+        return f"CHAIN BROKEN at Index {idx}: {why}"
+
+
+def verify_audit_chain(records: list[dict[str, Any]]) -> ChainVerifyResult:
+    """Walk the chain; recompute SHA-256 over each record body (excluding ``hash``)."""
+    if not records:
+        return ChainVerifyResult(ok=True, total=0)
+
+    errors: list[str] = []
+    break_index: int | None = None
+    reason: str | None = None
+    prev = GENESIS_PREV
+    for i, rec in enumerate(records):
+        if rec.get("prev_hash") != prev:
+            msg = f"record[{i}] broken prev_hash link"
+            errors.append(msg)
+            if break_index is None:
+                break_index = i
+                reason = "broken prev_hash link"
+        stored = rec.get("hash")
+        body = {k: v for k, v in rec.items() if k != "hash"}
+        expected = sha256_hex(canonical_json(body))
+        if stored != expected:
+            msg = f"record[{i}] hash mismatch"
+            errors.append(msg)
+            if break_index is None:
+                break_index = i
+                reason = "hash mismatch"
+        prev = stored if isinstance(stored, str) else prev
+
+    return ChainVerifyResult(
+        ok=not errors,
+        total=len(records),
+        break_index=break_index,
+        reason=reason,
+        errors=errors,
+    )
+
+
+def load_audit_records(path: Path) -> list[dict[str, Any]]:
+    """Load jsonl audit records without quarantine side effects."""
+    out: list[dict[str, Any]] = []
+    if not path.exists():
+        return out
+    with path.open(encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if line:
+                loaded = json.loads(line)
+                if isinstance(loaded, dict):
+                    out.append(loaded)
+    return out
+
+
+def write_audit_records(path: Path, records: list[dict[str, Any]]) -> None:
+    """Overwrite jsonl with the given records (demo restore / tamper helpers)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as fh:
+        for rec in records:
+            fh.write(json.dumps(rec, default=str) + "\n")
+
+
 class AuditLogger:
     def __init__(self, path: str | Path, *, quarantine_broken: bool = True) -> None:
         self.path = Path(path)
@@ -35,24 +113,11 @@ class AuditLogger:
         self._rewind_from_disk()
 
     def records(self) -> list[dict[str, Any]]:
-        out: list[dict[str, Any]] = []
-        if not self.path.exists():
-            return out
-        with self.path.open(encoding="utf-8") as fh:
-            for line in fh:
-                line = line.strip()
-                if line:
-                    loaded = json.loads(line)
-                    if isinstance(loaded, dict):
-                        out.append(loaded)
-        return out
+        return load_audit_records(self.path)
 
     def replace_records(self, records: list[dict[str, Any]]) -> None:
         """Overwrite the jsonl file (used to hydrate after ephemeral container disk reset)."""
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        with self.path.open("w", encoding="utf-8") as fh:
-            for rec in records:
-                fh.write(json.dumps(rec, default=str) + "\n")
+        write_audit_records(self.path, records)
         self._rewind_from_disk()
 
     def _quarantine_if_broken(self) -> Path | None:

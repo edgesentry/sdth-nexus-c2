@@ -19,14 +19,12 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import json
 import statistics
 import sys
 import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 from app import c2_server
 from app.bench_stress import (
@@ -39,7 +37,6 @@ from core.audit import AuditLogger
 from core.coa import ActionTier, CourseOfAction, GateVerdict
 from core.gate import LatencyBoundedGate
 from core.interlock import DeterministicInterlock
-from core.schema import canonical_json, sha256_hex
 from fastapi.testclient import TestClient
 
 # ---------------------------------------------------------------------------
@@ -338,31 +335,13 @@ def bench_picture_to_ack() -> MetricResult:
 
 def _verify_audit_chain(path: Path) -> tuple[int, int, list[str]]:
     """Return (ok_links, total_records, errors). Recomputes hashes."""
+    from core.audit import load_audit_records, verify_audit_chain
+
     if not path.exists():
         return 0, 0, ["audit file missing"]
-
-    records: list[dict[str, Any]] = []
-    with path.open(encoding="utf-8") as fh:
-        for line in fh:
-            line = line.strip()
-            if line:
-                records.append(json.loads(line))
-
-    errors: list[str] = []
-    prev = "0" * 64
-    ok = 0
-    for i, rec in enumerate(records):
-        if rec.get("prev_hash") != prev:
-            errors.append(f"record[{i}] broken prev_hash link")
-        else:
-            ok += 1
-        stored = rec.get("hash")
-        body = {k: v for k, v in rec.items() if k != "hash"}
-        expected = sha256_hex(canonical_json(body))
-        if stored != expected:
-            errors.append(f"record[{i}] hash mismatch")
-        prev = stored if isinstance(stored, str) else prev
-    return ok, len(records), errors
+    result = verify_audit_chain(load_audit_records(path))
+    ok = result.total if result.ok else 0
+    return ok, result.total, result.errors
 
 
 def bench_audit_integrity() -> MetricResult:
