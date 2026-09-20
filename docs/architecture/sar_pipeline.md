@@ -24,12 +24,18 @@ For the 48-hour hackathon and live demonstration, the upstream pipeline operates
 
 ```mermaid
 flowchart TD
+    subgraph MaritimeDataPlane ["Maritime Data Plane (Indago / aisstream.io / data.gov.sg)"]
+        AIS_LIVE["Live Terrestrial / Sat AIS Stream"] --> INDAGO["Indago Stream Collector"]
+        INDAGO --> DUCKDB[("Indago DuckDB / Parquet<br/>(Spatio-Temporal AIS Store)")]
+    end
+
     subgraph UpstreamSAR ["Upstream SAR & AIS Pipeline (Sentinel-Imagery-Analysis)"]
-        S1["ESA Copernicus Sentinel-1 SAR (Singapore Strait)"] --> PRE["Pass Predictor & Sync AIS Scraper"]
-        AIS["MarineTraffic / Local AIS Snapshot"] --> PRE
+        S1["ESA Copernicus Sentinel-1 SAR (Singapore Strait)"] --> PRE["Pass Predictor"]
+        DUCKDB -.->|"AIS at T - Δt (Historical query)"| CORR["Haversine AIS Correlator"]
+        AIS_LOCAL["Local AIS Snapshot / SIA Scrape"] -.->|Fallback| CORR
         PRE --> CV["Classical CV Engine: Land-Mask (DEM) + Adaptive Threshold"]
         CV --> OBB["Rotated Bounding Box (OBB): Length, Beam, Heading"]
-        OBB --> CORR["Haversine AIS Correlator"]
+        OBB --> CORR
         CORR --> DARK["Dark Vessel Isolation (status: uncorrelated)"]
         DARK --> CHIP["Radar Image Chip Cropper (demo_detection.jpg)"]
     end
@@ -39,16 +45,23 @@ flowchart TD
     end
 
     subgraph IngressBridge ["In-House Ingress Adapters & Transport Layer (app/adapters/)"]
-        ADAPT["Adapter: sar_candidate_event.py"]
+        ADAPT["Adapter: sar_candidate_event.py / dual_sar.py"]
         DARK -->|"In-House Standalone / Fail-Safe"| ADAPT
         CHIP -->|"Image URI / Asset"| ADAPT
         GLINT -.->|"External REST/MCP Stream"| ADAPT
         ADAPT --> PAYLOAD["CandidateEvent (v1.3.0 Schema) + Image URI"]
         PAYLOAD --> C2_INGRESS["POST /api/ingress/candidate-event"]
+
+        OPEN_ADAPT["Adapter: open_feed.py (#70)"]
+        DUCKDB -.->|"Current tracks at T - 0"| OPEN_ADAPT
+        API_LIVE["data.gov.sg / OpenSky API"] -.->|Live poll fallback| OPEN_ADAPT
+        FIXTURE["Golden Fixtures"] -.->|Deterministic fallback| OPEN_ADAPT
+        OPEN_ADAPT --> C2_OPEN_INGRESS["POST /api/ingress/open-feed"]
     end
 
     subgraph NexusGateC2 ["Project NexusGate C2 Core (app/c2_server.py)"]
         C2_INGRESS --> GRAPH["SpatialEntityGraph (Multi-Source Association)"]
+        C2_OPEN_INGRESS --> GRAPH
         COASTAL["Coastal Radar & CCTV Inputs"] --> GRAPH
         GRAPH --> INTERLOCK["Deterministic Interlock & Gating (<50ms)"]
         INTERLOCK --> WARN["Warning Picture: Amber Alert (SAR Hit / AIS Absent)"]
@@ -110,6 +123,33 @@ Beyond viewing raw radar chips, NexusGate resolves two fundamental operational h
      $$R_{\text{uncertainty}}(\Delta t) = \Delta t \cdot \left(\frac{v_{\max} - v_{\min}}{2}\right) + \sigma_{\text{nav}}$$
    - When coastal radar detects an unannounced contact, NexusGate verifies if it falls within the reachability uncertainty ellipse $\mathbf{E}(\Delta t)$, mathematically establishing tracking continuity from space SAR to coastal tactical C2 without relying on cooperative AIS transponders. S3 wires this into `SpatialEntityGraph` association and the detector (`radar_in_envelope`).
 
+### 2.4 Decoupled 3-Tier Architecture & Cognitive Load Compression
+
+#### The Operational Dilemma
+In high-density maritime corridors like the Singapore Strait, operators constantly face a critical ambiguity:
+> **"Space SAR sees a vessel-like return. AIS indicates normal, compliant commercial traffic. Is this discrepancy radar sea clutter, a non-cooperative dark vessel, or satellite sensor latency?"**
+
+NexusGate resolves this dilemma not by forcing raw pixels and millions of AIS points onto a single map, but by dividing the operational picture into **three decoupled tiers answering distinct questions at different time horizons**:
+
+| Stage | Component | AIS Usage | Time Horizon | Question Answered |
+|---|---|---|---|---|
+| **Macro SAR** | **GLINT** (Team 02) | None required | Wide corridor scene | *"Is there an anomalous statistical cluster in this sector?"* |
+| **Micro SAR × AIS** | **SIA** (In-house) | Matches against pass-time AIS snapshot to isolate unannounced returns | Satellite pass time ($T - \Delta t$) | *"Is this specific radar return a declared vessel or an unannounced dark contact?"* |
+| **Tactical C2 Picture** | **NexusGate** $\leftarrow$ **Indago** | Overlays current background traffic via `app/adapters/open_feed.py` ([#70](https://github.com/edgesentry/sdth-nexus-c2/issues/70)) | Present clock time ($T \approx 0$) | *"How is traffic flowing right now, and what is the dynamic intercept vector?"* |
+
+#### Cognitive Load Compression: Why This Matters for Defense Evaluators
+1. **No Over-Fusion Hallucinations**:
+   Rather than inventing a single "fused" synthetic track that might blend a legitimate tanker with an evasive threat, NexusGate preserves modality boundaries in `SpatialEntityGraph`.
+2. **From Manual Cross-Referencing to Decision Authorization**:
+   In legacy C4I workflows, operators manually query databases, overlay raster satellite images, and calculate time offsets. NexusGate pre-filters, correlates, and dead-reckons upstream.
+   **The commander's cognitive burden shrinks from *"understand everything from raw data"* to *"authorize this sealed Amber Warning Picture & Tier-1 COA"*.**
+3. **State Boundedness & Zero Database Coupling**:
+   - C2 maintains zero internal database (no SQLite/RDB footprint).
+   - AIS stream ingestion and spatio-temporal queries are delegated to **Indago (DuckDB/Parquet)**.
+   - C2 ingests normalized `Observation` events only, guaranteeing sub-50ms deterministic gating.
+4. **Zero-Risk Rehearsal Ladder**:
+   `app/adapters/open_feed.py` queries local Indago DuckDB when active, falls back to live public APIs (`data.gov.sg`), and seamlessly defaults to deterministic golden fixtures (`tests/fixtures/open_ais_datagovsg.json`) if offline.
+
 ---
 
 ## 3. Target Production Sovereign Architecture
@@ -123,20 +163,23 @@ flowchart TD
         AIS_STREAM["Terrestrial & Satellite AIS (Spire, exactEarth)"] --> GS
     end
 
-    subgraph StreamingQueue ["2. Sovereign Event Streaming Backbone (NATS / Kafka)"]
+    subgraph StreamingQueue ["2. Sovereign Event Streaming & Data Fabric (NATS + ClickHouse)"]
         GS --> NATS["Low-Latency Telemetry & Imagery Bus (NATS JetStream)"]
+        NATS --> CH_STORE[("Sovereign Maritime Data Fabric<br/>(ClickHouse / Indago Enterprise)")]
     end
 
     subgraph ComputeCluster ["3. High-Performance GPU Geospatial Cluster (Edge / On-Prem)"]
         NATS --> ORTHO["Automated Pre-Processing: Orthorectification & High-Res DEM Masking"]
         ORTHO --> DL_OBB["Deep Learning Detection: Rotated DETR / YOLOv8-OBB (Sub-meter metrology)"]
         DL_OBB --> CLUTTER["Sea-Clutter & Wake Rejection Engine"]
-        CLUTTER --> CORRELATOR["Spatio-Temporal AIS & Radar Correlator (IMM-PDAF Kalman Tracker)"]
+        CH_STORE -.->|"Historical AIS Query at T - Δt"| CORRELATOR["Spatio-Temporal AIS & Radar Correlator (IMM-PDAF Kalman Tracker)"]
+        CLUTTER --> CORRELATOR
         CORRELATOR --> EVENT_GEN["CandidateEvent Synthesizer (Signed Evidence Packages)"]
     end
 
     subgraph SovereignC2Core ["4. Sovereign C2 Decision Interlock (Project NexusGate Core)"]
-        EVENT_GEN --> INGRESS_GATE["Cryptographic Ingress Gateway (Air-Gapped Core)"]
+        EVENT_GEN -->|"Threat Events"| INGRESS_GATE["Cryptographic Ingress Gateway (Air-Gapped Core)"]
+        NATS -.->|"Live T-0 AIS Stream"| INGRESS_GATE
         COASTAL_FEEDS["Coastal 3D Radar / EO-IR Slew-to-Cue / Passive RF"] --> INGRESS_GATE
         INGRESS_GATE --> GRAPH_CORE["SpatialEntityGraph (Multi-Vendor Coordinate Alignment)"]
         GRAPH_CORE --> INTERLOCK_GATE["Zero-Trust Deterministic Interlock (<50ms Gating)"]

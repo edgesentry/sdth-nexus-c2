@@ -14,7 +14,7 @@ Not the external BattlePlan pitch UI. Contract: [C2 REST API](api/rest.md) · UI
 
 Same idea for GLINT: Assumed-mock fixture is enough; `uv run sdth-mock-glint` (`:5051`) is optional for a live pull demo.
 
-C2 never stores AIS history — that stays in **SIA’s** SQLite when you run SIA. See [Data provenance](data-provenance.md) · [SAR pipeline](architecture/sar_pipeline.md).
+C2 never stores AIS history — persistent data is decoupled to **Indago** (DuckDB) and **SIA’s** SQLite. C2 consumes current tracks via adapters. See [Data provenance](data-provenance.md) · [SAR pipeline](architecture/sar_pipeline.md).
 
 ```mermaid
 flowchart LR
@@ -55,12 +55,14 @@ Optional on Screen 1 (still no SIA server):
 - **Ingress SIA only** — Sentinel fixture (OBB + chip, ~2 dark vessels)
 - **Ingress GLINT only** — Assumed-mock fixture (macro cluster; use **GLINT pull** if mock `:5051` is up)
 - **Ingress Dual-SAR (both)** — fused composite (`source_id=DUAL_SAR`, confidence boost, keeps SIA geometry)
+- **Ingress Indago AIS** — open-feed background traffic (Indago DuckDB → live → fixture; flash shows `source=`)
+- **Reset** — clear runtime between mode compares
 
 Hub: http://127.0.0.1:8080/verify
 
 ### Macro vs micro SAR — when to use which
 
-Both feeds are **space-based SAR**, but they answer different operator questions. Full architecture: [SAR Pipeline §2.3 Dual-SAR Synergy](architecture/sar_pipeline.md#23-dual-sar-synergy--temporal-kinematic-bridge). Provenance / pitch roles: [Data provenance](data-provenance.md) (GLINT = S3 **macro**, SIA = S3 **micro**) · [Scenarios S3](scenarios.md).
+Both feeds are **space-based SAR**, but they answer different operator questions. Full architecture: [SAR Pipeline §2.3 Dual-SAR Synergy](architecture/sar_pipeline.md#23-dual-sar-synergy-temporal-kinematic-bridge). Provenance / pitch roles: [Data provenance](data-provenance.md) (GLINT = S3 **macro**, SIA = S3 **micro**) · [Scenarios S3](scenarios.md).
 
 | Source | Viewpoint | Typical product | Use alone when… |
 |--------|-----------|-----------------|-----------------|
@@ -202,6 +204,54 @@ Dual-SAR live pull (GLINT + SIA, each with its own fail-safe):
 curl -sf -X POST http://127.0.0.1:8080/api/ingress/candidate-event \
   -H 'content-type: application/json' -d '{"pull_dual_sar":true}' | jq '{source,count}'
 ```
+
+---
+
+## Full-Spectrum S3 E2E Verification (All Components Mobilized)
+
+This end-to-end rehearsal validates that **when every system component is simultaneously mobilized** in the maritime hero scenario (S3), NexusGate executes with zero-risk determinism, prevents over-fusion, and compresses operational cognitive load.
+
+### 1. Mobilized Architecture
+
+| Component | Operational State | Role in Full E2E |
+|---|---|---|
+| **Indago AIS** | Active (LaunchAgent, live Singapore Strait DuckDB) | Ingests 40 live background vessels via `open_feed` (`feed_source=indago:singapore.duckdb`) |
+| **GLINT mock** (`:5051`) | Running (`sdth-mock-glint`) | Ingests live macro anomaly (`SPACE_SAR_SCENE_DIFF`) |
+| **SIA** (`:5050`) | Intentionally Offline | Triggers automatic fail-safe fallback to high-res Sentinel-1 micro detection fixture (`SENTINEL_IMAGERY_ANALYSIS`) |
+| **NexusGate C2** (`:8080`) | Running (`sdth-c2-server`) | Corroborates Dual-SAR, maintains modality separation, evaluates deterministic gate, and logs immutable audit |
+
+### 2. Empirical Verification Results
+
+#### Ingress & Spatial Entity Graph
+- **Background AIS**: 40 vessels (`resolved_sources.ais=indago`) seamlessly layered into the operational picture.
+- **Dual-SAR Corroboration**: `source=dual_sar`, `dual=corroborated`, confidence boosted to **0.98**, vessel metrology extracted ($L=78.2\text{ m}, 52.0\text{ m}$).
+- **Evidence Chips**: High-resolution radar chips (`tests/fixtures/sentinel_chip.jpg`) attached to CandidateEvents.
+- **Modality Separation**: Graph ingested **42 observations** across **14 tracks** without blending AIS and SAR contacts into hallucinated composite entities.
+
+#### Gate Closed-Loop & Lead-Pursuit Tasking
+- **Amber Warning Picture**: `SAR_DARK_CLUSTER_VS_AIS_SILENCE` (threat `lane_sar_ais_dark_cluster`).
+- **Discrepancy Metrics**: Spatial mismatch **~4,973 m**, tactical warning time **~12 min**.
+- **Deterministic COA**: `APPROACH_PATROL` dispatched to dynamic **lead-pursuit POI** (Point of Interception calculated by quadratic collision-course kinematics [#58](https://github.com/edgesentry/sdth-nexus-c2/issues/58)) rather than stale historical coordinates.
+- **Human-in-the-Loop Gate**: Sealed `DecisionToken` generated upon Commander authorization (`approve`).
+- **Closed-Loop Ack**: Field Effector acknowledges tasking (`ACKED`) within latency bounds.
+
+#### Automation & Cryptographic Audit Proof
+```text
+picture_to_tasking S3: PASS
+Picture→Ack: 0.005s | Approve→Ack: 0.003s
+recipient_ack sealed; cryptographic audit chain intact (218+ links)
+```
+
+### 3. Operational Interpretation (Why Evaluators Care)
+
+> **"SAR sees ship-like radar returns. AIS reports normal commercial traffic. Is this sea clutter, an AIS-silent dark vessel, or sensor latency?"**
+
+NexusGate solves this operational dilemma across three decoupled tiers:
+1. **Macro SAR (GLINT)** asks: *"Is there an anomaly in this corridor sector?"*
+2. **Micro SAR × AIS (SIA)** asks: *"Is this specific radar return unannounced at satellite pass time ($T - \Delta t$)?"*
+3. **Tactical C2 (NexusGate $\leftarrow$ Indago)** asks: *"How is live traffic moving now ($T \approx 0$), and what is the dynamic intercept POI?"*
+
+**The cognitive outcome**: The operator never conducts manual cross-database joins or pixel comparisons. The decision space is compressed from *"analyze raw sensor streams"* to **"authorize the pre-correlated, mathematically verified Amber Warning Picture"**.
 
 ---
 

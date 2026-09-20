@@ -46,6 +46,12 @@
         <input type="hidden" name="mode" value="dual_sar" />
         <button type="submit" class="btn-ghost">Ingress Dual-SAR (both)</button>
       </form>
+      <form method="post" action="/verify/command/ingress">
+        <input type="hidden" name="unit_id" value="{{ unit_id }}" />
+        <input type="hidden" name="scenario_id" value="{{ scenario_id }}" />
+        <input type="hidden" name="mode" value="indago" />
+        <button type="submit" class="btn-ghost">Ingress Indago AIS</button>
+      </form>
       <form method="post" action="/verify/command/reset">
         <input type="hidden" name="unit_id" value="{{ unit_id }}" />
         <input type="hidden" name="scenario_id" value="{{ scenario_id }}" />
@@ -54,7 +60,7 @@
     </div>
     <p class="dim" style="margin-top:0.75rem">
       Compare SAR modes then check Ontology / Evidence. Dual-SAR boosts confidence and keeps SIA OBB + chip.
-      UI never seals tokens — Core does on Approve.
+      Indago AIS loads live background traffic (DuckDB → live → fixture). UI never seals tokens — Core does on Approve.
     </p>
   </section>
 

@@ -78,6 +78,6 @@ uv run python scripts/benchmark.py   # gate / ack / audit proof (pitch Slide 11)
 - Scenario detectors remain deterministic rules (LLM is optional overlay)
 - **UI Boundary:** `/verify` (Jinja2/HTMX on Core) and console TUI are **verification harnesses only**. **BattlePlan** (external pitch UI) lives **outside this repository**. In-repo WebUI is demo-grade (no full map / GIS); dual-key Tier 2 not implemented
 - Kinetic intercept is **not** claimed (S2 cues identify only)
-- C2 has **no application DB** — runtime is in-memory; audit is jsonl; AIS history stays in [Sentinel-Imagery-Analysis](architecture/sar_pipeline.md) (SIA) SQLite
+- C2 has **no application DB** — runtime is in-memory; audit is jsonl; AIS persistence is decoupled to Indago (DuckDB) and [Sentinel-Imagery-Analysis](architecture/sar_pipeline.md) (SIA) SQLite; C2 consumes current tracks via adapters
 
 Site: [edgesentry.github.io/sdth-nexus-c2](https://edgesentry.github.io/sdth-nexus-c2/) · Repo: [edgesentry/sdth-nexus-c2](https://github.com/edgesentry/sdth-nexus-c2)

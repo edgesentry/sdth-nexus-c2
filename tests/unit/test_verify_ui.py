@@ -88,6 +88,7 @@ def test_verify_glint_and_sia_ingress_modes(client: TestClient) -> None:
     assert b"Ingress SIA only" in cmd.content
     assert b"Ingress GLINT only" in cmd.content
     assert b"Ingress Dual-SAR" in cmd.content
+    assert b"Ingress Indago AIS" in cmd.content
 
     sia = client.post(
         "/verify/command/ingress",
@@ -105,6 +106,29 @@ def test_verify_glint_and_sia_ingress_modes(client: TestClient) -> None:
     assert glint.status_code == 200
     assert b"GLINT only" in glint.content
     assert b"glint" in glint.content.lower()
+
+
+def test_verify_indago_ais_ingress(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """UI button uses open-feed ladder; force fixture path for CI determinism."""
+    from app.adapters import open_feed
+
+    real = open_feed.open_feed_to_observations
+
+    def _fixture_only(*_args: object, **kwargs: object):
+        limit = int(kwargs.get("limit", 40))  # type: ignore[arg-type]
+        return real("ais", use_fixture=True, limit=limit)
+
+    monkeypatch.setattr(open_feed, "open_feed_to_observations", _fixture_only)
+
+    resp = client.post(
+        "/verify/command/ingress",
+        data={"mode": "indago", "unit_id": "CUE-NODE-01", "scenario_id": "S3"},
+    )
+    assert resp.status_code == 200
+    assert b"Indago AIS" in resp.content
+    assert b"source=fixture" in resp.content
+    assert b"OPEN_AIS_" in resp.content
+    assert b"open_feed" in resp.content
 
 
 def test_root_redirects_to_verify(client: TestClient) -> None:
