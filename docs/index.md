@@ -39,6 +39,7 @@ flowchart LR
 - **[LiteLLM](litellm.md)** — probabilistic interpret + proxy keys
 - **[Scenarios](scenarios.md)** — S1–S3 + optional open feeds
 - **[Demo & benchmarks](demo.md)** — two-laptop I/O (#17), verification WebUI (Path F), streamer, Picture→Tasking, gate/latency benchmarks (pitch Slide 11), tests
+- **[E2E verification](verify-e2e.md)** — `/verify` Path F; SIA/GLINT optional (fixtures default)
 - **[Roadmap](roadmap.md)** — Phase 0–5
 - **[Plan](plan.md)** — full planning source
 

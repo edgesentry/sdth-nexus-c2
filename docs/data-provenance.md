@@ -19,7 +19,7 @@ Labels used across this repo. Prefer these over vague “real” / “fake”.
 | Coastal radar (S3 counterpart) | **Synthetic** | Scenario (kinematics peer) | Match projected SAR |
 | open-feed AIS / air | **Synthetic** (fixture) | `POST /api/ingress/open-feed` | Optional demo only |
 | **AIS history** | **Real-processed** (`demo` SIA scrape) or **Synthetic** (`offline` MockAIS) | **SIA** `ingest_ais` → local SQLite `data.db` (not C2) | Cooperative side of dark-vessel filter |
-| **SIA SAR detections + chip** | **Real-processed** (Sentinel-1 CV) or recorded **fixture** | SIA → `POST /api/ingress/candidate-event` | S3 micro |
+| **SIA SAR detections + chip** | **Real-processed** (Sentinel-1 CV) or recorded **fixture** | SIA → `POST /api/ingress/candidate-event` **or** repo fixture (no SIA server) | S3 micro |
 | **GLINT macro** | **Assumed-mock** now → **Real-processed** after Team 02 | Mock `:5051` / live API → ingress | S3 macro |
 | LLM interpret | Optional | `POST /api/interpret` | Not pitch-critical |
 

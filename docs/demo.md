@@ -2,6 +2,8 @@
 
 Phase 2 demos use **curl / scripts / two laptops**, plus the optional **NexusGate verification WebUI** ([#65](https://github.com/edgesentry/sdth-nexus-c2/issues/65); Jinja2/HTMX harness at `/verify` on Core; **not** the external BattlePlan pitch UI) on the same frozen paths. Contract: [C2 REST API](api/rest.md). Topology: [Topology](architecture/topology.md) · Provenance: [Data provenance](data-provenance.md).
 
+**Full E2E runbook (fixtures vs live SIA/GLINT):** [E2E verification](verify-e2e.md).
+
 ## Quick start
 
 ```bash
@@ -142,6 +144,8 @@ Endpoint table: [C2 REST API](api/rest.md).
 
 Browser Screen 1 / Screen 2 served by Core itself (Jinja2/HTMX at `/verify`). **Not** the external BattlePlan pitch UI. No Node/Next.js required.
 
+**SIA server is not required** for this path — Screen 1 “Ingress Sentinel / Dual-SAR fixture” uses repo fixtures. Live SIA (`:5050`) / GLINT mock (`:5051`) are optional. Details: [E2E verification](verify-e2e.md).
+
 ```bash
 uv run sdth-c2-server
 # open http://127.0.0.1:8080/verify
@@ -160,9 +164,11 @@ Invariant: the UI never seals tokens — only Core `POST /api/gate/approve` does
 
 ## Demo Path: Sentinel-Imagery-Analysis → C2 (issue #47)
 
-In-house SAR × AIS dark-vessel ingress. Architecture: [SAR Pipeline](architecture/sar_pipeline.md). Upstream is a **sibling checkout** (`~/work/Sentinel-Imagery-Analysis`) — not a submodule.
+In-house SAR × AIS dark-vessel **ingress** (HTTP / fixture payloads into C2). Architecture: [SAR Pipeline](architecture/sar_pipeline.md). Upstream is a **sibling checkout** (`~/work/Sentinel-Imagery-Analysis`) — not a submodule.
 
-**Pattern A (CI / venue primary)** — recorded Singapore Strait `run_cv` fixture:
+**SIA is data linkage, not a required always-on C2 service.** Default demos use the Singapore Strait fixture (no SIA process). Running `python app.py` on `:5050` is only for live `pull_upstream`. Full matrix: [E2E verification](verify-e2e.md).
+
+**Pattern A (CI / venue primary)** — recorded Singapore Strait `run_cv` fixture (**no SIA server**):
 
 ```bash
 uv run sdth-c2-server

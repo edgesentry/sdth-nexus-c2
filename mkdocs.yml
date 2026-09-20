@@ -59,5 +59,6 @@ nav:
   - LiteLLM: litellm.md
   - Scenarios: scenarios.md
   - Demo & benchmarks: demo.md
+  - E2E verification: verify-e2e.md
   - Roadmap: roadmap.md
   - Plan: plan.md
