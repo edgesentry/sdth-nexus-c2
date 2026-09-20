@@ -4,7 +4,7 @@
 |-------|--------|--------|
 | **0** | Core foundations (graph, interlock, gate, audit) | Done |
 | **1** | S1–S3, C2 REST, streamer, benchmarks | Done |
-| **2** | Backend closed loop & operational core (+ NexusGate verify UI) | **Active (partial)** — #47 / #54 / #55 / #56 / #60 / #65 done; open: [#57](https://github.com/edgesentry/sdth-nexus-c2/issues/57)–[#59](https://github.com/edgesentry/sdth-nexus-c2/issues/59) |
+| **2** | Backend closed loop & operational core (+ NexusGate verify UI) | **Active (partial)** — #47 / #54 / #55 / #56 / #57 / #60 / #65 done; open: [#58](https://github.com/edgesentry/sdth-nexus-c2/issues/58)–[#59](https://github.com/edgesentry/sdth-nexus-c2/issues/59) |
 | **3** | Pitch-facing UI polish (external BattlePlan) | Planned — in-repo verify harness = Phase 2 [#65](https://github.com/edgesentry/sdth-nexus-c2/issues/65) (`/verify`) |
 | **4** | Pitch-day polish, Team 02 GLINT **live** integration & fallback | Planned (Sep 25–27) |
 | **5** | Post-hackathon sovereign PoC (live sensors, field USV) | Planned |
@@ -17,8 +17,8 @@
 
 In **SDTH 2026 PS 04 ("One Picture, Many Eyes")**, a C2 system dies if it only renders pins and radar chips on a map. NexusGate executes five core non-UI operational functions:
 
-1. **Temporal Kinematic Projection (`core/kinematics.py`)** — *planned Phase 2*: bridge SAR latency ($T - \Delta t$) to coastal radar ($T - 0$) via dead-reckoning envelopes.
-2. **Dual-SAR Multi-Fidelity Arbitration (`app/adapters/dual_sar.py`)** — *planned Phase 2*: fuse **GLINT** macro (Assumed-mock → live) with **SIA** micro OBB metrology.
+1. **Temporal Kinematic Projection (`core/kinematics.py`)** — **done** [#57](https://github.com/edgesentry/sdth-nexus-c2/issues/57): bridge SAR latency ($T - \Delta t$) to coastal radar ($T - 0$) via dead-reckoning envelopes.
+2. **Dual-SAR Multi-Fidelity Arbitration (`app/adapters/dual_sar.py`)** — **done** [#56](https://github.com/edgesentry/sdth-nexus-c2/issues/56): fuse **GLINT** macro (Assumed-mock → live) with **SIA** micro OBB metrology.
 3. **OSINT Text Parser (`app/adapters/osint_text.py`)** — *planned Phase 2*: extract counts/bearings from Synthetic social text (S2); not a live SNS API.
 4. **Deterministic Interlocks (<5ms Fast-Reject)** — **done**: geofence, speed, duplicate suppression.
 5. **Dynamic Intercept Vectoring & Cryptographic Audit** — audit **done**; lead-pursuit **POI** *planned Phase 2*.
@@ -30,7 +30,7 @@ In **SDTH 2026 PS 04 ("One Picture, Many Eyes")**, a C2 system dies if it only r
 | **Ingress replay** | Demo failure loses the CandidateEvent stream | ✅ `.audit/ingress.jsonl` + `scripts/replay_ingress.py` (#54) |
 | **GLINT mock** | Team 02 schema not final | ✅ HTTP stub `:5051` + `glint_client`; swap on handover |
 | **Dual-SAR** | GLINT and SIA ingested without joint rules | ✅ `app/adapters/dual_sar.py` (#56) |
-| **SAR Time-Delta** | Static SAR coords fail on moving ships | `core/kinematics.py` |
+| **SAR Time-Delta** | Static SAR coords fail on moving ships | ✅ `core/kinematics.py` (#57) |
 | **OSINT parse** | S2 social counts hardcoded beside the text | `app/adapters/osint_text.py` |
 | **Tasking geometry** | Effector sent to static historical coords | POI in `core/coa.py` / `app/agent.py` |
 | **NexusGate verify UI** | Curl-only loop is hard to rehearse live | ✅ `/verify` Jinja2/HTMX on Core (#65) |
@@ -39,7 +39,7 @@ In **SDTH 2026 PS 04 ("One Picture, Many Eyes")**, a C2 system dies if it only r
 
 | Point | Phase 2 implementation | Phase 5 raise |
 |-------|------------------------|---------------|
-| Multimodal & Kinematics | Synthetic tactical sensors + Real-processed SIA(+AIS) + Assumed-mock GLINT + Dual-SAR (#56) + kinematics (open) | Live coastal + multi-constellation SAR |
+| Multimodal & Kinematics | Synthetic tactical sensors + Real-processed SIA(+AIS) + Assumed-mock GLINT + Dual-SAR (#56) + kinematics (#57) | Live coastal + multi-constellation SAR |
 | Probabilistic | LLM / heuristic → hypotheses + COA; LiteLLM (#32, done) | Production CV + hardened LLM |
 | Deterministic gate | Stress 100+ tracks; p95 < 50ms, unauthorized=0 (done) | Air-gap, dual-key Tier-2 |
 | Picture→Tasking | Closed loop + POI (open) + Screen 2 Ack <3.0s | Field USV |

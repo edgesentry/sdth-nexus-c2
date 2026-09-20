@@ -17,9 +17,9 @@ dependencies = [
 
 [project.scripts]
 sdth-nexus-c2 = "app.main:cli_main"
-sdth-mock-effector = "app.mock_server:cli_main"
-sdth-mock-clearbot = "app.mock_server:cli_main"
-sdth-mock-glint = "app.mock_glint_server:cli_main"
+sdth-mock-effector = "mocks.usv:cli_main"
+sdth-mock-clearbot = "mocks.usv:cli_main"
+sdth-mock-glint = "mocks.glint:cli_main"
 sdth-c2-server = "app.c2_server:cli_main"
 
 [build-system]
@@ -27,7 +27,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["core", "app"]
+packages = ["core", "app", "mocks"]
 
 # YAML is outside hatchling's default package-data patterns; HTML/CSS under app/
 # are already picked up with packages=["app"]. Do not force-include directories
@@ -47,7 +47,7 @@ markers = [
 [tool.ruff]
 target-version = "py313"
 line-length = 100
-src = ["app", "core", "tests"]
+src = ["app", "core", "mocks", "tests"]
 
 [tool.ruff.lint]
 select = [
@@ -66,7 +66,7 @@ ignore = [
 
 [tool.mypy]
 python_version = "3.13"
-packages = ["app", "core"]
+packages = ["app", "core", "mocks"]
 strict = true
 warn_unreachable = true
 show_error_codes = true

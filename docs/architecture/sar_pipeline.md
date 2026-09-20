@@ -103,12 +103,12 @@ Beyond viewing raw radar chips, NexusGate resolves two fundamental operational h
    - **Sentinel-Imagery-Analysis (In-House)** extracts physical Oriented Bounding Box geometry (length 78.2m, beam 14.6m, angle -18.5°, confidence 0.91) and evidence radar chips (`demo_detection.jpg`).
    - **Unified Corroborator (`app/adapters/dual_sar.py`, issue [#56](https://github.com/edgesentry/sdth-nexus-c2/issues/56))**: When both observations align spatially within the sector (macro bbox or ≤3 km), the C2 synthesizes an enriched composite observation with elevated confidence ($\min(0.98, \max(c_g,c_s) + 0.1)$). Ingress: `POST /api/ingress/candidate-event` with `dual_sar=true` (fixtures) or `pull_dual_sar=true`. Venue resilience: if the live GLINT endpoint is down, `pull_dual_sar` falls back to the GLINT assumed fixture (and SIA live/fixture) and still returns `source=dual_sar` when the fixtures align spatially. `source=sia_only` applies when macro events cannot be loaded at all, or when SIA detections fall outside the macro corridor.
 
-2. **Temporal Kinematic Projection (`core/kinematics.py`)**:
+2. **Temporal Kinematic Projection (`core/kinematics.py`, issue [#57](https://github.com/edgesentry/sdth-nexus-c2/issues/57))**:
    - Satellite SAR overpasses are historical snapshots ($T - \Delta t$, typically 30 minutes to 4 hours old).
    - NexusGate projects the historical contact forward to current clock time $t_{\text{now}}$ using dead-reckoning kinematics:
      $$\mathbf{p}_{\text{proj}} = \mathbf{p}_{\text{sar}} + \Delta t \cdot \mathbf{v}_{\text{est}}$$
      $$R_{\text{uncertainty}}(\Delta t) = \Delta t \cdot \left(\frac{v_{\max} - v_{\min}}{2}\right) + \sigma_{\text{nav}}$$
-   - When coastal radar detects an unannounced contact, NexusGate verifies if it falls within the reachability uncertainty ellipse $\mathbf{E}(\Delta t)$, mathematically establishing tracking continuity from space SAR to coastal tactical C2 without relying on cooperative AIS transponders.
+   - When coastal radar detects an unannounced contact, NexusGate verifies if it falls within the reachability uncertainty ellipse $\mathbf{E}(\Delta t)$, mathematically establishing tracking continuity from space SAR to coastal tactical C2 without relying on cooperative AIS transponders. S3 wires this into `SpatialEntityGraph` association and the detector (`radar_in_envelope`).
 
 ---
 

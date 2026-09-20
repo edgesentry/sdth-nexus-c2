@@ -1,4 +1,4 @@
-"""Level 1: Vendor-neutral USV mock REST server (FastAPI)."""
+"""Vendor-neutral USV REST mock (FastAPI)."""
 
 from __future__ import annotations
 
@@ -62,7 +62,7 @@ async def emergency_stop() -> dict[str, Any]:
 
 
 def cli_main() -> None:
-    uvicorn.run("app.mock_server:app", host="127.0.0.1", port=8000, reload=False)
+    uvicorn.run("mocks.usv:app", host="127.0.0.1", port=8000, reload=False)
 
 
 if __name__ == "__main__":

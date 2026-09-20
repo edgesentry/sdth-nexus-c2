@@ -52,7 +52,7 @@ class SpatialEntityGraph:
         self.observations.append(observation)
 
         track_id = observation.entity_hint or observation.source_id
-        existing = self._find_nearby(observation.latitude, observation.longitude, track_id)
+        existing = self._find_nearby(observation)
         if existing is None:
             track = Track(
                 track_id=track_id,
@@ -104,14 +104,35 @@ class SpatialEntityGraph:
             in (self.tracks[track_id].observation_ids if track_id in self.tracks else [])
         ]
 
-    def _find_nearby(self, lat: float, lon: float, preferred_id: str) -> Track | None:
+    def _find_nearby(self, observation: Observation) -> Track | None:
+        preferred_id = observation.entity_hint or observation.source_id
         if preferred_id in self.tracks:
             return self.tracks[preferred_id]
         best: Track | None = None
         best_d = float("inf")
         for track in self.tracks.values():
-            d = haversine_m(lat, lon, track.latitude, track.longitude)
-            if d <= self.associate_radius_m and d < best_d:
+            d = self._association_distance_m(observation, track)
+            if d is not None and d < best_d:
                 best = track
                 best_d = d
         return best
+
+    def _association_distance_m(self, observation: Observation, track: Track) -> float | None:
+        """Static radius, or SAR↔radar dead-reckoning envelope (issue #57)."""
+        d = haversine_m(
+            observation.latitude, observation.longitude, track.latitude, track.longitude
+        )
+        if d <= self.associate_radius_m:
+            return d
+
+        from core.kinematics import associate_kinematically, projected_separation_m
+
+        for other in self.observations:
+            if other.observation_id not in track.observation_ids:
+                continue
+            if not associate_kinematically(observation, other):
+                continue
+            sep = projected_separation_m(observation, other)
+            if sep is not None:
+                return sep
+        return None

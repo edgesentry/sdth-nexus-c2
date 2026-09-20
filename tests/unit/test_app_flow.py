@@ -1,12 +1,12 @@
-"""App mock server / kinematics / C2 cycle smoke tests."""
+"""USV mock / kinematics / C2 cycle smoke tests."""
 
 from __future__ import annotations
 
 import pytest
 from app.adapters.kinematics_sim import KinematicsSim
-from app.mock_server import app as mock_app
 from core.coa import GateVerdict
 from fastapi.testclient import TestClient
+from mocks.usv import app as mock_app
 
 
 def test_mock_navigate_accepts_waypoint() -> None:

@@ -74,6 +74,7 @@ def test_s3_sar_ais_picture() -> None:
     text = finding.picture_summary.lower()
     assert "sar" in text or "space" in text
     assert finding.amber_alert == "SAR_DARK_CLUSTER_VS_AIS_SILENCE"
+    assert finding.source_breakdown.get("kinematics", {}).get("radar_in_envelope") is True
     coa = scenario.build_coa(graph, finding, timeout_seconds=5.0)
     assert coa.intent == "APPROACH_PATROL"
 

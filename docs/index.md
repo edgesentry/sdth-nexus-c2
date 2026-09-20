@@ -25,8 +25,9 @@ flowchart LR
 |------|------|
 | **`core/`** | NexusGate — spatial graph, deterministic interlocks, latency-bounded gate, OCSF audit |
 | **`app/`** | Venue C2 — S1–S3 scenarios, REST server, Warning Picture TUI, adapters, `/verify` harness |
+| **`mocks/`** | HTTP stubs (USV effector `:8000`, GLINT Assumed-mock `:5051`) |
 | **`deploy/`** | LiteLLM proxy + Cloudflare Containers Worker |
-| **`scripts/`** | Picture→Tasking, streamer, benchmarks, LiteLLM smoke |
+| **`scripts/`** | CLI entry points (Picture→Tasking, streamer, benchmarks, mock launchers) |
 
 ## Docs map
 

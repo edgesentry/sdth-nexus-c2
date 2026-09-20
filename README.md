@@ -54,9 +54,10 @@ export C2_API_TOKEN='…'           # shared Worker Bearer — docs/deploy.md
 |------|------|
 | `core/` | NexusGate (no SDTH/Clearbot/Singapore vocabulary) |
 | `app/` | Scenarios, C2 REST, TUI, adapters, `/verify` Jinja2/HTMX harness (#65) |
+| `mocks/` | HTTP stubs (USV effector, GLINT Assumed-mock) |
 | `deploy/litellm/` | LiteLLM front door |
 | `deploy/cloudflare/` | Worker + Containers (`sdth-c2-core`) |
-| `scripts/` | `picture_to_tasking`, `stream_events`, `benchmark`, LiteLLM smoke |
+| `scripts/` | Entry points (`picture_to_tasking`, `stream_events`, `benchmark`, mock launchers) |
 
 ## Tests
 

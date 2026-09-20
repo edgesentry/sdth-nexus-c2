@@ -12,7 +12,7 @@ export SCENARIO="${SCENARIO:-S1}"
 
 uv sync
 
-uv run uvicorn app.mock_server:app --host 127.0.0.1 --port 8000 &
+uv run uvicorn mocks.usv:app --host 127.0.0.1 --port 8000 &
 MOCK_PID=$!
 cleanup() { kill "$MOCK_PID" 2>/dev/null || true; wait "$MOCK_PID" 2>/dev/null || true; }
 trap cleanup EXIT

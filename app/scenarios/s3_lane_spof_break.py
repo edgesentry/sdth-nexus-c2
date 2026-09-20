@@ -6,7 +6,14 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from core.coa import CourseOfAction
+from core.kinematics import (
+    in_reachability_envelope,
+    kt_to_mps,
+    project_dead_reckoning,
+    project_observation,
+)
 from core.ontology import SpatialEntityGraph, haversine_m
+from core.schema import Observation
 
 from app.adapters.sar_candidate_event import (
     SPACE_SAR_MODALITY,
@@ -17,28 +24,41 @@ from app.scenarios.base import Finding, Scenario
 
 # Thin / stale open-AIS residue well away from the SAR cue cell
 _AIS_LAT, _AIS_LON = 1.2100, 103.8200
-# Coastal radar cue near the SAR anomaly cell (fixture: 1.254, 103.812)
-_RADAR_LAT, _RADAR_LON = 1.2555, 103.8135
+# SAR latency band (docs: typically 30 min); heading/speed estimated from OBB/COG.
+_SAR_AGE = timedelta(minutes=30)
+_SAR_HEADING_DEG = 200.0
+_SAR_SPEED_KT = 12.0
+_STATIC_RADAR_CUE_M = 1_500.0
 
 
 def _build_events() -> list[dict[str, Any]]:
     """Synthetic multimodal events: space_sar (fixture) + thin AIS + coastal radar."""
     now = datetime.now(UTC)
     sar_obs = observation_from_assumed_fixture()
-    # Re-stamp SAR to "recent pass" relative to demo clock while keeping fixture identity
-    sar_obs.observed_at = now - timedelta(minutes=8)
+    # Re-stamp SAR to a delayed pass relative to demo clock while keeping fixture identity
+    sar_at = now - _SAR_AGE
+    radar_at = now - timedelta(seconds=5)
+    sar_obs.observed_at = sar_at
+    projected = project_dead_reckoning(
+        sar_obs.latitude,
+        sar_obs.longitude,
+        heading_deg=_SAR_HEADING_DEG,
+        speed_mps=kt_to_mps(_SAR_SPEED_KT),
+        dt_sec=(radar_at - sar_at).total_seconds(),
+    )
     return [
         {
             "source_id": sar_obs.source_id,
             "entity_id": sar_obs.entity_hint,
             "observation_id": sar_obs.observation_id,
+            **sar_obs.attributes,
             "latitude": sar_obs.latitude,
             "longitude": sar_obs.longitude,
-            "speed_kt": 0.0,
+            "speed_kt": _SAR_SPEED_KT,
+            "heading_deg": _SAR_HEADING_DEG,
             "confidence": sar_obs.confidence,
-            "observed_at": sar_obs.observed_at.isoformat(),
+            "observed_at": sar_at.isoformat(),
             "modality": SPACE_SAR_MODALITY,
-            **sar_obs.attributes,
         },
         {
             "source_id": "OPEN_AIS_SNAPSHOT",
@@ -72,14 +92,14 @@ def _build_events() -> list[dict[str, Any]]:
         {
             "source_id": "COASTAL_RADAR_WEST",
             "entity_id": "RADAR-SAR-CUE-901",
-            "latitude": _RADAR_LAT,
-            "longitude": _RADAR_LON,
-            "speed_kt": 12.0,
-            "heading_deg": 200.0,
+            "latitude": projected.latitude,
+            "longitude": projected.longitude,
+            "speed_kt": _SAR_SPEED_KT,
+            "heading_deg": _SAR_HEADING_DEG,
             "confidence": 0.86,
-            "observed_at": (now - timedelta(seconds=5)).isoformat(),
+            "observed_at": radar_at.isoformat(),
             "modality": "radar",
-            "note": "coastal_cue_near_sar_cell",
+            "note": "coastal_cue_in_sar_reachability_envelope",
             "vendor_track": "RADAR-SAR-CUE-901",
         },
     ]
@@ -110,25 +130,50 @@ def _detect(graph: SpatialEntityGraph) -> Finding | None:
         if min_ais_d < 2_000.0:
             continue
 
-        vessel_est = int(primary.attributes.get("vessel_count_est") or 0)
+        t_ref = max((o.observed_at for o in radar), default=primary.observed_at)
+        projected = project_observation(primary, t_ref)
+        nearby_radar: list[Observation] = []
+        radar_in_envelope = False
+        radar_distance_m = 0.0
+        for o in radar:
+            static = (
+                haversine_m(primary.latitude, primary.longitude, o.latitude, o.longitude)
+                <= _STATIC_RADAR_CUE_M
+            )
+            inside = in_reachability_envelope(projected, o.latitude, o.longitude)
+            if not (static or inside):
+                continue
+            nearby_radar.append(o)
+            if inside:
+                radar_in_envelope = True
+                radar_distance_m = haversine_m(
+                    projected.latitude, projected.longitude, o.latitude, o.longitude
+                )
+
         track_radar = [o for o in obs if o.modality == "radar"]
-        # Also count nearby radar on other tracks within ~1 km of SAR
-        nearby_radar = [
-            o
-            for o in radar
-            if haversine_m(primary.latitude, primary.longitude, o.latitude, o.longitude) <= 1_500.0
-        ]
         approach = list(
             dict.fromkeys([o.source_id for o in track_sar + track_radar + nearby_radar])
         )
         amber = "SAR_DARK_CLUSTER_VS_AIS_SILENCE"
         warning_min = 12.0
         conf = min(0.92, 0.55 + 0.15 * len(track_sar) + 0.1 * len(nearby_radar))
+        vessel_est = int(primary.attributes.get("vessel_count_est") or 0)
+        dt_min = abs(projected.dt_sec) / 60.0
+        envelope_clause = (
+            f"Dead-reckoned SAR (Δt={dt_min:.0f} min, envelope {projected.radius_m:.0f} m) "
+            "contains coastal radar (no shared MMSI). "
+            if radar_in_envelope
+            else (
+                "Macro SAR is a retrospective baseline — coastal radar cues tactical "
+                "confirmation, not a live satellite stream. "
+            )
+        )
         picture = (
             f"AMBER {amber} (~{warning_min:.0f} min): space-based SAR scene difference flags "
-            f"unannounced dark vessel cluster (est. {vessel_est or 'n/a'}) in {primary.attributes.get('area_id', 'sector')} "
+            f"unannounced dark vessel cluster (est. {vessel_est or 'n/a'}) "
+            f"in {primary.attributes.get('area_id', 'sector')} "
             f"while open AIS is thin (lane_density_index={density:.2f}) and ~{min_ais_d:.0f} m away. "
-            "Macro SAR is a retrospective baseline — coastal radar cues tactical confirmation, not a live satellite stream."
+            + envelope_clause
         )
         hypo = (
             "If SPACE_SAR_SCENE_DIFF is a false diff product, do not escalate on AIS silence alone. "
@@ -148,6 +193,11 @@ def _detect(graph: SpatialEntityGraph) -> Finding | None:
             "radar": {
                 "contact_count": len(nearby_radar) or len(track_radar),
                 "sources": [o.source_id for o in nearby_radar or track_radar],
+            },
+            "kinematics": {
+                **projected.as_breakdown(),
+                "radar_in_envelope": radar_in_envelope,
+                "radar_distance_to_projected_m": radar_distance_m,
             },
         }
         return Finding(
@@ -187,8 +237,8 @@ SPEC = Scenario(
     warning_minutes_est=12.0,
     narrative=(
         "Macro space-based SAR scene difference flags an unannounced dark cluster; open AIS is thin "
-        "or silent in the same cell. Join the retrospective SAR baseline to coastal radar and "
-        "task approach patrol — without treating satellite passes as a realtime stream."
+        "or silent in the same cell. Dead-reckon the retrospective SAR contact to t_now, join it to "
+        "coastal radar without a shared MMSI, and task approach patrol."
     ),
     asset_label="Approach Patrol USV-02",
     _build_events=_build_events,

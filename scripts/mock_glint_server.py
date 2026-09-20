@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from app.mock_glint_server import cli_main
+from mocks.glint import cli_main
 
 if __name__ == "__main__":
     cli_main()
