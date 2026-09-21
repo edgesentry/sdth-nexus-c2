@@ -13,7 +13,7 @@ Laptop Screen 1: Command Cockpit             NexusGate C2 Core (Local / Cloudfla
 |------|-------|------|
 | **Screen 1 (Command)** | Laptop | BattlePlan Next.js UI / TUI / curl, operator approval/denial |
 | **C2 Core** | Local *or* Cloudflare | `app/c2_server.py` — ontology graph, gate, token sealing, inbox, OCSF audit |
-| **Screen 2 (Recipient)** | Laptop | Recipient node polling inbox (`/api/recipient/inbox`) and submitting signed Ack (`/api/recipient/ack`); optional RasPi GPIO blink on the laptop after Ack (#20) |
+| **Screen 2 (Recipient)** | Laptop | Recipient node polling inbox (`/api/recipient/inbox`) and submitting signed Ack (`/api/recipient/ack`). Runs as a **separate OS process** so the Ack is genuinely received. ~~RasPi GPIO blink (#20)~~ **excluded from the demo path (2026-09-17)** |
 
 Phase 2 cold-start curl rehearsal (two laptops / two terminals, no UI): [Demo Path A](../demo.md#demo-path-a-two-laptop-two-terminal-io-issue-17). Phase 2 NexusGate verification UI ([#65](https://github.com/edgesentry/sdth-nexus-c2/issues/65)): [Demo Path F](../demo.md#demo-path-f-nexusgate-verification-webui-phase-2--issue-65-not-pitch-ui) (`/verify` on Core). Plan context: [§4.2 Cloudflare Containers](../plan.md#42-cloudflare-containers-phase-2).
 

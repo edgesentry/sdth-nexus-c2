@@ -6,7 +6,11 @@
 **Challenge:** SDTH 2026 **PS 04 — One Picture, Many Eyes** (From Picture to Tasking)  
 **Product face:** Project NexusGate (core gate) + venue Command and Control (C2) app  
 **Target Reviewers:** DSTA, MINDEF/SAF C4I, EDTH, NUS Defense Tech Venture Lab  
-**Architecture Consensus (2026-09-17 Team Decision):** Purely software-driven digital C2 application running on standard laptops. Physical robotics/hardware excluded from primary hackathon deliverables to guarantee execution within the 48-hour window. Effectors are generic REST/simulated endpoints (`UsvRestAdapter` / simulated recipient nodes).
+**Architecture Consensus (2026-09-17 Team Decision):** Purely software-driven digital C2 application running on standard laptops. Physical robotics/hardware excluded from primary hackathon deliverables to guarantee execution within the 48-hour window. Effectors are generic REST/simulated endpoints (`UsvRestAdapter` / simulated recipient nodes) — **kept as separate OS processes**, never in-process calls, so the Ack link in the audit chain is not self-dealt.
+
+**Domain Lock (2026-09-20 Team Decision):** **100% maritime** — Singapore Strait vessel incursions, dark vessels, contraband / STS. **Air and drone-swarm scenarios are formally out of scope.** S2 remains in the repo as a reusable discrepancy mechanism, **not as a pitch scenario**.
+
+**Scope Revision (2026-09-21):** §5 benchmarks rewritten — `0` / `100%` absolutes withdrawn, primary metric moved from gate latency to **total decision time with an A/B baseline**. Three items added to Phase 2: `edgesentry-rs` crypto core, **UNCLOS Art. 111 continuity ledger**, and the A/B instrumentation. Strategy-side companion (cut list · forbidden phrasings · abort conditions): [`app-dev-plan-nexus-c2.md`](https://github.com/edgesentry/edgesentry-commercial/blob/main/docs/strategy/sdth2026/app-dev-plan-nexus-c2.md) in `edgesentry-commercial`.
 
 ---
 
@@ -135,10 +139,10 @@ To support the **BattlePlan Next.js Command Cockpit** and recipient nodes on sta
                                │ HTTP
                                ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ Screen 2 / Edge Node: Recipient Console (Simulated Laptop)  │
+│ Screen 2: Recipient Console (separate OS process, same box) │
 │  - GET  /api/recipient/inbox   (Fetch signed tasking order) │
 │  - POST /api/recipient/ack     (Return signed receipt ack)  │
-│  - [Optional] RasPi 5 GPIO     (Secondary stretch demo)     │
+│  - [RasPi 5 GPIO = excluded from demo path, 2026-09-17]     │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -183,14 +187,20 @@ Verify: `wrangler dev` + `C2_BASE_URL=http://127.0.0.1:8787 ./scripts/picture_to
 
 ## 5. Quantitative Operational Benchmarks (Slide 11 Proof)
 
-The pitch deck commits to 4 rigorous engineering metrics:
+**Revised 2026-09-21.** The previous table led with gate latency and claimed `0` and `100%`. Both were withdrawn: unfalsifiable absolutes invite exactly the audit a defence judge will run, and gate latency is the wrong headline because **the human decision loop, not the machine, is where the picture-to-tasking gap lives**. Full rationale: **[research §9 (canonical, `edgesentry-commercial`)](https://github.com/edgesentry/edgesentry-commercial/blob/main/docs/strategy/sdth2026/research-maritime-cop-to-tasking-gap.md)** — *not* the older English summary in this repo ([see its staleness notice](research-maritime-cop-to-tasking-gap.md)).
 
-| Metric | Target | Verification Method (`scripts/benchmark.py`) |
-|--------|--------|-----------------------------------------------|
-| **Gate Latency (p95)** | **< 50 ms** | 100 synthetic COA evaluations; measure gate transit time (interlock fast-reject < 5ms). |
-| **Unauthorized Taskings** | **0** | Stress-test with invalid geofences, speed breaches, duplicate IDs, and timeout expiries. All must fail safe. |
-| **Picture-to-Ack Roundtrip** | **< 3.0 s** | End-to-end benchmark from operator approval through recipient inbox poll and signed Ack submission. |
-| **Audit Trace Integrity** | **100% OCSF** | Cryptographic audit chain verification traversing all records; verify no broken hashes or missing links. |
+Every metric below carries an explicit statement of what it **cannot** show. State the limit before a judge asks.
+
+| # | Metric | Target | Verification | What it cannot show |
+|---|--------|--------|--------------|---------------------|
+| **1 ★** | **Total Decision Time (primary)** | Report measured median + spread, **no pre-committed number** | t0 = `CandidateEvent` ingress, t1 = operator approval committed. **A/B against a deliberately inconvenient manual baseline** (read coordinates off a second screen and retype them — the swivel-chair procedure). 30 trials. | n≈4 operators, synthetic scenarios, operators who built the system. **Not a claim about trained watchkeepers under real stress.** |
+| 2 | Effector Ack Roundtrip | < 3.0 s | Operator approval → recipient inbox poll → signed Ack, with `mocks/usv.py` running as a **separate OS process** on localhost. | Laptop-local, no radio link, no contested spectrum. Says nothing about field latency. |
+| 3 | Gate Transit Latency (p95) | < 50 ms | 100 synthetic COA evaluations; interlock fast-reject < 5 ms. | **Demoted to secondary.** Machine latency was never the bottleneck; it is table stakes, not a differentiator. |
+| 4 | Deterministic Refusal Coverage | **Report `n/n` passed, never "0 unauthorized"** | Invalid geofences, speed breaches, duplicate IDs, timeout expiry. Each must fail safe. | Near-tautological: the gate refuses what it was written to refuse. **Does not cover multi-sensor collusion, or a plausible-but-wrong COA that violates no rule.** |
+| 5 | Audit Chain Verifiability | **Report broken-link count (expect 0 of n records), never "100% integrity"** | `eds audit verify-chain` recomputes the chain **in a separate binary** from the one that wrote it. | Detects tampering; **does not prevent it**. Append-only on a local filesystem — an attacker with write access can truncate the tail. |
+| 6 | Tracking Continuity (UNCLOS Art. 111) | Zero unexplained gaps across asset handoffs in the demo run | Ledger records every handoff (from / to · timestamp · gap seconds); `/verify` surfaces it. | Continuity of **our own records**, not a legal finding. Court admissibility is untested. |
+
+**Do not say** "BLAKE3" until `edgesentry-rs` is wired (`core/audit.py` is SHA-256 today), "it ran on real hardware" (laptop only), or "100% / zero" for anything above.
 
 ---
 
@@ -204,7 +214,7 @@ The pitch deck commits to 4 rigorous engineering metrics:
 - [x] Basic S1, S2, S3 scenario stubs.
 
 ### Phase 1: MVP Synthetic Scenarios & C2 REST Loop (Completed)
-- [x] **S2 Hero Scenario Polish:** Add `intel_text` social media / recon input, count discrepancy (3 vs 1), and low-confidence EO blur (0.42) triggering `COUNT_AND_BEARING_MISMATCH` Amber Alert.
+- [x] **S2 Scenario Polish** (⛔ *was "Hero" — demoted 2026-09-20 when the air domain was dropped; mechanism reused by maritime scenarios*)**:** Add `intel_text` social media / recon input, count discrepancy (3 vs 1), and low-confidence EO blur (0.42) triggering `COUNT_AND_BEARING_MISMATCH` Amber Alert.
 - [x] **Vendor-Neutral Effector Adapter:** Implement `app/adapters/usv_rest.py` with `EFFECTOR_BASE_URL` (backward-compat shim for Clearbot).
 - [x] **Unified C2 REST Server:** Implement `app/c2_server.py` with the 7 endpoints supporting the Next.js Command UI on Screen 1 and simulated Recipient on Screen 2.
 - [x] **19-Event Temporal Streamer:** Implement `scripts/stream_events.py` for T-60s to T-00s event playback.
@@ -225,7 +235,7 @@ Phase 2 delivers thin / demo-fidelity slices of the pitch pillars (backend close
 - [x] **Optional open-feed ingress:** (issue #16).
 - [x] Validate backend closed loop via curl / scripts (`scripts/picture_to_tasking.sh`).
 - [x] Cloudflare Containers + local fallback (issue #18).
-- [x] Laptop I/O runbook (issue #17); RasPi stretch (issue #20); CI green (issue #19).
+- [x] Laptop I/O runbook (issue #17); ~~RasPi stretch (issue #20)~~ **excluded from the demo path (2026-09-17)**; CI green (issue #19).
 
 **Remaining (track via GitHub `phase-2` issues):**
 
@@ -239,6 +249,12 @@ Phase 2 delivers thin / demo-fidelity slices of the pitch pillars (backend close
 - [x] **AIS via SIA ingest only** (#60): `demo` / `offline` plugins → SIA local SQLite (no alternate AIS bridge).
 - [x] **NexusGate verification WebUI** (#65): `/verify` (Jinja2/HTMX on `sdth-c2-server`) Screen 1/2 harness on frozen REST (not external BattlePlan pitch UI).
 
+**Added 2026-09-21 — the only remaining work that changes what we can claim.** Everything above proves the loop runs; these three prove it is *worth* running. Strategy rationale, cut list, and abort conditions: [app-dev-plan-nexus-c2.md](https://github.com/edgesentry/edgesentry-commercial/blob/main/docs/strategy/sdth2026/app-dev-plan-nexus-c2.md).
+
+- [ ] **Cryptographic core via `edgesentry-rs`** (`core/audit_eds.py`): `ctypes` → `libedgesentry_bridge` for BLAKE3 + Ed25519 writes; `eds audit verify-chain` as a **separate process** for verification. Consume, do not fork. **Never reimplement `postcard` in Python** — `AuditRecord::hash()` is `blake3(postcard(record))`, and a wrong reimplementation succeeds on write and only fails at verification. Fallback if `ctypes` stalls: CLI subprocess for both paths. Benchmark #5.
+- [ ] **Tracking Continuity Ledger (UNCLOS Art. 111)** ★: per `track_id`, record every asset handoff (from / to · timestamp · gap seconds) so non-interruption of pursuit is machine-assertable and machine-verifiable. One row on `/verify`. Benchmark #6. *Why it matters: "the AI flagged it" loses in an international tribunal; "pursuit was never interrupted, here is the chain" does not.*
+- [ ] **Total Decision Time A/B** ★ (extend `app/bench_stress.py` + one manual path in `app/ui/console.py`): t0 → t1 instrumentation plus the swivel-chair baseline. Benchmark #1. *The existing p95 measures machine latency only and cannot answer "does it work?".*
+
 ### Phase 3: External BattlePlan polish (Not in-repo pitch UI)
 > **UI Boundary:** **BattlePlan** = external pitch UI (**outside this repo**). In-repo NexusGate verification harness is **Phase 2** ([#65](https://github.com/edgesentry/sdth-nexus-c2/issues/65), done).
 
@@ -248,7 +264,7 @@ Harness delivered at `/verify` on `sdth-c2-server` (Jinja2/HTMX; no Node):
 - [x] Evidence chips via `/static/fixtures/` (`evidence_image_uri`) (#65).
 - [x] Dual-SAR / Sentinel fixture ingress on Screen 1 (#65 / #56).
 - [x] Optional open feeds (Phase 2 / issue #16).
-- [x] RasPi GPIO blink stretch (issue #20).
+- [x] ~~RasPi GPIO blink stretch (issue #20)~~ — **excluded from the demo path** (2026-09-17). Code stays in `app/adapters/raspi_hardware.py`; edge deployment is a design claim only. Never say "it ran on real hardware."
 
 ### Phase 4: Pitch-Day Polish & Hackathon Live Demonstration (Planned: Sep 25–27)
 Hackathon-completeable only. Anything that needs field hardware, real AI pipelines, or sovereign buyers → Phase 5.
@@ -258,13 +274,14 @@ Hackathon-completeable only. Anything that needs field hardware, real AI pipelin
   - Validate live stream into C2 (`POST /api/ingress/candidate-event`).
   - Verify zero-risk fallback: seamless switch to in-house SIA (`:5050`) or local Singapore Strait golden fixture if network degrades.
 - [ ] **End-to-End Operational Playthroughs (Day 1 Evening)**:
-  - Scenario S2 (Air Hero): Social (3) vs Radar (1) vs EO blur $\to$ Amber Contradiction $\to$ Cue Tasking $\to$ Ack within 3s.
-  - Scenario S3 (Maritime Hero): Dual-SAR (GLINT + SIA) + Kinematic projection vs Coastal Radar $\to$ Intercept POI Tasking $\to$ Ack.
+  - **Hero = maritime.** Scenario S3 / S1: Dual-SAR (GLINT + SIA) + kinematic projection vs coastal radar $\to$ Intercept POI Tasking $\to$ Ack, then **continuity ledger across the handoff**.
+  - ⛔ **S2 is no longer the hero.** The [2026-09-20 team decision](https://github.com/edgesentry/edgesentry-commercial/blob/main/docs/strategy/sdth2026/meeting-20260920-sdth-planning.md) formally **dropped the air / drone domain** (100% maritime — Singapore Strait vessel incursions). `s2_air_corridor_attritable.py` stays in the repo because the **discrepancy mechanism (count / bearing mismatch) is domain-agnostic and reused by the maritime scenarios**, but it must not be pitched. Maritime scenario definition is owned by S2 John Teoh (due 9/22).
 - [ ] **Preliminary Judging Cut (Day 2 - Sat 26 Sep)**:
   - Deliver preliminary pitch to qualify in the Top ~20 of 37 two-day teams.
 - [ ] **VIP Judging Panel Pitch (Day 3 - Sun 27 Sep)**:
   - Live 3-minute pitch before MG Kelvin Fan (Chief of Air Force), Mr Tan Peng Yam (Chief Defence Scientist, MINDEF), Prof Quek Tong Boon, and MINDEF/DSTA leadership.
-  - Live demonstration of Slide 11 commitments (<50ms gate latency, 0 unauthorized, <3.0s Ack).
+  - Live demonstration of the **revised** §5 benchmarks: **measured total decision time vs manual baseline (lead with this)**, < 3.0 s Ack, < 50 ms gate transit, `n/n` refusal coverage, chain re-verified by a separate binary, continuity ledger with no unexplained gaps. **State each limitation before being asked.**
+- [ ] **Validate the inter-agency premise with DSTA / RSN on site (Day 2 morning)**: our claim that authority hand-offs depend on committee procedure is **our inference, not sourced from public material**. If it is wrong, the pitch subject shifts from "inter-agency coordination" to "delegation and evidence inside a single agency" — too late to discover on Sunday.
 
 ### Phase 5: Post-Hackathon → Sovereign PoC (Planned)
 Maps to the 9-month NUS Defence Tech Venture Lab bridge. Owns the pitch points Phase 4 cannot close.
@@ -280,7 +297,7 @@ Maps to the 9-month NUS Defence Tech Venture Lab bridge. Owns the pitch points P
 Checklist:
 - [ ] **Probabilistic App Layer:** Local LLM / CV ingestion → candidate COAs; Core remains zero-hallucination gate.
 - [ ] **Live Sensor Harness:** Singapore coastal streams (AIS, optical, open air) beyond demo stubs; adversarial / spoof cases.
-- [ ] **Swarm & Latency Stress:** Air-gapped Core vs synthetic 1,000+ track flood; gate p95 & unauthorized=0 under load.
+- [ ] **Swarm & Latency Stress:** Air-gapped Core vs synthetic 1,000+ track flood; gate p95 & `n/n` refusal coverage under load.
 - [ ] **Field Effector Trial:** Joint USV / MPA-style trial — signed token → physical or near-physical Ack.
 - [ ] **Legacy / Prime Bridges:** STANAG / Link-16 / JSON-RPC adapters (read-only or gated write) for prime C2 adjacency.
 - [ ] **Sovereign Sandbox + SOW:** Deploy as gateway add-on in DSTA/MINDEF testbed; first evaluation PoC contract narrative.
@@ -294,10 +311,13 @@ Synthetic Many Eyes + Gate  →  Two-screen software loop  →  Live AI + USV + 
 
 ## 7. Success Criteria (Demo Day — Phase 4)
 
-1. **Slide 04 Live Validation:** Run S2; prove that Civilian Social/Recon (3) vs Radar (1) vs EO/IR (blur) triggers Amber Discrepancy Alert rather than a hallucinated unified picture.
-2. **Two-Screen Handshake:** Command approves tasking on Screen 1; Recipient receives token and presses Ack on Screen 2 (laptop); Ack is sealed in OCSF audit log within 3 seconds.
-3. **Benchmarked Reliability:** Present live execution results from `scripts/benchmark.py` proving <50ms gate latency, 0 unauthorized taskings, and 100% audit integrity.
-4. **Judge Defense:** Confidently answer MINDEF/DSTA: *"We do not build sensors or shooters. We build the deterministic sovereign interlock that governs action when sensors disagree."*
+1. **Discrepancy, not false consensus:** run a **maritime** scenario (S3 / S1) and show that conflicting sources raise an Amber Discrepancy Alert instead of a hallucinated unified picture. Do **not** claim discrepancy detection is novel — it is already standard in commercial and military systems. What is ours is **what happens after the cue**.
+2. **Two-Screen Handshake:** Command approves tasking on Screen 1; Recipient receives token and presses Ack on Screen 2, with the recipient running as a **separate OS process**; Ack sealed in the OCSF audit log within 3 seconds.
+3. **Measured, not asserted:** present live results from `scripts/benchmark.py` — **lead with total decision time vs the manual baseline**, then Ack roundtrip, gate transit, `n/n` refusal coverage, and a chain re-verified by a separate binary. Report numbers actually measured; if the A/B does not produce data by Saturday evening, **say it is unmeasured and present the measurement design** rather than substituting a machine-latency number.
+4. **Continuity under law:** show the UNCLOS Art. 111 ledger — every asset handoff with its gap — and name the limit: this is continuity of our records, not a legal finding.
+5. **Judge Defense:** answer MINDEF/DSTA with: *"We do not build sensors or shooters. We build the deterministic sovereign interlock that governs action when sensors disagree."* Acknowledge that **SMCC already cut threat assessment from hours to minutes**; our claim is confined to the segment after the cue.
+
+**Fallback if Saturday runs short:** drop the A/B and ship the continuity ledger alone. It is the one deliverable neither Palantir nor Anduril demonstrates, and it is the one that lands with a former MINDEF Deputy Secretary (Policy).
 
 ### Phase 5 Success Criteria (Post-Demo)
 

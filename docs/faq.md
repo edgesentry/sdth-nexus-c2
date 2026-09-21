@@ -35,9 +35,11 @@ flowchart LR
 ### Q2.1: Why include civilian social media / OSINT in military C2? Isn't it full of rumors and enemy disinformation?
 **We include OSINT precisely *because* it is noisy and prone to exaggeration.**
 
-1. **Human as a Distributed Sensor**: Low-flying attritable drones (e.g. Shahed-136) often slip beneath radar horizons or coastal terrain clutter. Civilian social media reports often provide the *first operational cue* minutes before radar acquisition.
-2. **Preventing Kinetic Over-Reaction**: In Scenario 2 (S2), social chatter reports *"20 swarm drones incoming"*, while radar sees only 1 contact. An ungoverned C2 risks launching expensive surface-to-air missiles prematurely.
-3. **The Amber Discrepancy Gate**: NexusGate surfaces the **Amber contradiction** (*Count & Bearing Mismatch*) and routes the decision to non-kinetic **`CUE_AND_IDENTIFY`** (slewing EO/IR cameras and recon drones) rather than authorizing lethal overkill.
+1. **Human as a Distributed Sensor**: small craft running dark, ship-to-ship (STS) transfers at anchor, and AIS gaps in cluttered littoral water are frequently reported by fishermen, port workers, and ferry passengers **before** a track is firmly held. The eyewitness is an uncalibrated sensor, not a useless one.
+2. **Preventing Over-Reaction**: unverified chatter inflates counts and positions. An ungoverned C2 risks committing scarce patrol assets — or an intrusive boarding — on a single unconfirmed report.
+3. **The Amber Discrepancy Gate**: NexusGate surfaces the **Amber contradiction** (*Count & Bearing Mismatch*) and routes the decision to non-kinetic **`CUE_AND_IDENTIFY`** (slewing EO/IR, re-tasking a patrol craft) instead of an irreversible action.
+
+> ⛔ **Do not use the air / drone example in the pitch.** The [2026-09-20 team decision](https://github.com/edgesentry/edgesentry-commercial/blob/main/docs/strategy/sdth2026/meeting-20260920-sdth-planning.md) locked scope to **100% maritime**. Scenario S2 (Shahed-136 corridor) remains in the repo because the discrepancy mechanism is domain-agnostic and reused by the maritime scenarios, but it is no longer the hero and must not be presented.
 
 ---
 
@@ -89,21 +91,28 @@ flowchart LR
 |---|---|---|
 | **Tier 1: Nominal** | High-bandwidth, cloud available | Live REST API, Cloudflare Containers, real-time streaming |
 | **Tier 2: Disconnected** | Cloud severed, external APIs down | Automatic fallback to local DuckDB parquet cache / in-house SIA (:5050) |
-| **Tier 3: Degraded DIL** | Extreme jamming, zero external comms | Hardened local Golden Fixtures; zero-network execution on local laptop/RasPi |
+| **Tier 3: Degraded DIL** | Extreme jamming, zero external comms | Hardened local Golden Fixtures; zero-network execution on a **single laptop** (RasPi excluded from the demo path — 2026-09-17) |
 
-The deterministic gate runs entirely in-memory with zero cloud dependencies, guaranteeing **sub-50ms rule evaluation** even under total network severance.
+The deterministic gate runs entirely in-memory with no cloud dependency, so rule evaluation stays **sub-50 ms even with the network severed**. Stated precisely: what we demonstrated is that **on a single node, the path from gate to an independent effector process completes with external networking disconnected**. We have not demonstrated an edge device, and edge deployment is a design claim only.
 
 ---
 
 ## 5. Defense Procurement & Deployment Roadmap
 
-### Q5.1: What are the Slide 11 quantitative performance commitments?
-NexusGate's automated benchmark suite (`scripts/benchmark.py`) verifies 4 core metrics on every build:
+### Q5.1: What are the quantitative performance commitments?
 
-1. **Gate Latency (p95)**: `< 50 ms` (measured at ~0.02 ms in test runs).
-2. **Unauthorized Taskings**: `0` (100% fast-reject on geofence, velocity, duplicate, and timeout violations).
-3. **Picture-to-Ack Roundtrip**: `< 3.0 s` (operator approval $\to$ recipient inbox $\to$ signed field Ack).
-4. **Audit Trace Integrity**: `100% OCSF compliance` (complete hash-chain continuity).
+**Revised 2026-09-21.** We previously committed to `0 unauthorized` and `100% audit integrity`. **Both are withdrawn** — unfalsifiable absolutes invite precisely the audit a defence evaluator will run. The primary metric also moved: gate latency was never the bottleneck. See [PLAN §5](plan.md#5-quantitative-operational-benchmarks-slide-11-proof).
+
+| # | Metric | What we report | What it cannot show |
+|---|---|---|---|
+| **1 ★** | **Total decision time** (t0 = `CandidateEvent` ingress → t1 = approval committed), **A/B against a manual swivel-chair baseline** | Measured median and spread. **No pre-committed number.** | n≈4 operators, synthetic scenarios, operators who built the system. Not a claim about trained watchkeepers under stress. |
+| 2 | Effector Ack roundtrip | `< 3.0 s`, with the recipient as a **separate OS process** | Laptop-local. No radio link, no contested spectrum. |
+| 3 | Gate transit latency (p95) | `< 50 ms` (~0.02 ms observed) — **secondary** | Table stakes, not a differentiator. |
+| 4 | Deterministic refusal coverage | `n/n` cases passed (geofence, velocity, duplicate, timeout) | Near-tautological: the gate refuses what it was written to refuse. **Does not cover multi-sensor collusion, or a plausible COA that breaks no rule.** |
+| 5 | Audit chain verifiability | Broken-link count (expect `0 of n` records), recomputed by `eds audit verify-chain` in a **separate binary** | Detects tampering; **does not prevent it**. An attacker with write access can truncate the tail. |
+| 6 | Tracking continuity (UNCLOS Art. 111) | Unexplained gaps across asset handoffs | Continuity of **our own records**, not a legal finding. |
+
+**Do not say** "BLAKE3" until `edgesentry-rs` is wired (`core/audit.py` is SHA-256 today), or "it ran on real hardware" (laptop only).
 
 ---
 
