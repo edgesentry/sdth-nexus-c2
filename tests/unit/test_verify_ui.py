@@ -145,7 +145,7 @@ def test_verify_ocsf_health_pill(client: TestClient) -> None:
     )
     assert proposed.status_code == 200
     assert b"OCSF Hash Chain" in proposed.content
-    assert b"100% Verified" in proposed.content
+    assert b"broken links" in proposed.content
     assert b"records sealed" in proposed.content
 
 

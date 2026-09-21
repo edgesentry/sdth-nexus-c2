@@ -1,4 +1,8 @@
-"""Append-only OCSF-shaped audit log with hash chaining."""
+"""Append-only OCSF-shaped audit log with hash chaining.
+
+Optionally dual-writes a parallel edgesentry-rs AuditRecord chain
+(``eds_chain.json``) via :mod:`core.audit_eds` for BLAKE3 + Ed25519 sealing.
+"""
 
 from __future__ import annotations
 
@@ -7,9 +11,12 @@ import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from core.schema import canonical_json, sha256_hex, utc_now
+
+if TYPE_CHECKING:
+    from core.audit_eds import EdsChainWriter
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +33,17 @@ def chain_break_index(records: list[dict[str, Any]]) -> int | None:
     return None
 
 
+def broken_link_count(records: list[dict[str, Any]]) -> int:
+    """Count records whose prev_hash does not link to the prior digest."""
+    prev = GENESIS_PREV
+    broken = 0
+    for rec in records:
+        if rec.get("prev_hash") != prev:
+            broken += 1
+        prev = str(rec.get("hash") or "")
+    return broken
+
+
 @dataclass(frozen=True, slots=True)
 class ChainVerifyResult:
     """Full hash-chain walk: prev_hash links + recomputed content digests."""
@@ -38,10 +56,9 @@ class ChainVerifyResult:
 
     def summary(self) -> str:
         if self.ok:
-            return f"PASS: {self.total} records sealed (100% integrity)"
-        idx = self.break_index if self.break_index is not None else "?"
-        why = self.reason or "unknown"
-        return f"CHAIN BROKEN at Index {idx}: {why}"
+            return f"broken links: 0 of {self.total}"
+        broken = len(self.errors) if self.errors else 1
+        return f"broken links: {broken} of {self.total}"
 
 
 def verify_audit_chain(records: list[dict[str, Any]]) -> ChainVerifyResult:
@@ -104,13 +121,57 @@ def write_audit_records(path: Path, records: list[dict[str, Any]]) -> None:
 
 
 class AuditLogger:
-    def __init__(self, path: str | Path, *, quarantine_broken: bool = True) -> None:
+    def __init__(
+        self,
+        path: str | Path,
+        *,
+        quarantine_broken: bool = True,
+        eds_chain_path: str | Path | None = None,
+        eds_enabled: bool | None = None,
+    ) -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._prev = GENESIS_PREV
+        self._eds: EdsChainWriter | None = None
+        if eds_enabled is None:
+            # Dual-write when the bridge is loadable (opt-out via C2_EDS=0).
+            import os
+
+            eds_enabled = os.environ.get("C2_EDS", "1").strip() not in {"0", "false", "no"}
+        if eds_enabled:
+            self._init_eds(eds_chain_path)
         if quarantine_broken:
             self._quarantine_if_broken()
         self._rewind_from_disk()
+
+    def _init_eds(self, eds_chain_path: str | Path | None) -> None:
+        try:
+            from core.audit_eds import EdsChainWriter
+
+            chain = (
+                Path(eds_chain_path) if eds_chain_path else self.path.with_name("eds_chain.json")
+            )
+            key = chain.with_name("eds_key.json")
+            writer = EdsChainWriter(path=chain, key_path=key)
+            if writer.available:
+                self._eds = writer
+                # Backfill EDS sidecar if OCSF trail already exists.
+                ocsf = load_audit_records(self.path)
+                if ocsf and not writer.records():
+                    for i, rec in enumerate(ocsf, start=1):
+                        body = {k: v for k, v in rec.items() if k != "hash"}
+                        payload = canonical_json(body).encode("utf-8")
+                        activity = str(rec.get("activity_name") or "event")
+                        writer.append_payload(payload, object_ref=f"gate/{i}/{activity}")
+                logger.info("EDS dual-write enabled (%s) → %s", writer.backend, chain)
+            else:
+                logger.debug("EDS dual-write unavailable (backend=%s)", writer.backend)
+        except Exception as exc:
+            logger.warning("EDS dual-write init failed: %s", exc)
+
+    @property
+    def eds(self) -> EdsChainWriter | None:
+        return self._eds
 
     def records(self) -> list[dict[str, Any]]:
         return load_audit_records(self.path)
@@ -119,6 +180,14 @@ class AuditLogger:
         """Overwrite the jsonl file (used to hydrate after ephemeral container disk reset)."""
         write_audit_records(self.path, records)
         self._rewind_from_disk()
+        if self._eds is not None:
+            # Rebuild EDS sidecar from OCSF bodies (best-effort).
+            self._eds.clear()
+            for i, rec in enumerate(records, start=1):
+                body = {k: v for k, v in rec.items() if k != "hash"}
+                payload = canonical_json(body).encode("utf-8")
+                activity = str(rec.get("activity_name") or "event")
+                self._eds.append_payload(payload, object_ref=f"gate/{i}/{activity}")
 
     def _quarantine_if_broken(self) -> Path | None:
         """Archive a truncated/corrupt chain so demos and trail checks stay green.
@@ -144,6 +213,8 @@ class AuditLogger:
             self.path,
             archived,
         )
+        if self._eds is not None:
+            self._eds.clear()
         return archived
 
     def _rewind_from_disk(self) -> None:
@@ -161,6 +232,11 @@ class AuditLogger:
             "prev_hash": self._prev,
         }
         digest = sha256_hex(canonical_json(record))
+        # Seal OCSF body (pre-hash) into the EDS sidecar when available.
+        if self._eds is not None:
+            seq = self._eds.next_sequence
+            payload = canonical_json(record).encode("utf-8")
+            self._eds.append_payload(payload, object_ref=f"gate/{seq}/{event_name}")
         record["hash"] = digest
         with self.path.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(record, default=str) + "\n")

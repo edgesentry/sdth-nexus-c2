@@ -6,7 +6,7 @@ Metrics (fail = non-zero exit):
   Interlock fast-reject      <  5 ms   (subset of the above)
   Unauthorized taskings        = 0     (geofence / speed / duplicate / timeout)
   Picture-to-Ack roundtrip   <  3.0 s  (approve → inbox → ack)
-  Audit trace integrity      = 100%    (hash-chain walk)
+  Audit trace integrity      0 of n    (eds verify-chain or SHA-256 walk)
   Track-flood stress (p95)   < 50 ms   (100+ synthetic tracks; unauthorized=0)
 
 Usage:
@@ -333,19 +333,26 @@ def bench_picture_to_ack() -> MetricResult:
 # ---------------------------------------------------------------------------
 
 
-def _verify_audit_chain(path: Path) -> tuple[int, int, list[str]]:
-    """Return (ok_links, total_records, errors). Recomputes hashes."""
+def _verify_audit_chain(path: Path) -> tuple[int, int, list[str], str]:
+    """Return (broken_links, total_records, errors, backend)."""
     from core.audit import load_audit_records, verify_audit_chain
+    from core.audit_eds import eds_cli_available, verify_eds_chain
+
+    eds_path = path.with_name("eds_chain.json")
+    if eds_path.exists() and eds_cli_available():
+        result = verify_eds_chain(eds_path)
+        errors = [] if result.ok else [result.stderr or result.stdout or "CHAIN_INVALID"]
+        return result.broken_links, result.total, errors, "eds-cli"
 
     if not path.exists():
-        return 0, 0, ["audit file missing"]
+        return 0, 0, ["audit file missing"], "sha256"
     result = verify_audit_chain(load_audit_records(path))
-    ok = result.total if result.ok else 0
-    return ok, result.total, result.errors
+    broken = 0 if result.ok else len(result.errors) or 1
+    return broken, result.total, result.errors, "sha256"
 
 
 def bench_audit_integrity() -> MetricResult:
-    """Write a short chain via AuditLogger then walk + recompute hashes."""
+    """Write a short chain via AuditLogger then re-verify (EDS CLI when available)."""
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / "integrity.jsonl"
         logger = AuditLogger(path)
@@ -370,16 +377,18 @@ def bench_audit_integrity() -> MetricResult:
                 json={"coa_id": coa_id, "unit_id": "AUDIT-NODE"},
             ).raise_for_status()
 
-        ok, total, errors = _verify_audit_chain(path)
-        integrity_pct = 100.0 if total and not errors and ok == total else 0.0
+        broken, total, errors, backend = _verify_audit_chain(path)
+        passed = total > 0 and broken == 0 and not errors
+        label = f"{broken} of {total}"
 
         return MetricResult(
-            name="Audit trace integrity",
-            value=round(integrity_pct, 1),
-            unit="%",
-            target="= 100%",
-            passed=integrity_pct == 100.0 and total > 0 and not errors,
-            detail=f"records={total} ok_links={ok}" + (f" errors={errors[:3]}" if errors else ""),
+            name="Audit chain verifiability",
+            value=label,
+            unit="",
+            target="broken links: 0 of n",
+            passed=passed,
+            detail=f"backend={backend} records={total} broken={broken}"
+            + (f" errors={errors[:3]}" if errors else ""),
         )
 
 

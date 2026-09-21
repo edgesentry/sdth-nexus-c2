@@ -1,18 +1,23 @@
 name: Deploy Cloudflare
 
+# Hackathon: local Core only — do not auto-deploy to Cloudflare.
+# Re-enable the `push` trigger below when cloud deploy is needed again.
 on:
-  push:
-    branches: [main]
-    paths:
-      - "app/**"
-      - "core/**"
-      - "Dockerfile"
-      - ".dockerignore"
-      - "pyproject.toml"
-      - "uv.lock"
-      - "deploy/cloudflare/**"
-      - ".github/workflows/deploy-cloudflare.yml"
   workflow_dispatch:
+
+# on:
+#   push:
+#     branches: [main]
+#     paths:
+#       - "app/**"
+#       - "core/**"
+#       - "Dockerfile"
+#       - ".dockerignore"
+#       - "pyproject.toml"
+#       - "uv.lock"
+#       - "deploy/cloudflare/**"
+#       - ".github/workflows/deploy-cloudflare.yml"
+#   workflow_dispatch:
 
 concurrency:
   group: deploy-cloudflare

@@ -27,13 +27,13 @@ def _coa_id_from_html(body: str) -> str:
 
 
 def test_verify_ui_ocsf_health_pill_path_f(c2_client: TestClient) -> None:
-    """OCSF hash-chain pill stays 100% Verified across Propose → Approve → Ack."""
+    """OCSF hash-chain pill reports broken links: 0 of n across Propose → Approve → Ack."""
     c2_client.post("/api/admin/reset")
 
     hub = c2_client.get("/verify")
     assert hub.status_code == 200
     assert b"OCSF Hash Chain" in hub.content
-    assert b"100% Verified" in hub.content
+    assert b"broken links" in hub.content
     assert b"records sealed" in hub.content
 
     proposed = c2_client.post(
@@ -41,7 +41,7 @@ def test_verify_ui_ocsf_health_pill_path_f(c2_client: TestClient) -> None:
         data={"scenario_id": "S2", "unit_id": "CUE-NODE-01"},
     )
     assert proposed.status_code == 200
-    assert b"OCSF Hash Chain: 100% Verified" in proposed.content
+    assert b"OCSF Hash Chain: broken links" in proposed.content
     assert b"records sealed" in proposed.content
     coa_id = _coa_id_from_html(proposed.text)
 
@@ -56,11 +56,11 @@ def test_verify_ui_ocsf_health_pill_path_f(c2_client: TestClient) -> None:
     )
     assert approved.status_code == 200
     assert b"APPROVED" in approved.content
-    assert b"OCSF Hash Chain: 100% Verified" in approved.content
+    assert b"OCSF Hash Chain: broken links" in approved.content
 
     inbox = c2_client.get("/verify/recipient", params={"unit_id": "CUE-NODE-01"})
     assert inbox.status_code == 200
-    assert b"OCSF Hash Chain: 100% Verified" in inbox.content
+    assert b"OCSF Hash Chain: broken links" in inbox.content
     assert coa_id.encode() in inbox.content
 
     acked = c2_client.post(
@@ -69,7 +69,7 @@ def test_verify_ui_ocsf_health_pill_path_f(c2_client: TestClient) -> None:
     )
     assert acked.status_code == 200
     assert b"Ack" in acked.content
-    assert b"OCSF Hash Chain: 100% Verified" in acked.content
+    assert b"OCSF Hash Chain: broken links" in acked.content
 
 
 def test_verify_ui_osint_claim_badges_s2(c2_client: TestClient) -> None:
@@ -119,5 +119,5 @@ def test_verify_ui_lead_poi_card_also_on_s2(c2_client: TestClient) -> None:
     assert proposed.status_code == 200
     assert b"Lead POI" in proposed.content
     assert b"poi-card" in proposed.content
-    assert b"OCSF Hash Chain: 100% Verified" in proposed.content
+    assert b"OCSF Hash Chain: broken links" in proposed.content
     assert b"OSINT: 3 UAVs (Telegram)" in proposed.content

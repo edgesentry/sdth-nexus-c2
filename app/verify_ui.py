@@ -9,7 +9,6 @@ from math import atan2, cos, degrees, radians, sin
 from pathlib import Path
 from typing import Any
 
-from core.audit import chain_break_index
 from core.schema import utc_now
 from fastapi import APIRouter, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -66,16 +65,17 @@ def _evidence_urls(runtime: Any) -> list[str]:
 
 def _ocsf_health(runtime: Any) -> dict[str, Any]:
     """Hash-chain integrity summary for the verify UI pill."""
+    from core.audit import broken_link_count
+
     records = runtime.audit.records()
     count = len(records)
-    broke = chain_break_index(records)
-    if count == 0:
-        return {"verified": True, "pct": 100, "count": 0}
-    if broke is None:
-        return {"verified": True, "pct": 100, "count": count}
-    intact = broke
-    pct = round(100.0 * intact / count) if count else 0
-    return {"verified": False, "pct": pct, "count": count}
+    broken = broken_link_count(records)
+    return {
+        "verified": broken == 0,
+        "broken": broken,
+        "count": count,
+        "label": f"{broken} of {count}",
+    }
 
 
 def _initial_bearing_deg(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
