@@ -31,9 +31,10 @@ uv run python scripts/demo_pitch_run.py --base-url http://127.0.0.1:8080
 
 | Scene | Narrative |
 |-------|-----------|
-| **1 Air (S2)** | OSINT 3 vs radar 1 → Amber → kinetic `ENGAGE_KINETIC` fast-reject → approve `CUE_AND_IDENTIFY` → Ack under 3 s |
-| **2 Maritime (S3)** | Dual-SAR ingress → dark vessel kinematics + Lead POI → `APPROACH_PATROL` → Ack |
-| **3 Slide 11** | Gate p95 under 50 ms · unauthorized = 0 · OCSF integrity 100% |
+| **1 Maritime (S3) — hero** | Dual-SAR ingress → dark vessel kinematics + Lead POI → `APPROACH_PATROL` → Ack → **continuity ledger across the handoff** |
+| **2 Maritime (S1)** | Spoofed stationary AIS vs ~20 kt radar → Amber → `ISR_IDENTIFY_CONTACT` |
+| **3 Metrics** | **Total decision time vs manual baseline (lead with this)** · Ack < 3 s · gate p95 < 50 ms · refusal coverage `n/n` · chain re-verified by a separate binary |
+| ⛔ ~~Air (S2)~~ | **Out of scope** — air / drone domain dropped [2026-09-20](https://github.com/edgesentry/edgesentry-commercial/blob/main/docs/strategy/sdth2026/meeting-20260920-sdth-planning.md). Runnable for regression, **not for the pitch**. |
 
 ### Manual CLI (effector mock)
 
@@ -282,7 +283,8 @@ After a successful correlate, `correlated_count` rises and `uncorrelated_count` 
 Play T-60s → T-00s sensor ingress incrementally (PS 04 temporal alignment), not a one-shot `build_events()` dump:
 
 ```bash
-uv run python scripts/stream_events.py                  # S2 hero, local ontology
+uv run python scripts/stream_events.py                  # default S2 (out of scope — regression only)
+uv run python scripts/stream_events.py --scenario S3    # hero (maritime)
 uv run python scripts/stream_events.py --scenario S1
 uv run python scripts/stream_events.py --fast           # no inter-step sleep
 uv run python scripts/stream_events.py --mode print     # JSONL steps
@@ -358,13 +360,15 @@ Cloudflare down → `uv run sdth-c2-server` (do not set `C2_BASE_URL` / `C2_API_
 
 ## Effector levels
 
-1. **Mock REST** — `mocks/usv.py` (`EFFECTOR_BASE_URL`, default `http://127.0.0.1:8000`; `CLEARBOT_BASE_URL` still accepted)
+1. **Mock REST** — `mocks/usv.py` (`EFFECTOR_BASE_URL`, default `http://127.0.0.1:8000`; `CLEARBOT_BASE_URL` still accepted). **Run it as a separate OS process**, never as an in-process call: otherwise the Ack link in the audit chain is self-dealt and the roundtrip collapses to a function call.
 2. **2D kinematics** — lat/lon toward waypoint after approve
-3. **RasPi GPIO** — optional secondary proof on Ack (issue #20)
+3. ~~**RasPi GPIO**~~ — **excluded from the demo path** (2026-09-17). Kept below for reference only.
 
-### Optional RasPi Ack blink (stretch, Screen 2 client)
+### ⛔ RasPi Ack blink — excluded from the demo path
 
-GPIO runs on the **recipient laptop / RasPi**, not inside Core (Cloudflare has no GPIO).
+Dropped 2026-09-17 to remove venue power / HDMI / hardware risk. Never say "it ran on real hardware"; edge deployment is a design claim only. Retained for post-hackathon work.
+
+(Reference only — not part of the demo.) GPIO runs on the **recipient-side machine**, not inside Core (Cloudflare has no GPIO).
 
 ```bash
 # After a successful Screen 2 Ack (curl or script) on the Pi-side machine:
@@ -396,15 +400,19 @@ uv run python scripts/benchmark.py --tracks 150   # Pitch-3 flood size
 uv run python scripts/benchmark.py --help
 ```
 
-| Metric | Target |
-|--------|--------|
-| Gate latency (p95) | < 50 ms (100 COA evals) |
+| Metric | Target / reported value |
+|--------|-------------------------|
+| **Total decision time (primary)** | **Measured median + spread, A/B vs manual baseline. No pre-committed number.** |
+| Picture-to-Ack roundtrip | < 3.0 s (recipient as a separate OS process) |
+| Gate latency (p95) | < 50 ms (100 COA evals) — **secondary** |
 | Interlock fast-reject (p95) | < 5 ms |
-| Unauthorized taskings | 0 (geofence / speed / duplicate / timeout) |
+| Refusal coverage | `n/n` cases pass (geofence / speed / duplicate / timeout). **Do not report as "0 unauthorized".** |
 | Track-flood stress (gate p95) | < 50 ms under **100+** synthetic tracks |
-| Track-flood unauthorized | 0 under flood |
-| Picture-to-Ack roundtrip | < 3.0 s |
-| Audit trace integrity | 100% hash-chain |
+| Track-flood refusal coverage | `n/n` under flood |
+| Audit chain verifiability | Broken links: `0 of n` records, recomputed by `eds audit verify-chain`. **Do not report as "100% integrity".** |
+| Tracking continuity (UNCLOS Art. 111) | Unexplained gaps across asset handoffs |
+
+Rationale for the withdrawn `0` / `100%` claims and each metric's stated limits: [PLAN §5](plan.md#5-quantitative-operational-benchmarks-slide-11-proof).
 
 Exits non-zero if any metric misses its target (CI + live demo). Pitch-3 flood is on by default (`--skip-stress` to omit).
 

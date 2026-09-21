@@ -41,9 +41,11 @@ In **SDTH 2026 PS 04 ("One Picture, Many Eyes")**, a C2 system dies if it only r
 |-------|------------------------|---------------|
 | Multimodal & Kinematics | Synthetic tactical sensors + Real-processed SIA(+AIS) + Assumed-mock GLINT + Dual-SAR (#56) + kinematics (#57) + optional live open-feed ([#70](https://github.com/edgesentry/sdth-nexus-c2/issues/70)) | Live coastal + multi-constellation SAR |
 | Probabilistic | LLM / heuristic → hypotheses + COA; LiteLLM (#32, done) | Production CV + hardened LLM |
-| Deterministic gate | Stress 100+ tracks; p95 < 50ms, unauthorized=0 (done) | Air-gap, dual-key Tier-2 |
-| Picture→Tasking | Closed loop + POI (#58) + Screen 2 Ack <3.0s | Field USV |
-| Sovereign interlock | OCSF + Cloudflare Containers (done) | Stronger seal (Ed25519) |
+| Deterministic gate | Stress 100+ tracks; p95 < 50ms, refusal coverage `n/n` (done) | Air-gap, dual-key Tier-2 |
+| Picture→Tasking | Closed loop + POI (#58) + Screen 2 Ack <3.0s + **total decision time A/B** | Field USV |
+| Sovereign interlock | OCSF + Cloudflare Containers (done) + **UNCLOS Art. 111 continuity ledger** | BLAKE3 + Ed25519 via `edgesentry-rs`; tribunal-grade evidence review |
+
+> Metric phrasing revised 2026-09-21: `unauthorized=0` and `100% audit integrity` withdrawn in favour of `n/n` coverage and broken-link counts, and the primary metric moved to total decision time. See [PLAN §5](plan.md#5-quantitative-operational-benchmarks-slide-11-proof).
 
 ## Demo-day & Hackathon Execution (Phase 4: Sep 25–27)
 

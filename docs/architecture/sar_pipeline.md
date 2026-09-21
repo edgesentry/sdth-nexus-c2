@@ -20,7 +20,7 @@ To resolve this, the C2 architecture integrates an upstream **SAR × AIS Correla
 
 ## 2. Immediate Hackathon Architecture (Venue-Ready & Zero-Risk)
 
-For the 48-hour hackathon and live demonstration, the upstream pipeline operates either as a **local distributed microservice** or as a **hybrid cloud-hosted edge service**, providing 100% deterministic reliability even under venue network constraints.
+For the 48-hour hackathon and live demonstration, the upstream pipeline operates either as a **local distributed microservice** or as a **hybrid cloud-hosted edge service**, so the demo path stays deterministic and runnable **with venue networking fully disconnected** (golden fixtures as the last fallback).
 
 ```mermaid
 flowchart TD
@@ -215,7 +215,7 @@ flowchart TD
 #### 4. Deterministic Sovereign Gating (NexusGate Core)
 - **Air-Gapped Deployment**: Zero external API dependencies; deployed directly within sovereign defense enclaves.
 - **Strict Latency Bounds**: Fast-rejection of invalid proposals in `<5ms`; full interlock evaluation in `<50ms`.
-- **Cryptographic Tasking Tokens**: Orders issued with tamper-evident BLAKE3 / Ed25519 digital signatures ensuring non-repudiation.
+- **Cryptographic Tasking Tokens**: Orders issued with tamper-evident BLAKE3 / Ed25519 digital signatures ensuring non-repudiation. **(Target state. `core/audit.py` is SHA-256 today; BLAKE3 + Ed25519 arrive by consuming `edgesentry-rs` — do not claim BLAKE3 until that is wired.)**
 
 #### 5. Interoperable Tactical Effector Integration
 - **Tactical Data Adapters**: Compliant with military protocol baselines (MIL-STD / Link 16 / Link 22) and autonomous vehicle standards (STANAG 4586).

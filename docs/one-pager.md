@@ -43,17 +43,21 @@ flowchart LR
 | ID | Operational Focus | Sensor Contradiction | Deterministic Action |
 |----|-------------------|----------------------|----------------------|
 | **S1** | **Sea Approach** | Spoofed AIS stationary vs. ~20 kt radar/EO blur (~850m offset) | `ISR_IDENTIFY_CONTACT` dispatched to verify track |
-| **S2** | **Air Corridor** *(Hero)* | Social media claims "3 drones" vs. radar "1 target" + bearing disagreement | Non-kinetic `CUE_AND_IDENTIFY` (prevents kinetic over-reaction) |
-| **S3** | **Shipping Lane** | Space SAR cluster (Sentinel-1) vs. AIS radio silence + coastal radar | `APPROACH_PATROL` via dead-reckoning kinematics |
+| **S3** | **Shipping Lane** *(Hero)* | Space SAR cluster (Sentinel-1) vs. AIS radio silence + coastal radar | `APPROACH_PATROL` via dead-reckoning kinematics |
+| ⛔ ~~S2~~ | ~~Air Corridor~~ | **Out of scope** — air / drone domain dropped 2026-09-20 (100% maritime). Discrepancy mechanism reused by S1 / S3; not pitched. | — |
 
 ---
 
-## 4. Key Verified Metrics
+## 4. Key Measured Metrics
 
-* **Gate Latency:** `<50ms` deterministic rule evaluation & token sealing.
-* **Closed-Loop Verification:** Complete audit record from Commander approval (`approve`) to field effector execution (`ack`).
-* **Audit Compliance:** 100% OCSF JSONL event stream capturing every state transition and operator ID.
+* **Total decision time (primary):** `CandidateEvent` ingress → approval committed, measured **A/B against a manual swivel-chair baseline**. Reported as measured median and spread — we do not pre-commit a number. *Caveat: n≈4 operators on synthetic scenarios; not a claim about trained watchkeepers under stress.*
+* **Effector Ack roundtrip:** `< 3.0 s`, with the recipient running as a **separate OS process** so the Ack is genuinely received rather than self-dealt.
+* **Gate latency (secondary):** `< 50 ms` deterministic rule evaluation and token sealing. Table stakes, not the differentiator.
+* **Audit chain:** OCSF JSONL capturing every state transition and operator ID, **re-verified by a separate binary** (`eds audit verify-chain`). *Caveat: this detects tampering, it does not prevent it.*
+* **Tracking continuity (UNCLOS Art. 111):** every asset handoff recorded with its gap, so non-interruption of pursuit is machine-verifiable. *Caveat: continuity of our records, not a legal finding.*
 * **Architectural Safety:** Probabilistic layers (including LLMs) are strictly restricted to proposing; **only deterministic code seals action tokens**.
+
+> Withdrawn 2026-09-21: `0 unauthorized` and `100% audit integrity`. Absolutes are unfalsifiable and invite the audit an evaluator will run anyway — see [PLAN §5](plan.md#5-quantitative-operational-benchmarks-slide-11-proof).
 
 ---
 

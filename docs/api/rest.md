@@ -676,7 +676,7 @@ When ingested (either via upstream REST pull, optional `POST /api/ingress/candid
 
 ### Operational Assumptions
 1. **Retrospective & Periodic Ingress:** The payload represents a discrete, verified evidence package derived from satellite passes, not a high-frequency live video feed.
-2. **Non-Blocking Loose Coupling:** The C2 platform operates 100% stand-alone using synthetic fixture equivalents (`tests/fixtures/candidate_event_assumed.json`) if live upstream services are offline during hackathon operations.
+2. **Non-Blocking Loose Coupling:** The C2 platform operates fully stand-alone using synthetic fixture equivalents (`tests/fixtures/candidate_event_assumed.json`) if live upstream services are offline during hackathon operations.
 3. **Transport Interfaces:** Supported via HTTP REST (`GET` pull or `POST` push) and compatible with Model Context Protocol (MCP) tool querying.
 
 ### `POST /api/ingress/candidate-event`

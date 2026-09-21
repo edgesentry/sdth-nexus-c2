@@ -5,17 +5,23 @@ App-layer scenarios under `app/scenarios/`. Each run builds synthetic multi-vend
 | ID | Title | Conflict | Tasking |
 |----|-------|----------|---------|
 | **S1** | Sea Approach — Adversarial AIS Spoof | Stationary AIS vs ~20 kt radar/EO (~850 m) | `ISR_IDENTIFY_CONTACT` |
-| **S2** | Air Corridor — Shahed Swarm Contradiction | Social claims 3; radar 1 (~1.2 km N); EO blur 0.42; RF silent; no ADS-B | Amber `COUNT_AND_BEARING_MISMATCH` → `CUE_AND_IDENTIFY` |
+| ⛔ **S2** | Air Corridor — Shahed Swarm Contradiction (**out of scope**) | Social claims 3; radar 1 (~1.2 km N); EO blur 0.42; RF silent; no ADS-B | Amber `COUNT_AND_BEARING_MISMATCH` → `CUE_AND_IDENTIFY` |
 | **S3** | Shipping Lane & Coastal Anomaly — SAR Difference vs AIS | Space-based SAR anomaly diff (unannounced dark cluster with length/beam/heading metrology) vs thin AIS; coastal radar joined via dead-reckoned reachability envelope (#57), not a shared MMSI | `APPROACH_PATROL` |
 
-**S2** is the air hero (Slide 04): do not fuse into one hallucinated track — cue identify only.  
+> ## ⛔ S2 is no longer the hero (2026-09-20)
+>
+> The [team decision](https://github.com/edgesentry/edgesentry-commercial/blob/main/docs/strategy/sdth2026/meeting-20260920-sdth-planning.md) locked scope to **100% maritime** (Singapore Strait vessel incursions, dark vessels, STS) and **formally dropped the air / drone domain**. **S3 is the hero; S1 is the second maritime scenario.**
+>
+> S2 stays in the repo and in CI because its **discrepancy mechanism (count / bearing mismatch) is domain-agnostic and reused by S1 and S3**. It must not appear in the pitch. The OSINT argument below transfers directly to maritime: fishermen, port workers, and ferry passengers report dark craft and STS transfers before a track is firmly held.
 
-> **S2 Operational & Cognitive Value (Why OSINT in C2?):**  
+**Principle (applies to all scenarios):** do not fuse into one hallucinated track — cue identify only.
+
+> **(Out-of-scope reference) S2 Operational & Cognitive Value (Why OSINT in C2?):**  
 > 1. **Human as a Distributed Sensor**: Low-flying attritable drones (e.g., Shahed-136) often slip beneath radar horizons or clutter filters in urban/coastal corridors. Eyewitness social media and recon text often provide the *first operational cue* before radar acquires track lock.
 > 2. **Preventing Kinetic Over-Reaction**: Social chatter is prone to panic, exaggeration, and enemy deception (*"20 swarm drones incoming!"*). An un-governed C2 risks launching million-dollar surface-to-air interceptors prematurely. NexusGate surfaces the **Amber contradiction** (Social claims filtered 3 vs Radar detects 1) and routes tasking to non-kinetic **`CUE_AND_IDENTIFY`** (slew cameras/recon drones to verify) rather than lethal over-kill.
 > 3. **Decoupled Ingress Architecture**: Just as AIS history is decoupled to Indago, raw social media scraping/crawling lives in external OSINT Threat Intelligence services. NexusGate ingests only structured semantic extracts (`claimed_count`, `bearing`, `objective`) via [`app/adapters/osint_text.py`](data-provenance.md) without maintaining an internal social database.
 
-**S3** is the maritime hero: connects macro space-based SAR scene-difference alerts (GLINT) and micro OBB metrology (SIA) to tactical C2 tasking via dead-reckoning kinematics ([#57](https://github.com/edgesentry/sdth-nexus-c2/issues/57)) and lead-pursuit interception ([#58](https://github.com/edgesentry/sdth-nexus-c2/issues/58)) (see [SAR Pipeline Architecture](architecture/sar_pipeline.md)).
+**S3** is the hero scenario: connects macro space-based SAR scene-difference alerts (GLINT) and micro OBB metrology (SIA) to tactical C2 tasking via dead-reckoning kinematics ([#57](https://github.com/edgesentry/sdth-nexus-c2/issues/57)) and lead-pursuit interception ([#58](https://github.com/edgesentry/sdth-nexus-c2/issues/58)) (see [SAR Pipeline Architecture](architecture/sar_pipeline.md)).
 
 > **S3 Cognitive Load Compression (Dual-SAR × Dual-AIS):**  
 > Resolves the core maritime dilemma (*"SAR detects returns, AIS indicates normal traffic: is it clutter, a dark vessel, or latency?"*) across three decoupled tiers:

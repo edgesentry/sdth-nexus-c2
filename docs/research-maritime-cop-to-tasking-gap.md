@@ -1,5 +1,19 @@
 # The Maritime COP-to-Tasking Gap: Literature Review, Failure Paradigms, and Implementation Status
 
+> ## ⛔ Outdated — do not cite in the pitch (notice added 2026-09-21)
+>
+> **Canonical version:** [`edgesentry-commercial/docs/strategy/sdth2026/research-maritime-cop-to-tasking-gap.md`](https://github.com/edgesentry/edgesentry-commercial/blob/main/docs/strategy/sdth2026/research-maritime-cop-to-tasking-gap.md) (411 lines, Japanese). This English summary is 235 lines and predates an adversarial review that **retracted several of its central claims**:
+>
+> | This document says | Corrected position |
+> |---|---|
+> | §5 "**Three Unsolved Frontiers**" | **Withdrawn.** Discrepancy detection is already standard in commercial and military systems. What remains open is the authority-and-time last mile after the cue. |
+> | Sense-making is the unsolved problem | **SMCC already cut threat assessment from hours to minutes** (MINDEF). Our claim is confined to the segment after the cue. |
+> | §4 anti-pattern on naive fusion | Reframed: the failure is **collapsing to a single track too early**, i.e. skipping association / gating — a newcomer error, not established industry practice. |
+> | LMV crew reduction | Corrected to **~30 → 23 (~20%)**. The earlier "80 → 23" confused hull length (80 m) with crew size. |
+> | Implementation status matrix (§6) | Superseded by [`impl-alignment.md`](https://github.com/edgesentry/edgesentry-commercial/blob/main/docs/products/nexusgate/impl-alignment.md) (measured 2026-09-21) and [PLAN §5–6](plan.md). |
+>
+> Missing entirely from this version: the **threat model against NexusGate itself** (prompt injection, forged `CandidateEvent`, denial-of-audit), the **revised KPI table with explicit limits**, the **UNCLOS Art. 111 continuity ledger**, and the **full source list with verified citations**. Retained here only as history.
+
 > **Target Event:** Singapore Defense Tech Hackathon (SDTH 2026) — Problem Statement 04: *"One Picture, Many Eyes — From Picture to Tasking"*  
 > **Document Purpose:** Academic, operational, and technological survey of the *"Sensor-to-Shooter Valley of Death"* in maritime Command and Control (C2), analyzing global research benchmarks, five flawed anti-patterns, three unsolved frontiers, and an exhaustive implementation audit of **Project NexusGate**.
 
