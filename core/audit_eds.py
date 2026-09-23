@@ -11,7 +11,7 @@ import json
 import logging
 import os
 import shutil
-import subprocess
+import subprocess  # nosec B404 — intentional eds CLI boundary (fixed argv, shell=False)
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -268,7 +268,7 @@ def load_or_create_keypair(
             # Prefer inspect via CLI when available.
             eds = resolve_eds_bin()
             if eds is not None:
-                proc = subprocess.run(
+                proc = subprocess.run(  # nosec B603 — fixed argv, no shell
                     [str(eds), "audit", "inspect-key", "--private-key-hex", env],
                     check=False,
                     capture_output=True,
@@ -303,7 +303,7 @@ def load_or_create_keypair(
     eds = resolve_eds_bin()
     if eds is None:
         raise EdsError("cannot keygen: no bridge and no eds binary")
-    proc = subprocess.run(
+    proc = subprocess.run(  # nosec B603 — fixed argv, no shell
         [str(eds), "audit", "keygen"],
         check=True,
         capture_output=True,
@@ -463,7 +463,7 @@ def verify_eds_chain(path: Path, *, eds_bin: Path | None = None) -> EdsVerifyRes
             stderr="eds binary not found",
         )
 
-    proc = subprocess.run(
+    proc = subprocess.run(  # nosec B603 — fixed argv, no shell; writer ≠ verifier
         [str(binary), "audit", "verify-chain", "--records-file", str(path)],
         check=False,
         capture_output=True,
