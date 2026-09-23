@@ -141,11 +141,12 @@ def run_demo(*, path: Path, quiet: bool = False) -> int:
     say(f"[4] Integrity check: {after.summary()}")
     if after.ok or after.break_index != 1 or after.reason != "hash mismatch":
         say(
-            "FAIL: expected CHAIN BROKEN at Index 1: hash mismatch "
-            f"(got ok={after.ok} index={after.break_index} reason={after.reason})"
+            "FAIL: expected hash mismatch at Index 1 "
+            f"(got ok={after.ok} index={after.break_index} reason={after.reason} "
+            f"summary={after.summary()!r})"
         )
         return 1
-    say("     HALT: tasking blocked — audit chain integrity failure (security violation)")
+    say(f"     {after.summary()} — HALT tasking (security violation)")
     say("     Operator alert: do not dispatch; preserve forensic copy of tampered jsonl")
 
     # 5) Restore + recover

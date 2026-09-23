@@ -82,7 +82,7 @@ def test_verify_audit_chain_intact(tmp_path: Path) -> None:
     assert result.ok
     assert result.total == 3
     assert result.break_index is None
-    assert "PASS" in result.summary()
+    assert "broken links: 0 of 3" in result.summary()
 
 
 def test_verify_detects_content_tamper_hash_mismatch(tmp_path: Path) -> None:
@@ -103,7 +103,7 @@ def test_verify_detects_content_tamper_hash_mismatch(tmp_path: Path) -> None:
     assert not result.ok
     assert result.break_index == 1
     assert result.reason == "hash mismatch"
-    assert result.summary() == "CHAIN BROKEN at Index 1: hash mismatch"
+    assert result.summary() == "broken links: 1 of 3"
 
 
 def test_verify_detects_broken_prev_hash_link(tmp_path: Path) -> None:

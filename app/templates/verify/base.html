@@ -24,7 +24,7 @@
       </nav>
       {% if ocsf_health %}
       <span class="pill {% if ocsf_health.verified %}pill-ok{% else %}pill-warn{% endif %}" title="OCSF append-only hash chain">
-        OCSF Hash Chain: {{ ocsf_health.pct }}% {% if ocsf_health.verified %}Verified{% else %}Broken{% endif %}
+        OCSF Hash Chain: broken links {{ ocsf_health.label }}
         ({{ ocsf_health.count }} records sealed)
       </span>
       {% endif %}

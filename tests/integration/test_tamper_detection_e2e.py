@@ -93,7 +93,7 @@ def test_c2_closed_loop_audit_tamper_detect_and_restore(
     assert not after.ok
     assert after.break_index == idx
     assert after.reason == "hash mismatch"
-    assert after.summary() == f"CHAIN BROKEN at Index {idx}: hash mismatch"
+    assert after.summary() == f"broken links: 1 of {after.total}"
 
     # Trail API still serves records, but integrity check fails → tasking must halt.
     trail = c2_client.get("/api/audit/trail")
