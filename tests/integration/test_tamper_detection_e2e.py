@@ -11,9 +11,14 @@ from typing import Any
 import pytest
 from app import c2_server
 from app.c2_server import app as c2_app
-from core.audit import load_audit_records, verify_audit_chain, write_audit_records
+from core.audit import (
+    inject_one_char_tamper,
+    load_audit_records,
+    verify_audit_chain,
+    write_audit_records,
+)
 from fastapi.testclient import TestClient
-from scripts.demo_tamper_detection import _inject_one_char_tamper, run_demo
+from scripts.demo_tamper_detection import run_demo
 
 pytestmark = pytest.mark.integration
 
@@ -85,7 +90,7 @@ def test_c2_closed_loop_audit_tamper_detect_and_restore(
     idx = _gate_decision_index(original)
     assert original[idx]["metadata"]["verdict"] == "APPROVED"
 
-    tampered = _inject_one_char_tamper(copy.deepcopy(original), index=idx)
+    tampered = inject_one_char_tamper(copy.deepcopy(original), index=idx)
     assert tampered[idx]["metadata"]["verdict"] == "XPPROVED"
     write_audit_records(c2_audit_path, tampered)
 

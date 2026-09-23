@@ -12,11 +12,12 @@ from core.audit import (
     GENESIS_PREV,
     AuditLogger,
     chain_break_index,
+    inject_one_char_tamper,
     load_audit_records,
     verify_audit_chain,
     write_audit_records,
 )
-from scripts.demo_tamper_detection import _inject_one_char_tamper, run_demo
+from scripts.demo_tamper_detection import run_demo
 
 
 def test_replace_records_restores_chain(tmp_path: Path) -> None:
@@ -95,7 +96,7 @@ def test_verify_detects_content_tamper_hash_mismatch(tmp_path: Path) -> None:
     original = logger.records()
     assert verify_audit_chain(original).ok
 
-    tampered = _inject_one_char_tamper(original, index=1)
+    tampered = inject_one_char_tamper(original, index=1)
     assert tampered[1]["metadata"]["status"] == "XPPROVED"
     # prev_hash links still look contiguous — only content digest fails
     assert chain_break_index(tampered) is None

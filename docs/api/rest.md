@@ -26,7 +26,7 @@ Screen 1 = command · Screen 2 = recipient. No BattlePlan required for Phase 2 d
 | `GET` | `/api/audit/trail` | OCSF-shaped hash-chain records |
 | `POST` | `/api/admin/reset` | Clear in-memory runtime (tests / demos) |
 
-Operational (not frozen handshake): `GET /health`, `PUT /api/admin/audit/snapshot`, `GET /static/fixtures/*` (demo evidence chips for BattlePlan) — see [Cloudflare Containers](../deploy.md) · [Demo Path F](../demo.md#demo-path-f-nexusgate-verification-webui-phase-2--issue-65-not-pitch-ui).
+Operational (not frozen handshake): `GET /health`, `PUT /api/admin/audit/snapshot`, `POST /api/admin/audit/tamper|restore|reverify` (demo-only; `C2_DEMO_TAMPER=1`), `GET /static/fixtures/*` (demo evidence chips for BattlePlan) — see [Cloudflare Containers](../deploy.md) · [Demo Path F](../demo.md#demo-path-f-nexusgate-verification-webui-phase-2--issue-65-not-pitch-ui).
 
 Local Core enables CORS for NexusGate verify UI (`C2_CORS_ORIGINS`, default `localhost:3000`). Cloudflare Worker attaches CORS headers on all responses (including Bearer `401`).
 
@@ -509,6 +509,68 @@ Replace on-disk OCSF jsonl. Used by the Cloudflare Worker to hydrate the hash ch
 
 ```json
 { "status": "restored", "count": 1 }
+```
+
+---
+
+## `POST /api/admin/audit/tamper`
+
+Demo-only (#88). Requires `C2_DEMO_TAMPER=1`. Snapshots the current OCSF trail, flips one character in a sealed record (hash not updated), and optionally corrupts the EDS sidecar. Does **not** mint tokens.
+
+**Response `200`**
+
+```json
+{
+  "status": "tampered",
+  "index": 1,
+  "ocsf": {
+    "ok": false,
+    "total": 4,
+    "broken": 1,
+    "break_index": 1,
+    "reason": "hash mismatch",
+    "summary": "broken links: 1 of 4",
+    "label": "1 of 4"
+  },
+  "eds_corrupted": false
+}
+```
+
+**Response `403`** — gate unset. **`400`** — fewer than 2 sealed records.
+
+---
+
+## `POST /api/admin/audit/restore`
+
+Demo-only (#88). Requires `C2_DEMO_TAMPER=1`. Restores the pre-tamper OCSF (+ EDS) snapshot from the last inject.
+
+**Response `200`**
+
+```json
+{
+  "status": "restored",
+  "count": 4,
+  "ocsf": { "ok": true, "broken": 0, "summary": "broken links: 0 of 4" }
+}
+```
+
+**Response `400`** — no snapshot.
+
+---
+
+## `POST /api/admin/audit/reverify`
+
+Demo-only (#88). Requires `C2_DEMO_TAMPER=1`. Walks the OCSF SHA-256 chain in-process; when an EDS sidecar and `eds` CLI are available, also runs out-of-process `eds audit verify-chain`.
+
+**Response `200`**
+
+```json
+{
+  "status": "verified",
+  "path": "sha256",
+  "ocsf": { "ok": true, "summary": "broken links: 0 of 4" },
+  "eds": null
+}
 ```
 
 ---

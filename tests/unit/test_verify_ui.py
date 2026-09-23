@@ -181,3 +181,66 @@ def test_verify_lead_poi_card_s3(client: TestClient) -> None:
     assert "Lat" in body and "Lon" in body
     # Coordinates must appear as decimal degrees
     assert any(ch.isdigit() for ch in body)
+
+
+def _closed_loop_verify(client: TestClient) -> None:
+    proposed = client.post(
+        "/verify/command/propose",
+        data={"scenario_id": "S2", "unit_id": "CUE-NODE-01"},
+    )
+    assert proposed.status_code == 200
+    marker = 'name="coa_id" value="'
+    coa_id = proposed.text.split(marker, 1)[1].split('"', 1)[0]
+    approved = client.post(
+        "/verify/command/approve",
+        data={
+            "coa_id": coa_id,
+            "decision": "y",
+            "unit_id": "CUE-NODE-01",
+            "scenario_id": "S2",
+        },
+    )
+    assert approved.status_code == 200
+    acked = client.post(
+        "/verify/recipient/ack",
+        data={"coa_id": coa_id, "unit_id": "CUE-NODE-01"},
+    )
+    assert acked.status_code == 200
+
+
+def test_verify_audit_tamper_panel_roundtrip(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """propose→approve→ack → inject → broken UI → restore → 0 of n (#88)."""
+    monkeypatch.setenv("C2_DEMO_TAMPER", "1")
+    _closed_loop_verify(client)
+
+    hub = client.get("/verify")
+    assert hub.status_code == 200
+    assert b"Inject 1-char tamper" in hub.content
+    assert b"pill-ok" in hub.content
+    assert b"broken links 0 of" in hub.content
+
+    tampered = client.post("/verify/audit/tamper")
+    assert tampered.status_code == 200
+    assert b"pill-warn" in tampered.content
+    assert b"hash mismatch" in tampered.content
+    assert b"Injected 1-char tamper" in tampered.content
+    assert b"broken links 1 of" in tampered.content
+
+    restored = client.post("/verify/audit/restore")
+    assert restored.status_code == 200
+    assert b"pill-ok" in restored.content
+    assert b"broken links 0 of" in restored.content
+    assert b"Restored pre-tamper" in restored.content
+
+
+def test_verify_audit_tamper_gated_off(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("C2_DEMO_TAMPER", raising=False)
+    hub = client.get("/verify")
+    assert hub.status_code == 200
+    assert b"Inject 1-char tamper" not in hub.content
+
+    denied = client.post("/verify/audit/tamper")
+    assert denied.status_code == 200
+    assert b"Demo tamper disabled" in denied.content or b"C2_DEMO_TAMPER" in denied.content

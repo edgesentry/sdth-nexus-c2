@@ -16,7 +16,6 @@ Target wall time: < 3 s.
 from __future__ import annotations
 
 import argparse
-import copy
 import sys
 import tempfile
 import time
@@ -25,10 +24,14 @@ from typing import Any
 
 from core.audit import (
     AuditLogger,
+    inject_one_char_tamper,
     load_audit_records,
     verify_audit_chain,
     write_audit_records,
 )
+
+# Backward-compatible alias for tests / callers that imported the private name.
+_inject_one_char_tamper = inject_one_char_tamper
 
 
 def _build_legitimate_chain(path: Path) -> list[dict[str, Any]]:
@@ -64,45 +67,6 @@ def _build_legitimate_chain(path: Path) -> list[dict[str, Any]]:
     return logger.records()
 
 
-def _inject_one_char_tamper(records: list[dict[str, Any]], index: int = 1) -> list[dict[str, Any]]:
-    """Flip one character in record[index] payload without updating ``hash``."""
-    if index < 0 or index >= len(records):
-        raise IndexError(f"tamper index {index} out of range (n={len(records)})")
-    tampered = copy.deepcopy(records)
-    meta = tampered[index].setdefault("metadata", {})
-    if not isinstance(meta, dict):
-        raise TypeError("record metadata must be a dict")
-
-    def _flip_approved(key: str) -> bool:
-        value = meta.get(key)
-        if isinstance(value, str) and value == "APPROVED":
-            # 1-char flip: APPROVED → XPPROVED (content digests diverge).
-            meta[key] = "XPPROVED"
-            return True
-        if isinstance(value, str) and len(value) >= 1:
-            meta[key] = ("X" if value[0] != "X" else "Y") + value[1:]
-            return True
-        return False
-
-    # C2 gate_decision seals ``verdict``; demo logger uses ``status``.
-    if _flip_approved("status") or _flip_approved("verdict"):
-        return tampered
-
-    # Fallback: flip one digit in the timestamp string.
-    ts = str(tampered[index].get("time") or "")
-    if not ts:
-        raise ValueError("no status/verdict or time field to tamper")
-    chars = list(ts)
-    for i, ch in enumerate(chars):
-        if ch.isdigit():
-            chars[i] = "0" if ch != "0" else "1"
-            break
-    else:
-        chars[0] = "X" if chars[0] != "X" else "Y"
-    tampered[index]["time"] = "".join(chars)
-    return tampered
-
-
 def run_demo(*, path: Path, quiet: bool = False) -> int:
     """Execute intact → tamper → detect → restore → re-verify. Returns process exit code."""
     started = time.perf_counter()
@@ -128,7 +92,7 @@ def run_demo(*, path: Path, quiet: bool = False) -> int:
         return 1
 
     # 3) Inject 1-character tamper into record[1]
-    tampered = _inject_one_char_tamper(original, index=1)
+    tampered = inject_one_char_tamper(original, index=1)
     write_audit_records(path, tampered)
     flipped_meta = tampered[1].get("metadata", {})
     flipped = None

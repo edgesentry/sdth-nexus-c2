@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import os
 from dataclasses import asdict
 from pathlib import Path
@@ -9,7 +10,7 @@ from typing import Any
 from uuid import uuid4
 
 import uvicorn
-from core.audit import AuditLogger
+from core.audit import AuditLogger, inject_one_char_tamper, verify_audit_chain, write_audit_records
 from core.coa import ActionTier, CourseOfAction, GateVerdict
 from core.gate import LatencyBoundedGate
 from core.ingress_replay import IngressReplayLog
@@ -160,6 +161,40 @@ class AuditSnapshotRequest(BaseModel):
     records: list[dict[str, Any]]
 
 
+def demo_tamper_enabled() -> bool:
+    """Demo-only gate for interactive tamper inject/restore (#88)."""
+    return os.environ.get("C2_DEMO_TAMPER", "0").strip().lower() in {"1", "true", "yes"}
+
+
+def _require_demo_tamper() -> None:
+    if not demo_tamper_enabled():
+        raise HTTPException(
+            status_code=403,
+            detail="Demo tamper disabled (set C2_DEMO_TAMPER=1)",
+        )
+
+
+def _corrupt_eds_records(records: list[dict[str, Any]], index: int = 1) -> list[dict[str, Any]]:
+    """Flip one byte in EDS payload_hash so out-of-process verify-chain fails."""
+    corrupted = copy.deepcopy(records)
+    if not corrupted:
+        return corrupted
+    idx = index if index < len(corrupted) else 0
+    rec = corrupted[idx]
+    ph = rec.get("payload_hash")
+    if isinstance(ph, list) and ph:
+        ph[0] = (int(ph[0]) + 1) % 256
+    elif isinstance(ph, (bytes, bytearray)) and len(ph) > 0:
+        buf = bytearray(ph)
+        buf[0] = (buf[0] + 1) % 256
+        rec["payload_hash"] = list(buf)
+    else:
+        # Fallback: flip first char of object_ref / any string field.
+        ref = str(rec.get("object_ref") or "x")
+        rec["object_ref"] = ("X" if ref[0] != "X" else "Y") + ref[1:]
+    return corrupted
+
+
 class C2Runtime:
     def __init__(
         self,
@@ -177,6 +212,10 @@ class C2Runtime:
         self.proposals: dict[str, dict[str, Any]] = {}
         self.inbox: dict[str, dict[str, Any]] = {}  # coa_id -> tasking
         self.acked: set[str] = set()
+        # Pre-tamper snapshots for /verify demo restore (#88).
+        self.audit_pre_tamper: list[dict[str, Any]] | None = None
+        self.eds_pre_tamper: list[dict[str, Any]] | None = None
+        self.last_eds_verify: dict[str, Any] | None = None
 
     def reset(self) -> None:
         self.graph = SpatialEntityGraph(associate_radius_m=2_000.0)
@@ -187,6 +226,101 @@ class C2Runtime:
         self.acked.clear()
         # Drop soft-duplicate keys so the same scenario can be re-proposed after reset.
         self.policy.interlock.active_coa_ids.clear()
+        self.audit_pre_tamper = None
+        self.eds_pre_tamper = None
+        self.last_eds_verify = None
+
+    def inject_audit_tamper(self, *, index: int = 1) -> dict[str, Any]:
+        """Snapshot trail, inject 1-char OCSF tamper, optionally corrupt EDS sidecar."""
+        records = self.audit.records()
+        if len(records) < 2:
+            raise HTTPException(
+                status_code=400,
+                detail="Need ≥2 sealed audit records before tamper",
+            )
+        self.audit_pre_tamper = copy.deepcopy(records)
+        eds = self.audit.eds
+        if eds is not None:
+            self.eds_pre_tamper = copy.deepcopy(eds.records())
+        else:
+            self.eds_pre_tamper = None
+
+        tampered = inject_one_char_tamper(records, index=index)
+        # Do not use replace_records — that would re-seal EDS correctly.
+        self.audit.overwrite_ocsf_keep_eds(tampered)
+
+        eds_corrupted = False
+        if eds is not None and self.eds_pre_tamper:
+            corrupted = _corrupt_eds_records(self.eds_pre_tamper, index=index)
+            eds.replace_records(corrupted)
+            eds_corrupted = True
+
+        ocsf = verify_audit_chain(self.audit.records())
+        return {
+            "status": "tampered",
+            "index": index,
+            "ocsf": _chain_verify_dict(ocsf),
+            "eds_corrupted": eds_corrupted,
+        }
+
+    def restore_audit_tamper(self) -> dict[str, Any]:
+        """Restore pre-tamper OCSF (+ EDS) snapshot."""
+        if self.audit_pre_tamper is None:
+            raise HTTPException(status_code=400, detail="No pre-tamper snapshot to restore")
+        write_audit_records(self.audit.path, self.audit_pre_tamper)
+        self.audit._rewind_from_disk()
+        if self.eds_pre_tamper is not None and self.audit.eds is not None:
+            self.audit.eds.replace_records(self.eds_pre_tamper)
+        ocsf = verify_audit_chain(self.audit.records())
+        return {
+            "status": "restored",
+            "count": len(self.audit_pre_tamper),
+            "ocsf": _chain_verify_dict(ocsf),
+        }
+
+    def reverify_audit(self) -> dict[str, Any]:
+        """Full OCSF walk + optional out-of-process EDS verify-chain."""
+        ocsf = verify_audit_chain(self.audit.records())
+        out: dict[str, Any] = {
+            "status": "verified",
+            "path": "sha256",
+            "ocsf": _chain_verify_dict(ocsf),
+            "eds": None,
+        }
+        eds = self.audit.eds
+        if eds is not None:
+            try:
+                from core.audit_eds import eds_cli_available, verify_eds_chain
+
+                if eds_cli_available():
+                    eds_result = verify_eds_chain(eds.path)
+                    eds_payload = {
+                        "ok": eds_result.ok,
+                        "total": eds_result.total,
+                        "broken": eds_result.broken_links,
+                        "summary": eds_result.summary(),
+                        "label": "CHAIN_VALID" if eds_result.ok else eds_result.summary(),
+                    }
+                    out["eds"] = eds_payload
+                    out["path"] = "eds"
+                    self.last_eds_verify = eds_payload
+            except Exception as exc:  # pragma: no cover - defensive
+                out["eds"] = {"ok": False, "label": f"eds verify error: {exc}"}
+                self.last_eds_verify = out["eds"]
+        return out
+
+
+def _chain_verify_dict(result: Any) -> dict[str, Any]:
+    broken = 0 if result.ok else (len(result.errors) if result.errors else 1)
+    return {
+        "ok": result.ok,
+        "total": result.total,
+        "broken": broken,
+        "break_index": result.break_index,
+        "reason": result.reason,
+        "summary": result.summary(),
+        "label": f"{broken} of {result.total}",
+    }
 
 
 _runtime = C2Runtime()
@@ -764,6 +898,27 @@ async def admin_audit_snapshot(req: AuditSnapshotRequest) -> dict[str, Any]:
     runtime = get_runtime()
     runtime.audit.replace_records(req.records)
     return {"status": "restored", "count": len(req.records)}
+
+
+@app.post("/api/admin/audit/tamper")
+async def admin_audit_tamper() -> dict[str, Any]:
+    """Demo-only: flip one character in a sealed OCSF record (#88)."""
+    _require_demo_tamper()
+    return get_runtime().inject_audit_tamper(index=1)
+
+
+@app.post("/api/admin/audit/restore")
+async def admin_audit_restore() -> dict[str, Any]:
+    """Demo-only: restore pre-tamper audit snapshot (#88)."""
+    _require_demo_tamper()
+    return get_runtime().restore_audit_tamper()
+
+
+@app.post("/api/admin/audit/reverify")
+async def admin_audit_reverify() -> dict[str, Any]:
+    """Demo-only: re-walk OCSF (+ optional eds audit verify-chain) (#88)."""
+    _require_demo_tamper()
+    return get_runtime().reverify_audit()
 
 
 @app.post("/api/admin/reset")
