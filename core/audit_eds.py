@@ -71,6 +71,9 @@ def resolve_eds_bin() -> Path | None:
     if env:
         p = Path(env)
         return p if p.is_file() else None
+    local = _REPO_ROOT / ".eds" / "eds"
+    if local.is_file():
+        return local
     found = shutil.which("eds")
     return Path(found) if found else None
 

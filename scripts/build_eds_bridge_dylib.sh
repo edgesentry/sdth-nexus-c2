@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
-# Rebuild a dlopen-able libedgesentry_bridge.dylib from the static archive.
+# Fallback: rebuild a dlopen-able libedgesentry_bridge from the static archive.
 #
-# On macOS 27+, rustc's release cdylib can fail ctypes.CDLL with
-# "mis-aligned LINKEDIT string pool". Apple's ld64 linking of the .a is fine.
+# Prefer the prebuilt release instead:
+#   ./scripts/ci_install_eds.sh          # downloads v0.2.3+ .so/.dylib into .eds/
+#
+# Use this script only when the release dylib fails to load (historical macOS 27
+# LINKEDIT issue) or you need an unreleased bridge build.
 #
 # Usage:
 #   ./scripts/build_eds_bridge_dylib.sh
@@ -52,3 +55,4 @@ case "$(uname -s)" in
 esac
 
 echo "Wrote $OUT"
+echo "Prefer: ./scripts/ci_install_eds.sh  (prebuilt from edgesentry-rs releases)"
