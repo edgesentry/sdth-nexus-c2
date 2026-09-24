@@ -18,7 +18,7 @@ export interface OntologyState {
   tracks: Track[];
   observations: Observation[];
   amber_alert: AmberAlert | null;
-  pending_proposals: number;
+  pending_proposals: string[];
   inbox_depth: number;
 }
 
