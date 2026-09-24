@@ -7,7 +7,7 @@
 | Server | `app/c2_server.py` |
 | CLI | `uv run sdth-c2-server` |
 | Default base | `http://127.0.0.1:8080` (local) or `C2_BASE_URL` (Cloudflare HTTPS) |
-| Proof | `tests/unit/test_c2_server.py`, `tests/unit/test_c2_rest_contract.py`, `tests/integration/test_s2_c2_e2e.py` |
+| Proof | `tests/unit/test_c2_server.py`, `tests/unit/test_c2_rest_contract.py`, `tests/integration/test_s2_c2_e2e.py`, `tests/integration/test_archview_contract_e2e.py` |
 
 Screen 1 = command · Screen 2 = recipient. No BattlePlan required for Phase 2 demos.
 
@@ -24,11 +24,12 @@ Screen 1 = command · Screen 2 = recipient. No BattlePlan required for Phase 2 d
 | `GET` | `/api/recipient/inbox?unit_id=` | Pending approved taskings |
 | `POST` | `/api/recipient/ack` | Recipient ack sealed to audit chain |
 | `GET` | `/api/audit/trail` | OCSF-shaped hash-chain records |
+| `GET` | `/api/audit/health` | Hash-chain integrity summary (`verified` / `broken` / `count` / `label`) |
 | `POST` | `/api/admin/reset` | Clear in-memory runtime (tests / demos) |
 
 Operational (not frozen handshake): `GET /health`, `PUT /api/admin/audit/snapshot`, `POST /api/admin/audit/tamper|restore|reverify` (demo-only; `C2_DEMO_TAMPER=1`), `GET /static/fixtures/*` (demo evidence chips for BattlePlan) — see [Cloudflare Containers](../deploy.md) · [Demo Path F](../demo.md#demo-path-f-nexusgate-verification-webui-phase-2--issue-65-not-pitch-ui).
 
-Local Core enables CORS for NexusGate verify UI (`C2_CORS_ORIGINS`, default `localhost:3000`). Cloudflare Worker attaches CORS headers on all responses (including Bearer `401`).
+Local Core enables CORS for browser consoles (`C2_CORS_ORIGINS`; default includes `localhost:3000` NexusGate verify UI, `localhost:3001` ARCHVIEW Vite, and `localhost:5173` generic Vite). Prefer a Vite proxy for ARCHVIEW local dev; CORS is for direct-origin demos. Cloudflare Worker attaches CORS headers on all responses (including Bearer `401`).
 
 ## Handshake (curl)
 
@@ -469,6 +470,32 @@ Typical activity names in a full handshake: `coa_proposed` → `gate_decision` �
 
 ---
 
+## `GET /api/audit/health`
+
+No body. Same semantics as the NexusGate verify UI `_ocsf_health` pill, exposed as frozen REST so ARCHVIEW does not scrape `/verify`.
+
+### Response `200`
+
+```json
+{
+  "verified": true,
+  "broken": 0,
+  "count": 4,
+  "label": "0 of 4"
+}
+```
+
+| Field | Type | Notes |
+|-------|------|--------|
+| `verified` | boolean | `true` when the SHA-256 OCSF chain walks clean |
+| `broken` | number | Count of integrity errors (0 when verified) |
+| `count` | number | Total audit records (`verify_audit_chain` total) |
+| `label` | string | Display string, e.g. `"0 of 4"` / `"1 of 4"` |
+
+Vite proxy remains the preferred local path for ARCHVIEW; this endpoint is for the audit health pill (and direct-origin demos via CORS).
+
+---
+
 ## `POST /api/admin/reset`
 
 No body.
@@ -677,6 +704,19 @@ export C2_BASE_URL=http://127.0.0.1:8080
 ```
 
 Paths above are the frozen surface. UI clients must not invent alternate routes for Screen 1 / Screen 2 handshake.
+
+### ARCHVIEW connection
+
+ARCHVIEW (external repo, Vite on **`127.0.0.1:3001`**) talks to Core on **`:8080`** via the frozen REST above.
+
+| Topic | Guidance |
+|-------|----------|
+| Preferred local path | Vite `server.proxy` toward Core `:8080` (avoids CORS). Direct browser → Core is supported via default `C2_CORS_ORIGINS` (`:3001` included). |
+| Proxy collision | ARCHVIEW already proxies `/api` → its own evidence BFF (`:3102`). Do **not** replace that wholesale — use path splits (`/api/ontology/*`, `/api/gate/*`, `/api/audit/*`, `/api/recipient/*`, `/static/fixtures`) or a `/c2` prefix to Core (#95). |
+| Polling | 1–2 s poll of ontology / audit health. No WebSocket on Core for this epic. |
+| Field naming | Ontology amber object uses **`alert`**; Finding uses string **`amber_alert`**. Approve body uses **`operator_id`** (effector `unit_id` is set at proposals / inbox). |
+| TypeScript contract | Hand-written [`archview-types.ts`](archview-types.ts) — copy/import into ARCHVIEW; do not generate from `/openapi.json` (responses are still `dict[str, Any]`). |
+| Token seal | DecisionToken / OCSF chain use **SHA-256** digests for this epic (not Ed25519/BLAKE3). |
 
 !!! tip "Follow-up (Phase 3): Pydantic response models"
     Endpoints currently return ad-hoc `dict[str, Any]`, so `/openapi.json` lacks response schemas.

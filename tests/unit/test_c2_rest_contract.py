@@ -58,6 +58,7 @@ APPROVE_KEYS = {"status", "coa", "token"}
 INBOX_KEYS = {"unit_id", "taskings", "count"}
 ACK_KEYS = {"status", "ack", "audit_hash"}
 AUDIT_KEYS = {"count", "path", "records"}
+AUDIT_HEALTH_KEYS = {"verified", "broken", "count", "label"}
 AUDIT_RECORD_KEYS = {
     "class_name",
     "activity_name",
@@ -189,6 +190,15 @@ def test_frozen_contract_shapes(client: TestClient) -> None:
     assert tr["count"] >= 1
     for rec in tr["records"]:
         _assert_keys(rec, AUDIT_RECORD_KEYS, label="audit record")
+
+    health = client.get("/api/audit/health")
+    assert health.status_code == 200
+    hh = health.json()
+    _assert_keys(hh, AUDIT_HEALTH_KEYS, label="audit/health")
+    assert hh["verified"] is True
+    assert hh["broken"] == 0
+    assert hh["count"] == tr["count"]
+    assert hh["label"] == f"{hh['broken']} of {hh['count']}"
 
     reset = client.post("/api/admin/reset")
     assert reset.status_code == 200

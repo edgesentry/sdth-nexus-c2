@@ -132,8 +132,15 @@ def test_health_ok(client: TestClient) -> None:
     assert res.json() == {"status": "ok"}
 
 
-def test_cors_allows_nexusgate_verify_origin(client: TestClient) -> None:
-    origin = "http://localhost:3000"
+@pytest.mark.parametrize(
+    "origin",
+    [
+        "http://localhost:3000",
+        "http://127.0.0.1:3001",
+        "http://localhost:5173",
+    ],
+)
+def test_cors_allows_browser_console_origins(client: TestClient, origin: str) -> None:
     preflight = client.options(
         "/api/ontology/state",
         headers={

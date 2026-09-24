@@ -53,12 +53,15 @@ DEFAULT_INGRESS_REPLAY = _default_ingress_replay_path()
 
 app = FastAPI(title="NexusGate C2 Server", version="0.1.0")
 
-# Browser NexusGate verify UI (Phase 2 #65) — local Core. Cloudflare Worker adds CORS separately.
+# Browser NexusGate verify UI (:3000) + ARCHVIEW Vite (:3001) + generic Vite (:5173).
+# Cloudflare Worker adds CORS separately. Prefer Vite proxy for local ARCHVIEW (#95).
 _cors_origins = [
     o.strip()
     for o in os.environ.get(
         "C2_CORS_ORIGINS",
-        "http://127.0.0.1:3000,http://localhost:3000",
+        "http://127.0.0.1:3000,http://localhost:3000,"
+        "http://127.0.0.1:3001,http://localhost:3001,"
+        "http://127.0.0.1:5173,http://localhost:5173",
     ).split(",")
     if o.strip()
 ]
@@ -890,6 +893,20 @@ async def audit_trail() -> dict[str, Any]:
     runtime = get_runtime()
     records = runtime.audit.records()
     return {"count": len(records), "path": str(runtime.audit.path), "records": records}
+
+
+@app.get("/api/audit/health")
+async def audit_health() -> dict[str, Any]:
+    """Hash-chain integrity summary for ARCHVIEW audit pill (#93)."""
+    from app.verify_ui import _ocsf_health
+
+    full = _ocsf_health(get_runtime())
+    return {
+        "verified": full["verified"],
+        "broken": full["broken"],
+        "count": full["count"],
+        "label": full["label"],
+    }
 
 
 @app.put("/api/admin/audit/snapshot")

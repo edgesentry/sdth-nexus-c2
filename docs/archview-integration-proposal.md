@@ -16,7 +16,7 @@ This proposal evaluates whether to combine the codebases into a single monolithi
 **We recommend a decoupled integration model.** Rather than rewriting or folding all logic into a single repository, the project achieves maximum velocity and domain credibility by establishing a clear separation of concerns:
 
 * **Tactical Console (Front-End Lead / Defense Operations):** Focuses exclusively on the operator cockpit, military-grade map symbology, situational awareness presentation, and Rules of Engagement (ROE) workflow.
-* **C2 Core Engine (AI Platform / Systems Lead):** Serves as the sovereign, high-throughput verification backend executing sensor graph management, probabilistic contradiction detection, deterministic safety interlocks (<50 ms), cryptographic token sealing (Ed25519/BLAKE3), and field actuator communication.
+* **C2 Core Engine (AI Platform / Systems Lead):** Serves as the sovereign, high-throughput verification backend executing sensor graph management, probabilistic contradiction detection, deterministic safety interlocks (<50 ms), cryptographic token sealing (**SHA-256** DecisionToken / OCSF hash chain for this epic; Ed25519 is out of scope), and field actuator communication.
 
 ---
 
@@ -37,7 +37,7 @@ The stated design boundaries of both repositories demonstrate zero overlap and c
 | :--- | :--- | :--- |
 | **Primary Scope** | Evidence review, dark-themed BattlePlan map interface, manual review tracking. | Deterministic C2 governance bridging the Picture-to-Tasking handoff gap. |
 | **Documented Boundaries** | Explicitly excludes: military tasking, effector control, tactical fusion, strike impact, tamper-proof logging, guaranteed latency. | Directly implements: candidate COA generation, sub-50ms deterministic interlocks, sealed `DecisionToken`, OCSF audit chain, effector Ack loops. |
-| **Tech Stack** | Modern React, TypeScript, Leaflet, Lucide icons, Vite. | High-performance Python, FastAPI, Pydantic, Ed25519 / BLAKE3, DuckDB. |
+| **Tech Stack** | Modern React, TypeScript, Leaflet, Lucide icons, Vite (`127.0.0.1:3001`). | High-performance Python, FastAPI, Pydantic, SHA-256 OCSF chain, DuckDB. |
 | **Role in Pitch** | **Screen 1: Command Cockpit** (Visual centerpiece for VIP evaluators). | **C2 Governance Backbone** (The non-bypassable policy and audit spine). |
 
 ---
@@ -61,8 +61,8 @@ flowchart TB
         COA["Candidate COA Generator<br/>(e.g., APPROACH_PATROL)"]
         GATE["Deterministic Interlock Gate<br/>(Geofence, Kinematics, Speed &lt;50ms)"]
         HITL["Latency-Bounded Gate<br/>(30-Second Bounded Operator Window)"]
-        TOKEN["Sealed DecisionToken<br/>(Ed25519 Signed + Nonce)"]
-        OCSF[("OCSF Tamper-Proof Audit Journal<br/>(BLAKE3 Hash-Chain Ledger)")]
+        TOKEN["Sealed DecisionToken<br/>(SHA-256 digest)"]
+        OCSF[("OCSF Tamper-Proof Audit Journal<br/>(SHA-256 Hash-Chain Ledger)")]
     end
 
     subgraph ARCHVIEW_UI["ARCHVIEW Tactical Console (Screen 1 UI)"]
@@ -91,7 +91,7 @@ flowchart TB
     AMBER -.->|Finding Payload| ALERT
     HITL <==>|POST /api/gate/approve| REVIEW
     SEG -.->|Fixture / Chip URI| CHIPS
-    OCSF -.->|GET /api/audit/trail| AUDIT_PILL
+    OCSF -.->|GET /api/audit/health| AUDIT_PILL
 
     %% Backend to Field
     HITL -->|Operator Approved| TOKEN
@@ -104,31 +104,31 @@ flowchart TB
 
 ## 4. API Integration Surface
 
-The Tactical Console integrates with the C2 Core via clean, stateless REST interfaces:
+The Tactical Console integrates with the C2 Core via clean, stateless REST interfaces. Contract authority: [`docs/api/rest.md`](api/rest.md) and [`docs/api/archview-types.ts`](api/archview-types.ts). Core default base: **`http://127.0.0.1:8080`**.
 
 ### 4.1 Situational Picture & Ontology Stream
 * **Endpoint:** `GET /api/ontology/state`
 * **Consumer:** Tactical Console Map Layer.
-* **Payload:** Active tracks (kinematics, coordinates, history), raw observations, sensor modalities, and evidence URLs.
+* **Payload:** Active tracks (kinematics, coordinates, latest point), raw observations, sensor modalities, and evidence URLs. Ontology amber object uses field **`alert`** for the contradiction class.
 * **Behavior:** Renders friendly units (Blue force), suspected targets (Amber/Red force), and sensor coverage cones on the Leaflet map.
 
 ### 4.2 Amber Warning Picture & Proposals
 * **Endpoint:** `POST /api/gate/proposals` (or `POST /api/interpret`)
 * **Consumer:** Tactical Console Alert Bar and COA Proposal Card.
-* **Payload:** Discrepancy details (e.g., *Stationary AIS vs 20 kt Radar*, *Dual-SAR Vessel Anomaly*), confidence score, mismatch distance, and candidate Courses of Action (COAs).
+* **Payload:** Discrepancy details (e.g., *Stationary AIS vs 20 kt Radar*, *Dual-SAR Vessel Anomaly*), confidence score, mismatch distance, and candidate Courses of Action (COAs). Finding payloads use string key **`amber_alert`** for the contradiction class (distinct from the ontology amber object).
 * **Behavior:** Displays an Amber Alert banner demanding operator attention without collapsing disagreeing sensors into a speculative fused track.
 
 ### 4.3 Human-in-the-Loop (HITL) Gate Approval
 * **Endpoint:** `POST /api/gate/approve`
 * **Consumer:** Tactical Console Action Toolbar / Modal.
-* **Payload:** `{"coa_id": "<uuid>", "decision": "y" | "n", "unit_id": "<effector_id>"}`.
+* **Payload:** `{"coa_id": "<uuid>", "decision": "y" | "n", "operator_id": "<human_operator>"}`. Effector **`unit_id`** is set when queuing proposals / reading inbox — not on approve.
 * **Behavior:** Operator confirms the engagement within the bounded time window (e.g., 30s countdown). Sealing occurs exclusively within NexusGate Core.
 
 ### 4.4 Cryptographic Audit Trail
-* **Endpoint:** `GET /api/audit/trail`
+* **Endpoints:** `GET /api/audit/health` (pill), `GET /api/audit/trail` (full records)
 * **Consumer:** Tactical Console Security & Compliance Widget.
-* **Payload:** BLAKE3 hash-linked OCSF records, broken link count, latest token signature.
-* **Behavior:** Provides real-time proof to evaluators that all taskings and operator decisions are tamper-proof and non-repudiable.
+* **Payload:** Health returns `{ verified, broken, count, label }` over the SHA-256 OCSF hash chain. Trail returns full linked records when the operator drills in.
+* **Behavior:** Provides real-time proof to evaluators that all taskings and operator decisions are tamper-evident and non-repudiable.
 
 ---
 
@@ -137,7 +137,7 @@ The Tactical Console integrates with the C2 Core via clean, stateless REST inter
 | Functional Area | Assigned Lead | Core Deliverables |
 | :--- | :--- | :--- |
 | **Tactical Console & Operator UX** | **Defense Operations & Comms Lead** | • ARCHVIEW React front-end refinement.<br>• Tactical symbology (MIL-STD/APP-6 style).<br>• Operational scenario design and ROE validation.<br>• HITL countdown and approval UX. |
-| **C2 Engine & Platform Core** | **AI Platform Architect** | • FastAPI backend optimization and CORS configuration.<br>• `SpatialEntityGraph` and contradiction heuristics.<br>• Deterministic safety interlocks (<50 ms) & token sealing.<br>• OCSF tamper-proof audit chain with BLAKE3/Ed25519.<br>• Effector inbox/ack distribution API. |
+| **C2 Engine & Platform Core** | **AI Platform Architect** | • FastAPI backend optimization and CORS configuration.<br>• `SpatialEntityGraph` and contradiction heuristics.<br>• Deterministic safety interlocks (<50 ms) & SHA-256 token sealing.<br>• OCSF tamper-evident audit chain (`GET /api/audit/health`).<br>• Effector inbox/ack distribution API. |
 | **Geospatial & Sensor Fusion** | **Geospatial Analytics Lead** | • Singapore Strait traffic separation scheme (TSS) corridors.<br>• Coordinate frame harmonization (WGS84, SVY21).<br>• Sensor FOV geometry and clock-drift correction. |
 | **AI Inference & Object Detection** | **AI / Object Detection Lead** | • Dark vessel / UAV YOLO detection pipeline.<br>• Confidence scoring and Observation normalization. |
 | **Embedded Edge & Physical Effector** | **Embedded Hardware Lead** | • Screen 2: Raspberry Pi 5 node and physical actuator.<br>• Effector polling (`/api/recipient/inbox`) and execution Ack. |
@@ -153,13 +153,14 @@ flowchart LR
 ```
 
 ### Step 1: API Proxy & Type Contract
-* Configure the Tactical Console Vite development server to proxy `/api` requests directly to the C2 Core FastAPI server (port 8000).
-* Ensure schema compatibility between NexusGate's `Finding` / `SpatialEntityGraph` models and the TypeScript types in the console.
+* Configure the Tactical Console Vite development server (`127.0.0.1:3001`) to reach C2 Core FastAPI (**port 8080**). ARCHVIEW already proxies `/api` → its evidence BFF (`:3102`); use path splits or a `/c2` prefix so Core routes do not collide (#95).
+* Consume NexusGate [`docs/api/archview-types.ts`](api/archview-types.ts) for `Finding` / ontology / approve / audit health types (`operator_id`, `alert` vs `amber_alert`).
 
 ### Step 2: Tactical C2 UI Components
 * Implement the **Amber Warning Banner** in the console when a sensor discrepancy is detected.
 * Implement the **HITL Decision Card** featuring a visual countdown timer, lead intercept coordinates (Lat, Lon, Bearing, Speed, ETA), and Approve/Deny actions.
 * Connect the **Evidence Inspector** to preview dual-SAR imagery chips and optical bounding boxes served from the backend.
+* Wire the **Audit health pill** to `GET /api/audit/health`.
 
 ### Step 3: End-to-End Closed-Loop Verification
 * Run Hero Scenario S3 (Singapore Strait Shipping Lane Anomaly):
