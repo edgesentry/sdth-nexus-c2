@@ -8,11 +8,24 @@ Labels used across this repo. Prefer these over vague “real” / “fake”.
 | **Real-processed** | Upstream processes a real-world source; C2 receives the result indirectly |
 | **Assumed-mock** | Stand-in until the partner schema / endpoint is handed over (then becomes Real-processed) |
 
+## Operational sensor classes (4-tier)
+
+Singapore WOG maritime context — how feeds map to MOSAIC C2 ingress (not every class is live in-repo today):
+
+| Class | Examples | Role in MOSAIC |
+|-------|----------|----------------|
+| **1. Live / Current Observations** | AIS (MPA OCEANS-X, AISStream), VTIS / STRAITREP | Cooperative traffic and port context at $T \approx 0$ |
+| **2. Historical / Retrospective Evidence** | Satellite SAR `CandidateEvent` anomalies, Sentinel-1 CV detection (SIA) | Dark-vessel / corridor cues at $T - \Delta t$ |
+| **3. Recorded Sensor Data** | Singapore Maritime Dataset (SMD) visible & NIR camera surveillance | Pitch realism / replay; not required for deterministic gate |
+| **4. Synthetic Exercise Inputs** | Controlled coastal radar disagreement fixtures | Deterministic demo contradictions (S1–S3) |
+
+Labels in the inventory below remain **Synthetic / Real-processed / Assumed-mock** for audit clarity.
+
 ## Inventory
 
 | Data | Provenance | Path | Pitch role |
 |------|------------|------|------------|
-| Social / OSINT text | **Synthetic** (Phase 2 `osint_text` #59) or **External Service** (production target) | S2 scenario (`app/adapters/osint_text.py`) | S2 “3 vs 1” contradiction; early cueing |
+| Social / OSINT text | **Synthetic** (Phase 2 `osint_text` #59) or **External Service** (production target) | S2 scenario (`app/adapters/osint_text.py`) | Non-pitch stretch; discrepancy mechanism reused by S1/S3 |
 | Gap-filler radar | **Synthetic** | S1–S3 scenarios | Count / bearing mismatch |
 | EO / blur | **Synthetic** | S1, S2 scenarios | Low-confidence visual |
 | RF / ADS-B | **Synthetic** | S1, S2 scenarios | Silent / empty sector |
@@ -36,12 +49,12 @@ Labels used across this repo. Prefer these over vague “real” / “fake”.
 
 No C2 application RDB. Persistent AIS is decoupled to Indago/SIA, and raw OSINT ingestion/crawling is decoupled to external Threat Intel pipelines. C2 consumes only normalized Observation tracks and structured event claims via adapters.
 
-## UI boundary
+## UI boundary (dual-tier)
 
 | Name | Role | Location |
 |------|------|----------|
-| **BattlePlan** | External pitch UI | **Outside this repo** |
-| **Verification WebUI** | Inspect NexusGate Screen 1/2 (not for pitch); Phase 2 [#65](https://github.com/edgesentry/sdth-nexus-c2/issues/65) | Core `/verify` (Jinja2/HTMX) |
+| **BattlePlan (Tactical Map Cockpit)** | External MapLibre/React pitch UI | **Outside this repo** — consumes frozen REST (`/api/gate/proposals`, `/api/gate/approve`, `/api/recipient/inbox`, `/api/recipient/ack`) |
+| **Verification WebUI (`/verify`)** | Inspect NexusGate Screen 1/2 (not for pitch); Phase 2 [#65](https://github.com/edgesentry/sdth-nexus-c2/issues/65) | Core `/verify` (Jinja2/HTMX) |
 | TUI / curl / scripts | Automation and cold-start | This repo |
 
-Pitch screens can be fed by: Synthetic (OSINT + tactical sensors) + Real-processed (AIS / SIA SAR + optional live open-feed [#70](https://github.com/edgesentry/sdth-nexus-c2/issues/70)) + Assumed-mock GLINT (swap to live on Day 1). Live coastal radar / tactical EO remain Phase 5 — not required for the pitch narrative.
+Pitch screens can be fed by: Synthetic (tactical sensors + OSINT stretch) + Real-processed (AIS / SIA SAR + optional live open-feed [#70](https://github.com/edgesentry/sdth-nexus-c2/issues/70)) + Assumed-mock GLINT (swap to live on Day 1). Live coastal radar / tactical EO remain Phase 5 — not required for the pitch narrative.

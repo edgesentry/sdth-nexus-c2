@@ -8,9 +8,9 @@ Phase 2 demos use **curl / scripts / two laptops**, plus the optional **NexusGat
 
 ```bash
 uv sync
-./scripts/demo.sh                 # default SCENARIO=S1
-SCENARIO=S2 ./scripts/demo.sh
-uv run python -m app.main --scenario S3 --stub --yes
+./scripts/demo.sh                 # default SCENARIO=S3 (maritime hero)
+SCENARIO=S1 ./scripts/demo.sh     # port clearance baseline
+SCENARIO=S2 ./scripts/demo.sh     # non-pitch stretch
 ```
 
 ### Pitch-day all-in-one runner (issue #75)

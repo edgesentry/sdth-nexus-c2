@@ -1,4 +1,4 @@
-"""NexusGate Verify UI (Jinja2/HTMX) — Phase 2 #65."""
+"""MOSAIC C2 Verify UI (Jinja2/HTMX) — Phase 2 #65."""
 
 from __future__ import annotations
 
@@ -21,17 +21,17 @@ def client(tmp_path: Path) -> TestClient:
 def test_verify_hub_and_screens(client: TestClient) -> None:
     hub = client.get("/verify")
     assert hub.status_code == 200
-    assert b"NexusGate Verify" in hub.content
+    assert b"MOSAIC C2 Verify" in hub.content
     assert b"FastAPI + Jinja2/HTMX" in hub.content
 
     cmd = client.get("/verify/command")
     assert cmd.status_code == 200
     assert b"Screen 1" in cmd.content
+    assert b"S3 (maritime hero)" in cmd.content
 
     recv = client.get("/verify/recipient")
     assert recv.status_code == 200
     assert b"Screen 2" in recv.content
-
 
 def test_verify_path_f_handshake(client: TestClient) -> None:
     proposed = client.post(

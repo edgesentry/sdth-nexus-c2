@@ -2,13 +2,15 @@
 
 This document provides definitive answers to operational, architectural, and procurement questions anticipated from senior defense evaluators (**MINDEF Leadership, RSAF Chief of Air Force, Chief Defence Scientist, and DSTA C4I Directors**) during SDTH 2026.
 
+**MOSAIC C2** is the Challenge 04 application identity; **NexusGate** is the deterministic verification engine (`core/`) that seals tasking. Pitch scope is **100% maritime** under Singapore WOG coordination (SMCC / MSTF, SPF PCG → RSN, MPA VTIS/STRAITREP).
+
 ---
 
 ## 1. Strategic & Operational Positioning
 
 ### Q1.1: Does NexusGate replace existing military C2 systems (e.g. Link 16, Command Centers, US/NATO C4I)?
 **No. NexusGate does not replace sovereign C2 systems.**  
-NexusGate operates as a **deterministic safety interlock and governance gateway** positioned upstream of tactical effectors and adjacent to existing C4I networks:
+NexusGate (inside MOSAIC C2) operates as a **deterministic safety interlock and governance gateway** positioned upstream of tactical effectors and adjacent to existing C4I networks:
 
 ```mermaid
 flowchart LR

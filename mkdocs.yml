@@ -1,5 +1,5 @@
 site_name: sdth-nexus-c2
-site_description: SDTH 2026 PS 04 — NexusGate C2 closed loop (disagreeing sensors → Warning Picture → HITL gate → Ack).
+site_description: "SDTH 2026 PS 04 — MOSAIC C2 (Powered by NexusGate Core): disagreeing sensors → Warning Picture → HITL gate → Ack."
 site_url: https://edgesentry.github.io/sdth-nexus-c2/
 repo_url: https://github.com/edgesentry/sdth-nexus-c2
 repo_name: edgesentry/sdth-nexus-c2

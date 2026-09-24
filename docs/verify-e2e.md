@@ -259,7 +259,7 @@ NexusGate solves this operational dilemma across three decoupled tiers:
 
 | Check | Pass |
 |-------|------|
-| Hub | `/verify` shows **NexusGate Verify** |
+| Hub | `/verify` shows **MOSAIC C2 Verify** |
 | S2 loop | Propose → Approve → Screen 2 Ack within a few seconds |
 | Dual-SAR fixture | `source=dual_sar`, evidence under `/static/fixtures/` |
 | SAR mode compare | After Reset: SIA (2 + length + chip) ≠ GLINT (1 + cluster, no chip) ≠ Dual-SAR (`DUAL_SAR` + `corroborated` + conf≈0.98) — see [Compare SAR ingress modes](#compare-sar-ingress-modes-results-must-differ) |

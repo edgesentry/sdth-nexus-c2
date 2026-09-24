@@ -1,16 +1,18 @@
-# sdth-nexus-c2
+# MOSAIC C2 — Powered by NexusGate Core
 
 > **Deterministic Command-and-Control (C2) governance engine bridging the Picture-to-Tasking gap.**  
 > Built for SDTH 2026 **PS 04 — One Picture, Many Eyes**.
+
+**MOSAIC** is the application identity for Challenge 04: composable, heterogeneous sensor/effector tiles into a unified picture (Mosaic Warfare). **NexusGate** (`core/`) remains the sovereign-neutral, deterministic verification engine that seals tasking.
 
 [![Docs Site](https://img.shields.io/badge/docs-edgesentry.github.io%2Fsdth--nexus--c2-blue)](https://edgesentry.github.io/sdth-nexus-c2/)
 
 ---
 
-### 💡 Executive Summary (At a Glance)
+### Executive Summary (At a Glance)
 
 * **What is it?** A C2 governance engine that ingests conflicting sensor feeds, surfaces an **Amber Warning Picture** instead of collapsing data into hallucinated tracks, and deterministically gates actionable tasking to effectors with a cryptographically sealed audit trail.
-* **Whose problem?** Operational commanders and C4 evaluators (**DSTA / MINDEF·SAF C4I / MDA**).
+* **Whose problem?** Singapore Whole-of-Government (WOG) maritime security coordinators and C4 evaluators (**SMCC / MSTF**, **DSTA / MINDEF·SAF C4I / MDA**).
 * **Which problem?** The **Picture-to-Tasking gap**: operators see merged pictures, but systems fail when tasking real effectors—leading to either dangerous hallucinated tracks from over-fusion or unverified verbal orders without an audit trail.
 * **How is it solved?** **Two-Layer Architecture**:
   1. **Probabilistic Layer (`app/`)**: Detects sensor contradictions and constructs a Warning Picture with candidate Courses of Action (COAs).
@@ -40,6 +42,19 @@ Modern multi-domain operations already have access to merged sensor pictures. Sy
 
 > *We don’t just fuse the picture. We govern the action with deterministic certainty.*
 
+### Singapore WOG maritime framework
+
+MOSAIC C2 workflows are grounded in Singapore’s inter-agency maritime security structure:
+
+| Actor | Role in the picture-to-tasking loop |
+|-------|-------------------------------------|
+| **SMCC / MSTF** | Singapore Maritime Crisis Centre & Maritime Security Task Force — coordinate cross-agency response |
+| **SPF PCG** | Police Coast Guard — first line (patrols, vessel checks, coastal radar & EO/IR) |
+| **RSN** | Republic of Singapore Navy — escalation for show of force and interdiction |
+| **MPA** | Maritime and Port Authority — VTIS / STRAITREP vessel traffic and port context |
+
+**Cross-Team Coordination & Handoff (Value Proposition #5):** an initial interceptor unit can pass tracking and tasking state to an escalating military or secondary response unit via frozen REST (`unit_id` inbox / Ack) with an immutable OCSF audit trail — without inventing a shared fused track.
+
 Full planning context: [`docs/plan.md`](docs/plan.md).
 
 ---
@@ -61,20 +76,22 @@ Closed-loop narrative: [`docs/architecture/index.md`](docs/architecture/index.md
 
 ## 3. Operational Scenarios
 
+Pitch scope is **100% maritime** (Singapore Strait). Hierarchy:
+
 | ID | Domain & Focus | Sensor Contradiction | Deterministic Tasking |
 |----|----------------|----------------------|-----------------------|
-| **S1** | **Sea Approach** (Clearance) | Stationary AIS vs. ~20 kt coastal radar/EO | `ISR_IDENTIFY_CONTACT` |
-| **S2** | **Air Corridor** (Primary Hero) | Social media claims "3 drones" vs. radar "1 track" + bearing mismatch | `CUE_AND_IDENTIFY`<br/>*(strictly non-kinetic)* |
-| **S3** | **Shipping Lane** (Maritime Hero) | Space SAR cluster vs. AIS silence / coastal radar joined via kinematics | `APPROACH_PATROL` |
+| **S3** | **Shipping Lane** (*Primary Hero*) | Dual-SAR anomaly (macro scene difference + Sentinel-1 ship detection) × 2 Hz coastal radar via dead-reckoning reachability — no shared MMSI | `APPROACH_PATROL` |
+| **S1** | **Sea Approach** (Port clearance) | Stationary AIS vs. ~20 kt coastal radar/EO | `ISR_IDENTIFY_CONTACT` |
+| ⛔ **S2** | **Air Corridor** (non-pitch stretch) | Social “3 drones” vs radar “1 track” + bearing mismatch — retained for CI / domain-agnostic discrepancy mechanism | `CUE_AND_IDENTIFY`<br/>*(strictly non-kinetic)* |
 
-Scenario details: [`docs/scenarios.md`](docs/scenarios.md). Data provenance (Synthetic / Real-processed / Assumed-mock): [`docs/data-provenance.md`](docs/data-provenance.md).
+Scenario details: [`docs/scenarios.md`](docs/scenarios.md). Data provenance (4-tier sensor classes + Synthetic / Real-processed / Assumed-mock): [`docs/data-provenance.md`](docs/data-provenance.md).
 
 ---
 
 ## 4. Architecture & Topology
 
 ```text
-Laptop Screen 1: Command Cockpit             NexusGate C2 Core (Local / Cloudflare)         Laptop Screen 2: Field Recipient
+Laptop Screen 1: Command Cockpit             MOSAIC C2 / NexusGate Core (Local / Cloudflare)  Laptop Screen 2: Field Recipient
   - Operator / Commander UI (or TUI)    →      - Ingest & SpatialEntityGraph              ←    - GET /api/recipient/inbox
   - POST /api/gate/proposals (COA)     →      - Deterministic Interlocks (<50ms)         →    - POST /api/recipient/ack
   - POST /api/gate/approve (Operator)  →      - Sealed DecisionToken & OCSF Audit        →    - Optional Effector (USV mock)
@@ -82,12 +99,12 @@ Laptop Screen 1: Command Cockpit             NexusGate C2 Core (Local / Cloudfla
 
 ### Roles
 * **Screen 1 (Command Cockpit):** Operational commander workstation to review Amber Findings, inspect COAs, and issue approvals.
-* **NexusGate Core:** High-speed deterministic core (graph, kinematics, interlocks, token sealing, audit).
+* **NexusGate Core:** High-speed deterministic core (graph, kinematics, interlocks, token sealing, audit) powering MOSAIC C2.
 * **Screen 2 (Field Recipient / Effector):** Tactical edge node that polls the inbox, receives sealed tokens, executes orders, and returns an authenticated `Ack`.
 
-### UI Boundary & Live Verification Harness
-* **In-Repo Verification Harness (`/verify`):** Embedded Jinja2/HTMX web harness served directly on Core (`:8080`) providing live Screen 1 (`/verify/command`) and Screen 2 (`/verify/recipient`) interfaces for functional verification.
-* **BattlePlan Pitch UI:** The external presentation-grade Next.js tactical interface resides in a **separate repository** and consumes this Core's frozen REST contract.
+### Dual-tier UI boundary
+* **In-Repo Verification Harness (`/verify`):** Standalone Jinja2/HTMX harness on Core (`:8080`) — Screen 1 (`/verify/command`) and Screen 2 (`/verify/recipient`) for CLI and end-to-end testing. Zero dependency on the pitch UI.
+* **Tactical Map Cockpit (BattlePlan):** External MapLibre/React C2 dashboard in a **separate repository**. Integrates via the frozen REST contract (`/api/gate/proposals`, `/api/gate/approve`, `/api/recipient/inbox`, `/api/recipient/ack`). Real-time WebSocket events are a BattlePlan concern; this repo’s authority boundary is the REST contract.
 
 | Screen 1: Command Cockpit (`/verify/command`) | Screen 2: Field Recipient (`/verify/recipient`) |
 |:---:|:---:|
@@ -126,14 +143,14 @@ Run directly using `uv` with pre-packaged fixtures:
 ```bash
 uv sync
 
-# Run S1 (Sea approach)
+# Default: S3 maritime hero (Shipping Lane / Dual-SAR × coastal radar)
 ./scripts/demo.sh
 
-# Run S2 (Air corridor hero scenario)
-SCENARIO=S2 ./scripts/demo.sh
+# Port clearance baseline
+SCENARIO=S1 ./scripts/demo.sh
 
-# Run S3 with stubs and auto-approval
-uv run python -m app.main --scenario S3 --stub --yes
+# Non-pitch stretch (air corridor; CI / architecture only)
+SCENARIO=S2 ./scripts/demo.sh
 ```
 
 ### Step 2: Interactive Verification Harness (Screen 1 → Core → Screen 2)
@@ -145,9 +162,9 @@ uv run sdth-c2-server
 ```
 
 1. Open **Screen 1 (Command)** in your browser: `http://127.0.0.1:8080/verify/command`
-   * Click **Propose S2** → Review amber contradiction → Click **Approve**.
+   * Select **S3** (default) → **Propose** → Review amber contradiction → **Approve**.
 2. Open **Screen 2 (Recipient)**: `http://127.0.0.1:8080/verify/recipient`
-   * View dispatched `DecisionToken` in inbox → Click **Ack**.
+   * View dispatched `DecisionToken` in inbox → **Ack**.
 3. Observe real-time OCSF audit log updated with `recipient_ack`.
 
 *One-shot script equivalent:* `./scripts/picture_to_tasking.sh`
@@ -180,7 +197,7 @@ uv run pytest tests/integration/ -v -m integration
 # Latency & gate verification benchmark (Slide 11 proof: <50ms gate + Ack audit)
 uv run python scripts/benchmark.py
 
-# Pitch-day all-in-one narrative (S2 → S3 → Slide 11; issue #75)
+# Pitch-day all-in-one narrative (S3 hero → S1; issue #75)
 ./scripts/demo_pitch_run.sh
 ```
 
@@ -192,7 +209,7 @@ uv run python scripts/benchmark.py
 
 * **Deterministic Gate Authority:** Probabilistic models / LLMs may only propose candidate COAs; **only the deterministic NexusGate** can seal a `DecisionToken`.
 * **Harness Scope:** `/verify` is a functional test harness (Jinja2/HTMX), not a full production GIS map.
-* **Non-Kinetic Scope:** Scenario S2 cues identification only; kinetic engagements are strictly excluded.
+* **Non-Kinetic Scope:** Scenario S2 (non-pitch) cues identification only; kinetic engagements are strictly excluded.
 * **In-Memory Architecture:** C2 Core maintains state in-memory with append-only JSONL audit logs. AIS historical tracking is delegated to SIA SQLite.
 
 ---

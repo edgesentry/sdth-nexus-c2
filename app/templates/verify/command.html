@@ -1,6 +1,6 @@
 {% extends "verify/base.html" %}
 {% set active = "command" %}
-{% block title %}NexusGate Verify · Command{% endblock %}
+{% block title %}MOSAIC C2 Verify · Command{% endblock %}
 {% block status %}pending {{ pending_ids|length }} · obs {{ obs_count }} · inbox {{ inbox_depth }}{% endblock %}
 {% block body %}
 <div class="grid">
@@ -9,9 +9,9 @@
     <form method="post" action="/verify/command/propose" class="controls">
       <label>Scenario
         <select name="scenario_id">
-          <option value="S1" {% if scenario_id == "S1" %}selected{% endif %}>S1</option>
-          <option value="S2" {% if scenario_id == "S2" %}selected{% endif %}>S2 (hero amber)</option>
-          <option value="S3" {% if scenario_id == "S3" %}selected{% endif %}>S3 (maritime / SAR)</option>
+          <option value="S1" {% if scenario_id == "S1" %}selected{% endif %}>S1 (port clearance)</option>
+          <option value="S2" {% if scenario_id == "S2" %}selected{% endif %}>S2 (non-pitch stretch)</option>
+          <option value="S3" {% if scenario_id == "S3" %}selected{% endif %}>S3 (maritime hero)</option>
         </select>
       </label>
       <label>Unit ID

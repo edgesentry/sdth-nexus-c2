@@ -1,6 +1,8 @@
-# sdth-nexus-c2
+# MOSAIC C2 — Powered by NexusGate Core
 
 SDTH 2026 **PS 04 — One Picture, Many Eyes**: disagreeing sensors → **Warning Picture** → latency-bounded HITL → effector Ack.
+
+**MOSAIC** is the Challenge 04 application identity; **NexusGate** (`core/`) is the deterministic verification engine.
 
 > We don’t just fuse the picture. We govern the action with deterministic certainty.
 
@@ -17,9 +19,9 @@ flowchart LR
 
 | Scenario | One-line |
 |----------|----------|
-| **S1** | Clearance — spoofed AIS vs radar / EO blur |
-| **S2** | Shadow Intruder — social OSINT count vs radar (cue & identify) |
-| **S3** | Dark Vessel — space SAR cluster vs AIS silence |
+| **S3** | *Primary Hero* — Dual-SAR × coastal radar (Shipping Lane / dark vessel) |
+| **S1** | Port clearance — spoofed AIS vs radar / EO blur |
+| ⛔ **S2** | Non-pitch stretch — social OSINT count vs radar (CI / architecture only) |
 
 | Path | Role |
 |------|------|
@@ -51,9 +53,9 @@ CLI demo (no long-running server):
 
 ```bash
 uv sync
-./scripts/demo.sh                 # default SCENARIO=S1
-SCENARIO=S2 ./scripts/demo.sh
-uv run python -m app.main --scenario S3 --stub --yes
+./scripts/demo.sh                 # default SCENARIO=S3 (maritime hero)
+SCENARIO=S1 ./scripts/demo.sh     # port clearance baseline
+SCENARIO=S2 ./scripts/demo.sh     # non-pitch stretch
 ```
 
 REST Core + verification WebUI (one process):
@@ -77,8 +79,8 @@ uv run python scripts/benchmark.py   # gate / ack / audit proof (pitch Slide 11)
 
 - Probabilistic proposes; **deterministic gate** alone seals tokens
 - Scenario detectors remain deterministic rules (LLM is optional overlay)
-- **UI Boundary:** `/verify` (Jinja2/HTMX on Core) and console TUI are **verification harnesses only**. **BattlePlan** (external pitch UI) lives **outside this repository**. In-repo WebUI is demo-grade (no full map / GIS); dual-key Tier 2 not implemented
-- Kinetic intercept is **not** claimed (S2 cues identify only)
+- **UI Boundary:** `/verify` (Jinja2/HTMX on Core) and console TUI are **verification harnesses only**. **BattlePlan** (external MapLibre/React tactical cockpit) lives **outside this repository** and consumes the frozen REST contract. In-repo WebUI is demo-grade (no full map / GIS); dual-key Tier 2 not implemented
+- Kinetic intercept is **not** claimed (S2, non-pitch, cues identify only)
 - C2 has **no application DB** — runtime is in-memory; audit is jsonl; AIS persistence is decoupled to Indago (DuckDB) and [Sentinel-Imagery-Analysis](architecture/sar_pipeline.md) (SIA) SQLite; C2 consumes current tracks via adapters
 
 Site: [edgesentry.github.io/sdth-nexus-c2](https://edgesentry.github.io/sdth-nexus-c2/) · Repo: [edgesentry/sdth-nexus-c2](https://github.com/edgesentry/sdth-nexus-c2)
