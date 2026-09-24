@@ -26,7 +26,7 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 router = APIRouter(tags=["verify-ui"])
 
 DEFAULT_UNIT = "CUE-NODE-01"
-DEFAULT_SCENARIO = "S2"
+DEFAULT_SCENARIO = "S3"
 DEFAULT_TIMEOUT = 30.0
 
 

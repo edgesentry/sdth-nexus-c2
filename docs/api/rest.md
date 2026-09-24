@@ -39,7 +39,7 @@ uv run sdth-c2-server
 
 curl -s -X POST localhost:8080/api/gate/proposals \
   -H 'content-type: application/json' \
-  -d '{"scenario_id":"S2","unit_id":"CUE-NODE-01"}'
+  -d '{"scenario_id":"S3","unit_id":"CUE-NODE-01"}'
 
 curl -s -X POST localhost:8080/api/gate/approve \
   -H 'content-type: application/json' \

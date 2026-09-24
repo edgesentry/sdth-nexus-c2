@@ -77,7 +77,7 @@ if FIXTURES_DIR.is_dir():
         name="fixtures",
     )
 
-# NexusGate Verify harness assets (Phase 2 #65) — CSS for Jinja2/HTMX UI.
+# MOSAIC C2 Verify harness assets (Phase 2 #65) — CSS for Jinja2/HTMX UI.
 if VERIFY_STATIC.is_dir():
     app.mount(
         "/static/verify",

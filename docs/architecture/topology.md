@@ -1,21 +1,23 @@
 # Topology
 
-**Input and Ack stay on laptops.** Core runs locally (`sdth-c2-server`) or, in Phase 2, on **Cloudflare Containers** with the same REST paths.
+**Input and Ack stay on laptops.** MOSAIC C2 / NexusGate Core runs locally (`sdth-c2-server`) or, in Phase 2, on **Cloudflare Containers** with the same REST paths.
 
 ```text
-Laptop Screen 1: Command Cockpit             NexusGate C2 Core (Local / Cloudflare)         Laptop Screen 2: Field Recipient
-  - Next.js UI / TUI / curl            →      - Ingest & SpatialEntityGraph              ←    - GET /api/recipient/inbox
+Laptop Screen 1: Command Cockpit             MOSAIC C2 / NexusGate Core (Local / CF)         Laptop Screen 2: Field Recipient
+  - BattlePlan / TUI / curl /verify    →      - Ingest & SpatialEntityGraph              ←    - GET /api/recipient/inbox
   - POST /api/gate/proposals (COA)     →      - Deterministic Interlock & Gate (<50ms)   →    - POST /api/recipient/ack
   - POST /api/gate/approve (Operator)  →      - Sealed DecisionToken & OCSF Audit        →    - [Optional] mock effector / USV
 ```
 
 | Role | Where | What |
 |------|-------|------|
-| **Screen 1 (Command)** | Laptop | BattlePlan Next.js UI / TUI / curl, operator approval/denial |
-| **C2 Core** | Local *or* Cloudflare | `app/c2_server.py` — ontology graph, gate, token sealing, inbox, OCSF audit |
+| **Screen 1 (Command)** | Laptop | BattlePlan (external MapLibre/React) / TUI / curl / in-repo `/verify`, operator approval/denial |
+| **C2 Core** | Local *or* Cloudflare | `app/c2_server.py` — ontology graph, gate, token sealing, inbox, OCSF audit (NexusGate engine) |
 | **Screen 2 (Recipient)** | Laptop | Recipient node polling inbox (`/api/recipient/inbox`) and submitting signed Ack (`/api/recipient/ack`). Runs as a **separate OS process** so the Ack is genuinely received. ~~RasPi GPIO blink (#20)~~ **excluded from the demo path (2026-09-17)** |
 
-Phase 2 cold-start curl rehearsal (two laptops / two terminals, no UI): [Demo Path A](../demo.md#demo-path-a-two-laptop-two-terminal-io-issue-17). Phase 2 NexusGate verification UI ([#65](https://github.com/edgesentry/sdth-nexus-c2/issues/65)): [Demo Path F](../demo.md#demo-path-f-nexusgate-verification-webui-phase-2--issue-65-not-pitch-ui) (`/verify` on Core). Plan context: [§4.2 Cloudflare Containers](../plan.md#42-cloudflare-containers-phase-2).
+**Dual-tier UI:** `/verify` is the zero-dependency verification harness on Core; BattlePlan is the external tactical map cockpit that consumes the frozen REST contract only.
+
+Phase 2 cold-start curl rehearsal (two laptops / two terminals, no UI): [Demo Path A](../demo.md#demo-path-a-two-laptop-two-terminal-io-issue-17). Phase 2 MOSAIC C2 verification UI ([#65](https://github.com/edgesentry/sdth-nexus-c2/issues/65)): [Demo Path F](../demo.md#demo-path-f-nexusgate-verification-webui-phase-2--issue-65-not-pitch-ui) (`/verify` on Core). Plan context: [§4.2 Cloudflare Containers](../plan.md#42-cloudflare-containers-phase-2).
 
 ## Cloudflare (Phase 2)
 
