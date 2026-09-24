@@ -170,6 +170,7 @@ Browser Screen 1 / Screen 2 served by Core itself (Jinja2/HTMX at `/verify`). **
 **SIA server is not required** for this path — Screen 1 “Ingress Sentinel / Dual-SAR fixture” uses repo fixtures. Live SIA (`:5050`) / GLINT mock (`:5051`) are optional. Details: [E2E verification](verify-e2e.md).
 
 ```bash
+export C2_DEMO_TAMPER=1   # enable Audit integrity Inject / Restore / Re-verify (#88)
 uv run sdth-c2-server
 # open http://127.0.0.1:8080/verify
 # Screen 1: /verify/command · Screen 2: /verify/recipient (two tabs)
@@ -180,6 +181,7 @@ uv run sdth-c2-server
 | 1 | Screen 1 `/verify/command` | Propose `S3` (default / maritime hero) → Approve |
 | 2 | Screen 2 `/verify/recipient` | Auto-poll inbox (HTMX 2s) → Ack |
 | 3 | Optional | Screen 1 → **Ingress SIA only** / **GLINT only** / **Dual-SAR (both)** → compare Ontology + evidence (expected diffs: [verify-e2e.md](verify-e2e.md#compare-sar-ingress-modes-results-must-differ)) |
+| 4 | Optional (`C2_DEMO_TAMPER=1`) | Header **Audit integrity** → **Inject 1-char tamper** → pill warns `hash mismatch` → **Restore** → `0 of n` ([rehearsal](verify-e2e.md#tamper-detection-rehearsal-88)) |
 
 Invariant: the UI never seals tokens — only Core `POST /api/gate/approve` does.
 

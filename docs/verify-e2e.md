@@ -60,6 +60,23 @@ Optional on Screen 1 (still no SIA server):
 
 Hub: http://127.0.0.1:8080/verify
 
+### Tamper detection rehearsal (#88)
+
+After a closed loop (Propose → Approve → Ack), show that a 1-character edit of the sealed OCSF trail is caught. Requires the demo gate:
+
+```bash
+export C2_DEMO_TAMPER=1
+uv run sdth-c2-server
+```
+
+On any `/verify` screen, the **Audit integrity** panel shows `OCSF Hash Chain: broken links 0 of n` and three actions:
+
+1. **Inject 1-char tamper** — flips one character in a sealed record (same semantics as `scripts/demo_tamper_detection.py`); pill turns warn (`hash mismatch @ record[i]`).
+2. **Re-verify** — re-walks the SHA-256 chain; when an EDS sidecar is present, also runs out-of-process `eds audit verify-chain` (`CHAIN_VALID` / fail).
+3. **Restore** — writes back the pre-tamper snapshot; status returns to `0 of n`.
+
+Never claim “100% integrity” — always report broken-link counts (KPI #5). CLI-only equivalent: `uv run python scripts/demo_tamper_detection.py`.
+
 ### Macro vs micro SAR — when to use which
 
 Both feeds are **space-based SAR**, but they answer different operator questions. Full architecture: [SAR Pipeline §2.3 Dual-SAR Synergy](architecture/sar_pipeline.md#23-dual-sar-synergy-temporal-kinematic-bridge). Provenance / pitch roles: [Data provenance](data-provenance.md) (GLINT = S3 **macro**, SIA = S3 **micro**) · [Scenarios S3](scenarios.md).

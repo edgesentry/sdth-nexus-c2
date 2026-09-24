@@ -121,3 +121,48 @@ def test_verify_ui_lead_poi_card_also_on_s2(c2_client: TestClient) -> None:
     assert b"poi-card" in proposed.content
     assert b"OCSF Hash Chain: broken links" in proposed.content
     assert b"OSINT: 3 UAVs (Telegram)" in proposed.content
+
+
+def test_verify_ui_tamper_detection_rehearsal(
+    c2_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Path F + interactive tamper panel: inject → broken → restore (#88)."""
+    monkeypatch.setenv("C2_DEMO_TAMPER", "1")
+    c2_client.post("/api/admin/reset")
+
+    proposed = c2_client.post(
+        "/verify/command/propose",
+        data={"scenario_id": "S2", "unit_id": "CUE-NODE-01"},
+    )
+    assert proposed.status_code == 200
+    coa_id = _coa_id_from_html(proposed.text)
+    assert b"Inject 1-char tamper" in proposed.content
+
+    approved = c2_client.post(
+        "/verify/command/approve",
+        data={
+            "coa_id": coa_id,
+            "decision": "y",
+            "unit_id": "CUE-NODE-01",
+            "scenario_id": "S2",
+        },
+    )
+    assert approved.status_code == 200
+
+    acked = c2_client.post(
+        "/verify/recipient/ack",
+        data={"coa_id": coa_id, "unit_id": "CUE-NODE-01"},
+    )
+    assert acked.status_code == 200
+    assert b"pill-ok" in acked.content
+
+    tampered = c2_client.post("/verify/audit/tamper")
+    assert tampered.status_code == 200
+    assert b"pill-warn" in tampered.content
+    assert b"hash mismatch" in tampered.content
+    assert b"broken links 1 of" in tampered.content
+
+    restored = c2_client.post("/verify/audit/restore")
+    assert restored.status_code == 200
+    assert b"pill-ok" in restored.content
+    assert b"broken links 0 of" in restored.content

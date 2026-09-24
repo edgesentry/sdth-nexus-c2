@@ -175,3 +175,58 @@ def test_admin_audit_snapshot_hydrates_chain(client: TestClient) -> None:
     assert restored.status_code == 200
     assert restored.json()["count"] == len(snapshot)
     assert client.get("/api/audit/trail").json()["records"] == snapshot
+
+
+def _seal_closed_loop(client: TestClient) -> None:
+    proposed = client.post(
+        "/api/gate/proposals",
+        json={"scenario_id": "S2", "unit_id": "CUE-NODE-01"},
+    )
+    assert proposed.status_code == 200
+    coa_id = proposed.json()["coa"]["coa_id"]
+    approved = client.post(
+        "/api/gate/approve",
+        json={"coa_id": coa_id, "decision": "y", "operator_id": "test"},
+    )
+    assert approved.status_code == 200
+    acked = client.post(
+        "/api/recipient/ack",
+        json={"coa_id": coa_id, "unit_id": "CUE-NODE-01", "message": "ack"},
+    )
+    assert acked.status_code == 200
+
+
+def test_admin_audit_tamper_restore_reverify(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Admin JSON tamper → broken → restore → 0 of n (#88)."""
+    monkeypatch.setenv("C2_DEMO_TAMPER", "1")
+    _seal_closed_loop(client)
+
+    before = client.post("/api/admin/audit/reverify")
+    assert before.status_code == 200
+    assert before.json()["ocsf"]["ok"] is True
+
+    tampered = client.post("/api/admin/audit/tamper")
+    assert tampered.status_code == 200
+    body = tampered.json()
+    assert body["status"] == "tampered"
+    assert body["ocsf"]["ok"] is False
+    assert body["ocsf"]["reason"] == "hash mismatch"
+    assert body["ocsf"]["break_index"] == 1
+
+    mid = client.post("/api/admin/audit/reverify")
+    assert mid.json()["ocsf"]["ok"] is False
+
+    restored = client.post("/api/admin/audit/restore")
+    assert restored.status_code == 200
+    assert restored.json()["ocsf"]["ok"] is True
+    assert restored.json()["ocsf"]["broken"] == 0
+
+
+def test_admin_audit_tamper_requires_gate(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("C2_DEMO_TAMPER", raising=False)
+    denied = client.post("/api/admin/audit/tamper")
+    assert denied.status_code == 403

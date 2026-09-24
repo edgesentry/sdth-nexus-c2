@@ -28,9 +28,19 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 
 .shell { max-width: 1100px; margin: 0 auto; padding: 1rem 1.25rem 2.5rem; }
 .header {
-  display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem;
-  align-items: center; justify-content: space-between;
-  border-bottom: 1px solid var(--line); padding-bottom: 0.85rem; margin-bottom: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.85rem;
+  margin-bottom: 1.25rem;
+}
+.header-top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  align-items: center;
+  justify-content: space-between;
 }
 .brand { display: flex; gap: 0.5rem; align-items: baseline; }
 .brand-mark { font-weight: 700; letter-spacing: 0.02em; }
@@ -38,7 +48,7 @@ code, .mono { font-family: var(--mono); font-size: 0.9em; }
 .nav { display: flex; gap: 0.75rem; flex-wrap: wrap; }
 .nav a { color: var(--muted); }
 .nav a.active, .nav a:hover { color: var(--text); }
-.status { color: var(--muted); font-size: 0.85rem; }
+.status { color: var(--muted); font-size: 0.85rem; margin: 0; }
 
 .grid {
   display: grid;
@@ -112,6 +122,55 @@ button:hover { border-color: var(--accent); }
   color: var(--warn);
   background: color-mix(in srgb, var(--warn) 14%, var(--panel));
   border-color: color-mix(in srgb, var(--warn) 45%, var(--line));
+}
+.pill-muted {
+  color: var(--muted);
+  background: var(--panel);
+}
+
+.audit-integrity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.65rem;
+  width: 100%;
+}
+.audit-integrity .pill {
+  white-space: nowrap;
+  border-radius: 8px;
+  line-height: 1.35;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.audit-integrity-actions {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: auto;
+}
+.audit-integrity-actions form {
+  display: contents;
+}
+.audit-integrity-actions button {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  padding: 0.3rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.audit-integrity-actions button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.audit-integrity-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .claim-tags {

@@ -64,17 +64,39 @@ def _evidence_urls(runtime: Any) -> list[str]:
 
 
 def _ocsf_health(runtime: Any) -> dict[str, Any]:
-    """Hash-chain integrity summary for the verify UI pill."""
-    from core.audit import broken_link_count
+    """Hash-chain integrity summary for the verify UI pill (#88)."""
+    from core.audit import verify_audit_chain
 
     records = runtime.audit.records()
-    count = len(records)
-    broken = broken_link_count(records)
+    result = verify_audit_chain(records)
+    broken = 0 if result.ok else (len(result.errors) if result.errors else 1)
+    detail = ""
+    if not result.ok and result.break_index is not None and result.reason:
+        detail = f" · {result.reason} @ record[{result.break_index}]"
+
+    path = "sha256"
+    eds_ok: bool | None = None
+    eds_label: str | None = None
+    last_eds = getattr(runtime, "last_eds_verify", None)
+    if isinstance(last_eds, dict):
+        eds_ok = bool(last_eds.get("ok"))
+        eds_label = str(last_eds.get("label") or last_eds.get("summary") or "")
+        path = "eds"
+    elif runtime.audit.eds is not None:
+        # Sidecar present but not yet re-verified out-of-process.
+        eds_label = "eds sidecar (re-verify for CHAIN_VALID)"
+
     return {
-        "verified": broken == 0,
+        "verified": result.ok,
         "broken": broken,
-        "count": count,
-        "label": f"{broken} of {count}",
+        "count": result.total,
+        "label": f"{broken} of {result.total}",
+        "reason": result.reason,
+        "break_index": result.break_index,
+        "detail": detail,
+        "path": path,
+        "eds_ok": eds_ok,
+        "eds_label": eds_label,
     }
 
 
@@ -158,6 +180,8 @@ def _ctx(
         "evidence": _evidence_urls(runtime),
         "audit_rows": list(reversed(runtime.audit.records()[-12:])),
         "ocsf_health": _ocsf_health(runtime),
+        "demo_tamper": _c2().demo_tamper_enabled(),
+        "has_tamper_snapshot": runtime.audit_pre_tamper is not None,
     }
 
 
@@ -372,6 +396,57 @@ async def verify_ack(
     except HTTPException as exc:
         error = _exc_message(exc)
     return _page(request, "verify/recipient.html", flash=flash, error=error, unit_id=unit_id)
+
+
+def _audit_demo_page(request: Request, *, flash: str = "", error: str = "") -> HTMLResponse:
+    """Land audit demo actions on the hub (header forms are shared across screens)."""
+    return _page(request, "verify/hub.html", flash=flash, error=error)
+
+
+@router.post("/verify/audit/tamper", response_class=HTMLResponse)
+async def verify_audit_tamper(request: Request) -> HTMLResponse:
+    c2 = _c2()
+    try:
+        c2._require_demo_tamper()
+        result = c2.get_runtime().inject_audit_tamper(index=1)
+        ocsf = result.get("ocsf") or {}
+        flash = (
+            f"Injected 1-char tamper · {ocsf.get('summary', 'broken')} "
+            f"(path={ocsf.get('reason', 'hash mismatch')})"
+        )
+        return _audit_demo_page(request, flash=flash)
+    except HTTPException as exc:
+        return _audit_demo_page(request, error=_exc_message(exc))
+
+
+@router.post("/verify/audit/restore", response_class=HTMLResponse)
+async def verify_audit_restore(request: Request) -> HTMLResponse:
+    c2 = _c2()
+    try:
+        c2._require_demo_tamper()
+        result = c2.get_runtime().restore_audit_tamper()
+        ocsf = result.get("ocsf") or {}
+        flash = f"Restored pre-tamper snapshot · {ocsf.get('summary', 'ok')}"
+        return _audit_demo_page(request, flash=flash)
+    except HTTPException as exc:
+        return _audit_demo_page(request, error=_exc_message(exc))
+
+
+@router.post("/verify/audit/reverify", response_class=HTMLResponse)
+async def verify_audit_reverify(request: Request) -> HTMLResponse:
+    c2 = _c2()
+    try:
+        c2._require_demo_tamper()
+        result = c2.get_runtime().reverify_audit()
+        ocsf = result.get("ocsf") or {}
+        eds = result.get("eds")
+        parts = [f"OCSF {ocsf.get('summary', '?')} via {result.get('path', 'sha256')}"]
+        if isinstance(eds, dict):
+            parts.append(f"EDS {eds.get('label', '?')}")
+        flash = " · ".join(parts)
+        return _audit_demo_page(request, flash=flash)
+    except HTTPException as exc:
+        return _audit_demo_page(request, error=_exc_message(exc))
 
 
 @router.get("/")
