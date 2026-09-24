@@ -179,7 +179,7 @@ Expect: amber `SAR_DARK_CLUSTER_VS_AIS_SILENCE` / `APPROACH_PATROL` → `APPROVE
 
 ## Path ARCHVIEW (Hero S3 — issue #99) {#path-archview-hero-s3--issue-99}
 
-Pitch closed loop via the external **ARCHVIEW** Screen-1 console ([`johnnyteoh8888/SDTH-2026`](https://github.com/johnnyteoh8888/SDTH-2026)) into Core seal/OCSF and Screen-2 Ack. Same frozen REST as Path A / Path F. Proposal Step 3: [ARCHVIEW integration](archview-integration-proposal.md). Demo entry: [Path G](demo.md#demo-path-g-archview-tactical-console-issue-99).
+Pitch closed loop via the external **ARCHVIEW** Screen-1 console ([`johnnyteoh8888/SDTH-2026`](https://github.com/johnnyteoh8888/SDTH-2026)) into Core seal/OCSF and Screen-2 Ack. Same frozen REST as Path A / Path F. Proposal Step 3: [ARCHVIEW integration](architecture/archview-integration-proposal.md). Demo entry: [Path G](demo.md#demo-path-g-archview-tactical-console-issue-99).
 
 ### Split of ownership
 

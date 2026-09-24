@@ -1,5 +1,7 @@
 # Space-based SAR Pipeline & Production Architecture
 
+SAR×AIS upstream and sovereign target architecture. Closed-loop / Screen placement live elsewhere: [Closed loop](index.md) · [Topology](topology.md). Doc roles: [architecture map](index.md#closed-loop).
+
 This document specifies the integration of space-based Synthetic Aperture Radar (SAR) and maritime intelligence feeds into **Project NexusGate C2 Core**, spanning both **Immediate Hackathon Operations** and the **Target Production Sovereign Architecture**.
 
 ---
@@ -66,21 +68,9 @@ flowchart TD
         GRAPH --> INTERLOCK["Deterministic Interlock & Gating (<50ms)"]
         INTERLOCK --> WARN["Warning Picture: Amber Alert (SAR Hit / AIS Absent)"]
     end
-
-    subgraph OperatorCockpit ["Screen 1: BattlePlan UI (Next.js)"]
-        WARN --> COCKPIT["Tactical Map Display"]
-        COCKPIT --> MODAL["Click Amber Alert: High-Res Radar Chip & Histogram"]
-        MODAL --> HITL["Commander Visual Verification (HITL)"]
-        HITL -->|Approve Tasking| TOKEN["Signed DecisionToken (SHA-256)"]
-    end
-
-    subgraph EffectorAck ["Screen 2: Field Node"]
-        TOKEN --> INBOX["GET /api/recipient/inbox"]
-        INBOX --> ACK["Signed Ack POST /api/recipient/ack (<3.0s)"]
-        ACK --> AUDIT["OCSF Immutable Hash Chain (.audit/gate.jsonl)"]
-        TOKEN --> AUDIT
-    end
 ```
+
+Downstream Screen 1 / HITL / Token / Screen 2 Ack / OCSF: [Closed loop](index.md) · [Topology](topology.md).
 
 ### 2.1 Upstream Data Mapping to NexusGate C2
 
@@ -99,7 +89,7 @@ The pipeline maps directly into the `sdth-nexus-c2` internal schema:
 
 ### 2.2 Venue Deployment Options
 
-To balance processing depth and live reliability, three deployment patterns are evaluated:
+To balance processing depth and live reliability, three deployment patterns are evaluated. Cloudflare Worker / container runbook: [Topology · Cloudflare](topology.md#cloudflare-phase-2) · [Deploy](../deploy.md).
 
 | Deployment Pattern | Architecture | Strengths | Operational Role |
 |---|---|---|---|
@@ -225,40 +215,9 @@ flowchart TD
 
 ## 4. Verification & Testing Strategy
 
-1. **Sentinel fixture ingress (issue #47 / Pattern A)**:
-   ```bash
-   curl -s -X POST http://127.0.0.1:8080/api/ingress/candidate-event \
-     -H 'content-type: application/json' \
-     -d '{"use_sentinel_fixture":true}'
-   # or: uv run python scripts/sentinel_ingress_smoke.py
-   ```
-2. **Pattern B pull with fixture fail-safe** (upstream optional on `:5050`):
-   ```bash
-   # Sibling checkout: ~/work/Sentinel-Imagery-Analysis → uv run sia-server (PORT=5050)
-   curl -s -X POST http://127.0.0.1:8080/api/ingress/candidate-event \
-     -H 'content-type: application/json' \
-     -d '{"pull_upstream":true}'
-   # Unreachable upstream → Singapore Strait fixture (GLINT fail-safe)
-   ```
-3. **AIS correlate on a live scan, then C2** (issue #47):
-   ```bash
-   # After Copernicus download into static/output/<scan>/
-   # demo = AISFriends (venue); offline = Mock
-   uv run python scripts/sentinel_ais_correlate.py \
-     --scan <scan_folder> --ais-source demo --ingest-c2 --reset-c2
-   ```
-   Ingests AIS for the scan bbox → `run_cv` with correlation → posts only `uncorrelated` detections to C2. AIS profiles: [Demo Path: Sentinel](../demo.md#ais-correlate-then-c2-live-scan).
-4. **Assumed CandidateEvent fixture** (Pitch-1 / #25):
-   ```bash
-   curl -s -X POST http://127.0.0.1:8080/api/ingress/candidate-event \
-     -H 'content-type: application/json' \
-     -d '{"use_fixture":true}'
-   ```
-5. **Scenario S3 End-to-End Verification**:
-   ```bash
-   uv run python -m app.main --scenario S3 --stub --yes
-   ```
-6. **Picture-to-Tasking Closed-Loop Latency**:
-   ```bash
-   ./scripts/picture_to_tasking.sh
-   ```
+Executable curl / Path checklists live outside this page (avoid duplicating SoT):
+
+* Ingress contract & CandidateEvent flags: [REST · Upstream Ingress](../api/rest.md#upstream-ingress-contract-assumed-candidateevent-specification)
+* E2E modes (fixture / pull / dual-SAR) and Path ARCHVIEW: [E2E verification](../verify-e2e.md)
+* AIS correlate then C2 (live scan): [Demo · Sentinel](../demo.md#ais-correlate-then-c2-live-scan)
+* Closed-loop latency: `./scripts/picture_to_tasking.sh` · Scenario S3: `uv run python -m app.main --scenario S3 --stub --yes`

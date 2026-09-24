@@ -1,5 +1,13 @@
 # Closed loop
 
+| Doc | Owns |
+|-----|------|
+| **This page** | Probabilistic vs deterministic principles, Finding meaning, 8 orthogonal dimensions, OSINT ingress boundary |
+| [Topology](topology.md) | Screen 1 / Core / Screen 2 placement, dual-tier UI, Cloudflare deploy |
+| [Space SAR Pipeline](sar_pipeline.md) | SAR×AIS upstream, Dual-SAR, 3-tier cognitive load, sovereign target architecture |
+| [ARCHVIEW Integration](archview-integration-proposal.md) | Why UI stays decoupled (decision, RACI, roadmap intent) — not API or E2E SoT |
+| [REST](../api/rest.md) · [verify-e2e](../verify-e2e.md) | Frozen contract · executable runbooks |
+
 NexusGate splits **probabilistic interpretation** (app layer) from **deterministic gating** (core):
 
 1. **Probabilistic** — noisy, conflicting feeds (social OSINT, radar, EO blur, AIS, RF) become a Warning Picture / candidate COA.
