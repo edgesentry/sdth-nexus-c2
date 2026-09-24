@@ -715,7 +715,7 @@ ARCHVIEW (external repo, Vite on **`127.0.0.1:3001`**) talks to Core on **`:8080
 | Proxy collision | ARCHVIEW already proxies `/api` → its own evidence BFF (`:3102`). Do **not** replace that wholesale — use path splits (`/api/ontology/*`, `/api/gate/*`, `/api/audit/*`, `/api/recipient/*`, `/static/fixtures`) or a `/c2` prefix to Core (#95). |
 | Polling | 1–2 s poll of ontology / audit health. No WebSocket on Core for this epic. |
 | Field naming | Ontology amber object uses **`alert`**; Finding uses string **`amber_alert`**. Approve body uses **`operator_id`** (effector `unit_id` is set at proposals / inbox). |
-| TypeScript contract | Hand-written [`archview-types.ts`](archview-types.ts) — copy/import into ARCHVIEW; do not generate from `/openapi.json` (responses are still `dict[str, Any]`). |
+| TypeScript contract | Hand-written [`archview-types.ts`](archview-types.ts) — copy/import into ARCHVIEW; do not generate from `/openapi.json` (responses are still `dict[str, Any]`). After Core contract changes, re-copy/patch into ARCHVIEW (`src/nexusgate/archview-types.ts`), preserve ARCHVIEW-only types (`LeadPoi`, `ProposalRequest`), then `npm run typecheck`. |
 | Token seal | DecisionToken / OCSF chain use **SHA-256** digests for this epic (not Ed25519/BLAKE3). |
 | Hero S3 rehearsal | [Path ARCHVIEW](../verify-e2e.md#path-archview-hero-s3--issue-99) (#99) — Screen-1 ARCHVIEW + Screen-2 abort (`/verify/recipient` or curl). |
 
