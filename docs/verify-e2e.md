@@ -1,7 +1,7 @@
 # End-to-end verification (NexusGate)
 
-How to rehearse **Picture → Gate → Ack** locally with `/verify` (Jinja2/HTMX on Core).  
-Not the external BattlePlan pitch UI. Contract: [C2 REST API](api/rest.md) · UI: [Demo Path F](demo.md#demo-path-f-nexusgate-verification-webui-phase-2--issue-65-not-pitch-ui).
+How to rehearse **Picture → Gate → Ack** locally with `/verify` (Jinja2/HTMX on Core) or the external **ARCHVIEW** tactical console ([Path ARCHVIEW](#path-archview-hero-s3--issue-99)).  
+`/verify` is not the pitch UI. Contract: [C2 REST API](api/rest.md) · Path F: [Demo Path F](demo.md#demo-path-f-nexusgate-verification-webui-phase-2--issue-65-not-pitch-ui) · Path G: [Demo Path G](demo.md#demo-path-g-archview-tactical-console-issue-99).
 
 ## Do you need an SIA server?
 
@@ -177,6 +177,127 @@ Expect: amber `SAR_DARK_CLUSTER_VS_AIS_SILENCE` / `APPROACH_PATROL` → `APPROVE
 
 ---
 
+## Path ARCHVIEW (Hero S3 — issue #99) {#path-archview-hero-s3--issue-99}
+
+Pitch closed loop via the external **ARCHVIEW** Screen-1 console ([`johnnyteoh8888/SDTH-2026`](https://github.com/johnnyteoh8888/SDTH-2026)) into Core seal/OCSF and Screen-2 Ack. Same frozen REST as Path A / Path F. Proposal Step 3: [ARCHVIEW integration](archview-integration-proposal.md). Demo entry: [Path G](demo.md#demo-path-g-archview-tactical-console-issue-99).
+
+### Split of ownership
+
+| Half | Owner | Process |
+|------|-------|---------|
+| **Screen 1** | ARCHVIEW (external) | Vite `127.0.0.1:3001` — Propose S3, Amber, Evidence, Approve, audit pill |
+| **Core** | This repo | `sdth-c2-server` `:8080` — ingress, gate, `DecisionToken` seal, OCSF |
+| **Screen 2** | Abort path (default) | `/verify/recipient` **or** curl inbox/ack — **not** RasPi (demo-excluded) |
+
+ARCHVIEW has **no Dual-SAR ingress button** — run fixture ingress on Core (curl) before Propose. Proxy / CORS: [REST · ARCHVIEW connection](api/rest.md#archview-connection). Types: [`archview-types.ts`](api/archview-types.ts).
+
+### Prerequisites
+
+| Process | Port | Start |
+|---------|------|-------|
+| NexusGate Core | `:8080` | `uv run sdth-c2-server` (this repo) |
+| ARCHVIEW Vite | `:3001` | Sibling checkout; `npm run dev` (path-split proxy → Core; evidence BFF stays `:3102`) |
+| ARCHVIEW evidence BFF | `:3102` | `npm run dev:api` or `npm start` as required by ARCHVIEW INSTALL |
+| Screen 2 (abort) | same Core | Browser tab `/verify/recipient` **or** curl (below) |
+
+```bash
+# Terminal A — Core
+cd /path/to/sdth-nexus-c2
+uv sync
+uv run sdth-c2-server          # http://127.0.0.1:8080
+
+# Terminal B — ARCHVIEW (sibling checkout; not a submodule)
+cd /path/to/SDTH-2026
+npm ci                         # first time
+npm run dev:api &              # evidence BFF :3102 (if not already up)
+npm run dev                    # http://127.0.0.1:3001
+```
+
+Do **not** replace ARCHVIEW’s `/api` → BFF proxy wholesale — Core routes are path-split (`/api/ontology`, `/api/gate`, `/api/audit`, `/api/recipient`, `/api/ingress`, `/static/fixtures`).
+
+### Checklist (Hero S3)
+
+1. **Reset (optional):** `curl -sf -X POST http://127.0.0.1:8080/api/admin/reset`
+2. **Ingress Dual-SAR (+ optional coastal):**
+   ```bash
+   curl -sf -X POST http://127.0.0.1:8080/api/ingress/open-feed \
+     -H 'content-type: application/json' -d '{"feed":"all","use_fixture":true}'
+   curl -sf -X POST http://127.0.0.1:8080/api/ingress/candidate-event \
+     -H 'content-type: application/json' -d '{"dual_sar":true}' | jq '{source,count}'
+   # Expect: source=dual_sar, count=2
+   ```
+   (Same hops work through the Vite proxy: `http://127.0.0.1:3001/api/ingress/...`.)
+3. **ARCHVIEW — conflicting picture + Amber:** open `http://127.0.0.1:3001/` → scenario **S3 maritime hero** → **Propose**. Expect Amber `SAR_DARK_CLUSTER_VS_AIS_SILENCE`, COA `APPROACH_PATROL`, map/ontology tracks from Core.
+4. **Operator Approve:** review Evidence Inspector chips → **Approve** on the HITL card **within the window** (console shows `timeout` — often ~5s; if expired, **Propose** again then Approve immediately). Core alone seals `DecisionToken` and appends OCSF (`POST /api/gate/approve`).
+5. **Screen 2 Ack (abort default):**
+   - **Browser:** `http://127.0.0.1:8080/verify/recipient` → wait HTMX poll → **Ack**, **or**
+   - **curl:**
+     ```bash
+     COA=<coa_id from Propose>
+     curl -sf "http://127.0.0.1:8080/api/recipient/inbox?unit_id=CUE-NODE-01" | jq '{count}'
+     curl -sf -X POST http://127.0.0.1:8080/api/recipient/ack \
+       -H 'content-type: application/json' \
+       -d "{\"coa_id\":\"$COA\",\"unit_id\":\"CUE-NODE-01\",\"status\":\"ACKED\"}" | jq .status
+     ```
+6. **ARCHVIEW audit pill:** after Ack, pill shows verified (`GET /api/audit/health` → `verified: true`, `broken: 0`, label `0 of n`).
+
+### Abort (RasPi unavailable)
+
+Accepted split for Demo Day:
+
+| Role | Path |
+|------|------|
+| Screen 1 | **ARCHVIEW only** (Propose / Approve / audit pill) |
+| Screen 2 | `/verify/recipient`, Path A curl, **or** Core half of `SCENARIO=S3 ./scripts/picture_to_tasking.sh` after ARCHVIEW Approve |
+
+~~Raspberry Pi 5 GPIO blink (#20)~~ remains **excluded from the demo path**. Optional stretch only: `RASPI_ACK_BLINK=1` (see [demo.md](demo.md)).
+
+### Proxy-only smoke (no browser clicks)
+
+With Core + Vite up:
+
+```bash
+# From ARCHVIEW checkout
+npm run smoke:nexusgate
+# Expect: smoke:nexusgate OK · audit health verified
+```
+
+Full curl closed loop through the Vite proxy (Screen-1 hops) + Core Ack (Screen-2 abort):
+
+```bash
+export C2=http://127.0.0.1:3001   # ARCHVIEW Vite → Core path-split
+curl -sf -X POST http://127.0.0.1:8080/api/admin/reset >/dev/null
+curl -sf -X POST "$C2/api/ingress/candidate-event" \
+  -H 'content-type: application/json' -d '{"dual_sar":true}' | jq '{source,count}'
+PROP=$(curl -sf -X POST "$C2/api/gate/proposals" \
+  -H 'content-type: application/json' \
+  -d '{"scenario_id":"S3","unit_id":"CUE-NODE-01"}')
+COA=$(echo "$PROP" | jq -r '.coa.coa_id')
+echo "$PROP" | jq '{amber: .finding.amber_alert, intent: .coa.intent}'
+curl -sf -X POST "$C2/api/gate/approve" \
+  -H 'content-type: application/json' \
+  -d "{\"coa_id\":\"$COA\",\"decision\":\"y\",\"operator_id\":\"archview-e2e\"}" | jq .status
+curl -sf -X POST http://127.0.0.1:8080/api/recipient/ack \
+  -H 'content-type: application/json' \
+  -d "{\"coa_id\":\"$COA\",\"unit_id\":\"CUE-NODE-01\",\"status\":\"ACKED\"}" | jq .status
+curl -sf "$C2/api/audit/health" | jq .
+```
+
+### What “pass” looks like (Path ARCHVIEW)
+
+| Check | Pass |
+|-------|------|
+| Ingress | `source=dual_sar`, count `2` (fixture; coastal open-feed optional) |
+| ARCHVIEW Amber | `SAR_DARK_CLUSTER_VS_AIS_SILENCE` + COA `APPROACH_PATROL` after Propose S3 |
+| Approve | Core returns `APPROVED` + sealed `DecisionToken` digest |
+| Screen 2 | Inbox count `1` → `ACKED` via `/verify/recipient` or curl |
+| Audit pill | `verified: true`, `broken: 0`, label `0 of n` |
+| Invariant | UI never seals tokens — only `POST /api/gate/approve` |
+
+Browser UI E2E stays **local-only** (not CI). Contract/CORS coverage: `tests/integration/test_archview_contract_e2e.py` (#93).
+
+---
+
 ## Optional: live GLINT mock
 
 ```bash
@@ -279,6 +400,7 @@ NexusGate solves this operational dilemma across three decoupled tiers:
 |-------|------|
 | Hub | `/verify` shows **MOSAIC C2 Verify** |
 | S3 hero loop | Propose (default S3) → Approve → Screen 2 Ack within a few seconds |
+| Path ARCHVIEW (#99) | Dual-SAR ingress → ARCHVIEW Propose S3 / Approve → Screen-2 Ack (abort) → audit pill verified — see [Path ARCHVIEW](#path-archview-hero-s3--issue-99) |
 | Dual-SAR fixture | `source=dual_sar`, evidence under `/static/fixtures/` |
 | SAR mode compare | After Reset: SIA (2 + length + chip) ≠ GLINT (1 + cluster, no chip) ≠ Dual-SAR (`DUAL_SAR` + `corroborated` + conf≈0.98) — see [Compare SAR ingress modes](#compare-sar-ingress-modes-results-must-differ) |
 | SIA down | `pull_upstream` / `pull_dual_sar` still **200** via fixture |

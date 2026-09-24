@@ -41,8 +41,8 @@ flowchart LR
 - **[Cloudflare Containers](deploy.md)** — Worker + container Core, `C2_BASE_URL`, local fallback
 - **[LiteLLM](litellm.md)** — probabilistic interpret + proxy keys
 - **[Scenarios](scenarios.md)** — S1–S3 + optional open feeds
-- **[Demo & benchmarks](demo.md)** — two-laptop I/O (#17), pitch all-in-one runner (#75), verification WebUI (Path F), streamer, Picture→Tasking, gate/latency benchmarks (pitch Slide 11), tests
-- **[E2E verification](verify-e2e.md)** — `/verify` Path F; SIA/GLINT optional (fixtures default)
+- **[Demo & benchmarks](demo.md)** — two-laptop I/O (#17), pitch all-in-one runner (#75), verification WebUI (Path F), ARCHVIEW Path G (#99), streamer, Picture→Tasking, gate/latency benchmarks (pitch Slide 11), tests
+- **[E2E verification](verify-e2e.md)** — `/verify` Path F · [Path ARCHVIEW](verify-e2e.md#path-archview-hero-s3--issue-99) (#99); SIA/GLINT optional (fixtures default)
 - **[Research & Gap Analysis](research-maritime-cop-to-tasking-gap.md)** — Literature survey, failure paradigms, and NexusGate implementation status
 - **[Roadmap](roadmap.md)** — Phase 0–5
 - **[Plan](plan.md)** — full planning source

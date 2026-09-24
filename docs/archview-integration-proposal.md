@@ -163,10 +163,13 @@ flowchart LR
 * Wire the **Audit health pill** to `GET /api/audit/health`.
 
 ### Step 3: End-to-End Closed-Loop Verification
+
+Runbook: **[Path ARCHVIEW](verify-e2e.md#path-archview-hero-s3--issue-99)** ([#99](https://github.com/edgesentry/sdth-nexus-c2/issues/99); Demo [Path G](demo.md#demo-path-g-archview-tactical-console-issue-99)).
+
 * Run Hero Scenario S3 (Singapore Strait Shipping Lane Anomaly):
-  1. Ingress dual-SAR and coastal radar feeds via backend.
+  1. Ingress dual-SAR and coastal radar feeds via backend (fixtures OK; ARCHVIEW has no ingress button).
   2. Tactical Console displays conflicting tracks and triggers Amber Warning.
   3. Operator reviews evidence chips and clicks **Approve** on the console.
   4. C2 Core seals `DecisionToken` and logs to the OCSF hash chain.
-  5. Screen 2 (Raspberry Pi 5 effector) consumes tasking, triggers physical actuation, and posts cryptographic Ack.
-  6. Tactical Console reflects tasking execution completion with verified audit status.
+  5. Screen 2 consumes tasking and posts Ack — **default abort:** `/verify/recipient` or curl (~~RasPi 5 GPIO~~ demo-excluded; optional stretch only).
+  6. Tactical Console reflects tasking execution completion with verified audit status (`GET /api/audit/health`).

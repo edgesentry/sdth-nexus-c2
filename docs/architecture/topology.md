@@ -11,13 +11,13 @@ Laptop Screen 1: Command Cockpit             MOSAIC C2 / NexusGate Core (Local /
 
 | Role | Where | What |
 |------|-------|------|
-| **Screen 1 (Command)** | Laptop | BattlePlan (external MapLibre/React) / TUI / curl / in-repo `/verify`, operator approval/denial |
+| **Screen 1 (Command)** | Laptop | ARCHVIEW / BattlePlan (external React) / TUI / curl / in-repo `/verify`, operator approval/denial |
 | **C2 Core** | Local *or* Cloudflare | `app/c2_server.py` — ontology graph, gate, token sealing, inbox, OCSF audit (NexusGate engine) |
 | **Screen 2 (Recipient)** | Laptop | Recipient node polling inbox (`/api/recipient/inbox`) and submitting signed Ack (`/api/recipient/ack`). Runs as a **separate OS process** so the Ack is genuinely received. ~~RasPi GPIO blink (#20)~~ **excluded from the demo path (2026-09-17)** |
 
-**Dual-tier UI:** `/verify` is the zero-dependency verification harness on Core; BattlePlan is the external tactical map cockpit that consumes the frozen REST contract only.
+**Dual-tier UI:** `/verify` is the zero-dependency verification harness on Core; **ARCHVIEW** is the external tactical map cockpit (Screen 1) that consumes the frozen REST contract only.
 
-Phase 2 cold-start curl rehearsal (two laptops / two terminals, no UI): [Demo Path A](../demo.md#demo-path-a-two-laptop-two-terminal-io-issue-17). Phase 2 MOSAIC C2 verification UI ([#65](https://github.com/edgesentry/sdth-nexus-c2/issues/65)): [Demo Path F](../demo.md#demo-path-f-nexusgate-verification-webui-phase-2--issue-65-not-pitch-ui) (`/verify` on Core). Plan context: [§4.2 Cloudflare Containers](../plan.md#42-cloudflare-containers-phase-2).
+Phase 2 cold-start curl rehearsal (two laptops / two terminals, no UI): [Demo Path A](../demo.md#demo-path-a-two-laptop-two-terminal-io-issue-17). Phase 2 MOSAIC C2 verification UI ([#65](https://github.com/edgesentry/sdth-nexus-c2/issues/65)): [Demo Path F](../demo.md#demo-path-f-nexusgate-verification-webui-phase-2--issue-65-not-pitch-ui) (`/verify` on Core). Phase 3 ARCHVIEW pitch path ([#99](https://github.com/edgesentry/sdth-nexus-c2/issues/99)): [Demo Path G](../demo.md#demo-path-g-archview-tactical-console-issue-99) / [Path ARCHVIEW](../verify-e2e.md#path-archview-hero-s3--issue-99). Plan context: [§4.2 Cloudflare Containers](../plan.md#42-cloudflare-containers-phase-2).
 
 ## Cloudflare (Phase 2)
 
