@@ -307,8 +307,8 @@ class C2Runtime:
                     out["eds"] = eds_payload
                     out["path"] = "eds"
                     self.last_eds_verify = eds_payload
-            except Exception as exc:  # pragma: no cover - defensive
-                out["eds"] = {"ok": False, "label": f"eds verify error: {exc}"}
+            except Exception:  # pragma: no cover - defensive
+                out["eds"] = {"ok": False, "label": "eds verify error"}
                 self.last_eds_verify = out["eds"]
         return out
 
