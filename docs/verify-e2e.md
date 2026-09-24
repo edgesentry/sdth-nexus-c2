@@ -47,7 +47,7 @@ Browser (two tabs):
 
 | Tab | URL | Actions |
 |-----|-----|---------|
-| Screen 1 | http://127.0.0.1:8080/verify/command | **Propose** `S2` → **Approve** |
+| Screen 1 | http://127.0.0.1:8080/verify/command | **Propose** `S3` (default / maritime hero) → **Approve** |
 | Screen 2 | http://127.0.0.1:8080/verify/recipient | Wait for HTMX poll (2s) → **Ack** |
 
 Optional on Screen 1 (still no SIA server):
@@ -137,12 +137,12 @@ curl -sf -X POST "$C2/api/admin/reset" >/dev/null
 curl -sf -X POST "$C2/api/ingress/candidate-event" \
   -H 'content-type: application/json' -d '{"dual_sar":true}' | jq '{source,count}'
 
-# Path F
+# Path F (S3 maritime hero — default)
 PROP=$(curl -sf -X POST "$C2/api/gate/proposals" \
   -H 'content-type: application/json' \
-  -d '{"scenario_id":"S2","unit_id":"CUE-NODE-01"}')
+  -d '{"scenario_id":"S3","unit_id":"CUE-NODE-01"}')
 COA=$(echo "$PROP" | jq -r '.coa.coa_id')
-echo "$PROP" | jq '{amber: .finding.amber_alert, coa_id: .coa.coa_id}'
+echo "$PROP" | jq '{amber: .finding.amber_alert, threat: .finding.threat_class, coa_id: .coa.coa_id}'
 
 curl -sf -X POST "$C2/api/gate/approve" \
   -H 'content-type: application/json' \
@@ -155,7 +155,8 @@ curl -sf -X POST "$C2/api/recipient/ack" \
   -d "{\"coa_id\":\"$COA\",\"unit_id\":\"CUE-NODE-01\",\"status\":\"ACKED\"}" | jq .status
 ```
 
-Expect: amber `COUNT_AND_BEARING_MISMATCH` → `APPROVED` → inbox count `1` → `ACKED`.
+Expect: amber `SAR_DARK_CLUSTER_VS_AIS_SILENCE` / `APPROACH_PATROL` → `APPROVED` → inbox count `1` → `ACKED`.  
+(S2 non-pitch stretch still works with `"scenario_id":"S2"` → `COUNT_AND_BEARING_MISMATCH`.)
 
 ---
 
@@ -260,7 +261,7 @@ NexusGate solves this operational dilemma across three decoupled tiers:
 | Check | Pass |
 |-------|------|
 | Hub | `/verify` shows **MOSAIC C2 Verify** |
-| S2 loop | Propose → Approve → Screen 2 Ack within a few seconds |
+| S3 hero loop | Propose (default S3) → Approve → Screen 2 Ack within a few seconds |
 | Dual-SAR fixture | `source=dual_sar`, evidence under `/static/fixtures/` |
 | SAR mode compare | After Reset: SIA (2 + length + chip) ≠ GLINT (1 + cluster, no chip) ≠ Dual-SAR (`DUAL_SAR` + `corroborated` + conf≈0.98) — see [Compare SAR ingress modes](#compare-sar-ingress-modes-results-must-differ) |
 | SIA down | `pull_upstream` / `pull_dual_sar` still **200** via fixture |

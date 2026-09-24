@@ -1,6 +1,6 @@
 # Demo & benchmarks
 
-Phase 2 demos use **curl / scripts / two laptops**, plus the optional **NexusGate verification WebUI** ([#65](https://github.com/edgesentry/sdth-nexus-c2/issues/65); Jinja2/HTMX harness at `/verify` on Core; **not** the external BattlePlan pitch UI) on the same frozen paths. Contract: [C2 REST API](api/rest.md). Topology: [Topology](architecture/topology.md) · Provenance: [Data provenance](data-provenance.md).
+Phase 2 demos use **curl / scripts / two laptops**, plus the optional **MOSAIC C2 verification WebUI** ([#65](https://github.com/edgesentry/sdth-nexus-c2/issues/65); Jinja2/HTMX harness at `/verify` on Core, powered by NexusGate; **not** the external BattlePlan pitch UI) on the same frozen paths. Contract: [C2 REST API](api/rest.md). Topology: [Topology](architecture/topology.md) · Provenance: [Data provenance](data-provenance.md).
 
 **Full E2E runbook (fixtures vs live SIA/GLINT):** [E2E verification](verify-e2e.md).
 
@@ -47,7 +47,7 @@ uv run python -m app.main --scenario S3 --stub --yes
 
 ---
 
-## Demo Path A: Two-Laptop / Two-Terminal I/O (issue #17)
+## Demo Path A: Two-Laptop / Two-Terminal I/O (issue #17) {#demo-path-a-two-laptop-two-terminal-io-issue-17}
 
 Cold-start rehearsal for Phase 2 **without UI**. Paths never change — only `C2_BASE_URL` (+ optional `C2_API_TOKEN` on Cloudflare).
 
@@ -88,7 +88,7 @@ curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/admin/reset"
 # Truncate the replay log between rehearsals (optional):
 #   uv run python scripts/replay_ingress.py --clear
 
-# Optional ingress (skip for minimal S2 handshake — proposals load the scenario)
+# Optional ingress (skip for minimal S3 handshake — proposals load the scenario)
 curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/ingress/open-feed" \
   -H 'content-type: application/json' -d '{"feed":"all","use_fixture":true}'
 # S3 SAR path (Pitch-1 assumed fixture):
@@ -107,10 +107,10 @@ curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/ingress/candidate-event" \
 curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/ingress/candidate-event" \
   -H 'content-type: application/json' -d '{"dual_sar":true}'
 
-# Propose (loads S2 Warning Picture + queues COA). Capture coa_id:
+# Propose (loads S3 Warning Picture + queues COA). Capture coa_id:
 PROP=$(curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/gate/proposals" \
   -H 'content-type: application/json' \
-  -d '{"scenario_id":"S2","unit_id":"CUE-NODE-01"}')
+  -d '{"scenario_id":"S3","unit_id":"CUE-NODE-01"}')
 echo "$PROP" | jq '{coa_id: .coa.coa_id, amber: .finding.amber_alert, threat: .finding.threat_class}'
 COA_ID=$(echo "$PROP" | jq -r '.coa.coa_id')
 # Tell Screen 2 the same COA_ID (chat / shared terminal / sticky note).
@@ -125,7 +125,7 @@ Optional Pitch-2 overlay on Screen 1 (never seals tokens by itself):
 
 ```bash
 curl -s "${AUTH[@]}" -X POST "$C2_BASE_URL/api/interpret" \
-  -H 'content-type: application/json' -d '{"scenario_id":"S2","force_heuristic":true}'
+  -H 'content-type: application/json' -d '{"scenario_id":"S3","force_heuristic":true}'
 # or one-hop: proposals with "interpret":true (LiteLLM if Core has LLM_BASE_URL)
 ```
 
@@ -163,7 +163,7 @@ Endpoint table: [C2 REST API](api/rest.md).
 
 ---
 
-## Demo Path F: NexusGate Verification WebUI (Phase 2 — issue #65; not pitch UI) {#demo-path-f-nexusgate-verification-webui-phase-2--issue-65-not-pitch-ui}
+## Demo Path F: MOSAIC C2 Verification WebUI (Phase 2 — issue #65; not pitch UI) {#demo-path-f-nexusgate-verification-webui-phase-2--issue-65-not-pitch-ui}
 
 Browser Screen 1 / Screen 2 served by Core itself (Jinja2/HTMX at `/verify`). **Not** the external BattlePlan pitch UI. No Node/Next.js required.
 
@@ -177,7 +177,7 @@ uv run sdth-c2-server
 
 | Step | Where | Action |
 |------|-------|--------|
-| 1 | Screen 1 `/verify/command` | Propose `S2` → Approve |
+| 1 | Screen 1 `/verify/command` | Propose `S3` (default / maritime hero) → Approve |
 | 2 | Screen 2 `/verify/recipient` | Auto-poll inbox (HTMX 2s) → Ack |
 | 3 | Optional | Screen 1 → **Ingress SIA only** / **GLINT only** / **Dual-SAR (both)** → compare Ontology + evidence (expected diffs: [verify-e2e.md](verify-e2e.md#compare-sar-ingress-modes-results-must-differ)) |
 
@@ -433,7 +433,7 @@ uv run python scripts/sentinel_ais_correlate.py --help  # AIS → run_cv → opt
 
 ### Zero-internet rehearsal (issue #76)
 
-Venue Wi-Fi dropouts must not break the pitch. This suite blocks non-loopback sockets and checks that S1–S3 stubs, `/verify`, Indago DuckDB, SIA Sentinel fixture, GLINT loopback mock, and pull→fixture fail-safes all run offline. Same fixture-first paths as [Demo Path A](#demo-path-a-two-laptop--two-terminal-io-issue-17).
+Venue Wi-Fi dropouts must not break the pitch. This suite blocks non-loopback sockets and checks that S1–S3 stubs, `/verify`, Indago DuckDB, SIA Sentinel fixture, GLINT loopback mock, and pull→fixture fail-safes all run offline. Same fixture-first paths as [Demo Path A](#demo-path-a-two-laptop-two-terminal-io-issue-17).
 
 ```bash
 # Venue / zero-internet rehearsal (#76) — no outbound network required

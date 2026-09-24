@@ -53,10 +53,10 @@ def main() -> None:
 
     print("Server ready at", base)
 
-    # 1. Propose S2 via form
+    # 1. Propose S3 (maritime hero) via form
     res = httpx.post(
         f"{base}/verify/command/propose",
-        data={"scenario_id": "S2", "unit_id": "CUE-NODE-01"},
+        data={"scenario_id": "S3", "unit_id": "CUE-NODE-01"},
         follow_redirects=True,
     )
     print("Propose status:", res.status_code)

@@ -17,7 +17,7 @@ Laptop Screen 1: Command Cockpit             MOSAIC C2 / NexusGate Core (Local /
 
 **Dual-tier UI:** `/verify` is the zero-dependency verification harness on Core; BattlePlan is the external tactical map cockpit that consumes the frozen REST contract only.
 
-Phase 2 cold-start curl rehearsal (two laptops / two terminals, no UI): [Demo Path A](../demo.md#demo-path-a-two-laptop-two-terminal-io-issue-17). Phase 2 NexusGate verification UI ([#65](https://github.com/edgesentry/sdth-nexus-c2/issues/65)): [Demo Path F](../demo.md#demo-path-f-nexusgate-verification-webui-phase-2--issue-65-not-pitch-ui) (`/verify` on Core). Plan context: [§4.2 Cloudflare Containers](../plan.md#42-cloudflare-containers-phase-2).
+Phase 2 cold-start curl rehearsal (two laptops / two terminals, no UI): [Demo Path A](../demo.md#demo-path-a-two-laptop-two-terminal-io-issue-17). Phase 2 MOSAIC C2 verification UI ([#65](https://github.com/edgesentry/sdth-nexus-c2/issues/65)): [Demo Path F](../demo.md#demo-path-f-nexusgate-verification-webui-phase-2--issue-65-not-pitch-ui) (`/verify` on Core). Plan context: [§4.2 Cloudflare Containers](../plan.md#42-cloudflare-containers-phase-2).
 
 ## Cloudflare (Phase 2)
 
