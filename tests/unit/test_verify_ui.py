@@ -33,6 +33,7 @@ def test_verify_hub_and_screens(client: TestClient) -> None:
     assert recv.status_code == 200
     assert b"Screen 2" in recv.content
 
+
 def test_verify_path_f_handshake(client: TestClient) -> None:
     proposed = client.post(
         "/verify/command/propose",
