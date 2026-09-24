@@ -1,8 +1,8 @@
 # Demo & benchmarks
 
-Phase 2 demos use **curl / scripts / two laptops**, plus the optional **MOSAIC C2 verification WebUI** ([#65](https://github.com/edgesentry/sdth-nexus-c2/issues/65); Jinja2/HTMX harness at `/verify` on Core, powered by NexusGate; **not** the external BattlePlan pitch UI) on the same frozen paths. Contract: [C2 REST API](api/rest.md). Topology: [Topology](architecture/topology.md) · Provenance: [Data provenance](data-provenance.md).
+Phase 2 demos use **curl / scripts / two laptops**, plus the optional **MOSAIC C2 verification WebUI** ([#65](https://github.com/edgesentry/sdth-nexus-c2/issues/65); Jinja2/HTMX harness at `/verify` on Core, powered by NexusGate; **not** the external pitch UI) on the same frozen paths. Phase 3 pitch Screen 1: **ARCHVIEW** ([Path G](#demo-path-g-archview-tactical-console-issue-99) / [#99](https://github.com/edgesentry/sdth-nexus-c2/issues/99)). Contract: [C2 REST API](api/rest.md). Topology: [Topology](architecture/topology.md) · Provenance: [Data provenance](data-provenance.md).
 
-**Full E2E runbook (fixtures vs live SIA/GLINT):** [E2E verification](verify-e2e.md).
+**Full E2E runbook (fixtures vs live SIA/GLINT · Path ARCHVIEW):** [E2E verification](verify-e2e.md).
 
 ## Quick start
 
@@ -184,6 +184,29 @@ uv run sdth-c2-server
 | 4 | Optional (`C2_DEMO_TAMPER=1`) | Header **Audit integrity** → **Inject 1-char tamper** → pill warns `hash mismatch` → **Restore** → `0 of n` ([rehearsal](verify-e2e.md#tamper-detection-rehearsal-88)) |
 
 Invariant: the UI never seals tokens — only Core `POST /api/gate/approve` does.
+
+---
+
+## Demo Path G: ARCHVIEW Tactical Console (issue #99) {#demo-path-g-archview-tactical-console-issue-99}
+
+External Screen-1 pitch UI ([ARCHVIEW](https://github.com/johnnyteoh8888/SDTH-2026)) on frozen REST → Core seal/OCSF → Screen-2 Ack. Full checklist: **[Path ARCHVIEW](verify-e2e.md#path-archview-hero-s3--issue-99)**.
+
+```bash
+# Terminal A — Core
+uv run sdth-c2-server                    # :8080
+
+# Terminal B — ARCHVIEW sibling checkout
+cd /path/to/SDTH-2026 && npm run dev     # :3001 (path-split proxy → Core)
+```
+
+| Step | Where | Action |
+|------|-------|--------|
+| 1 | Core curl | Dual-SAR fixture ingress (`{"dual_sar":true}`); optional coastal `open-feed` |
+| 2 | ARCHVIEW `:3001` | Scenario **S3** → **Propose** → Amber + evidence → **Approve** |
+| 3 | Screen 2 (abort) | `/verify/recipient` **or** curl inbox/ack — RasPi **not** required |
+| 4 | ARCHVIEW | Audit pill verified (`0 of n`) after Ack |
+
+**Abort:** Screen-1 = ARCHVIEW only; Screen-2 = `/verify/recipient`, Path A curl, or `SCENARIO=S3 ./scripts/picture_to_tasking.sh` Core/Screen-2 half. Invariant unchanged: only `POST /api/gate/approve` seals tokens.
 
 ---
 

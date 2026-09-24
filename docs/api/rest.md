@@ -717,6 +717,7 @@ ARCHVIEW (external repo, Vite on **`127.0.0.1:3001`**) talks to Core on **`:8080
 | Field naming | Ontology amber object uses **`alert`**; Finding uses string **`amber_alert`**. Approve body uses **`operator_id`** (effector `unit_id` is set at proposals / inbox). |
 | TypeScript contract | Hand-written [`archview-types.ts`](archview-types.ts) — copy/import into ARCHVIEW; do not generate from `/openapi.json` (responses are still `dict[str, Any]`). |
 | Token seal | DecisionToken / OCSF chain use **SHA-256** digests for this epic (not Ed25519/BLAKE3). |
+| Hero S3 rehearsal | [Path ARCHVIEW](../verify-e2e.md#path-archview-hero-s3--issue-99) (#99) — Screen-1 ARCHVIEW + Screen-2 abort (`/verify/recipient` or curl). |
 
 !!! tip "Follow-up (Phase 3): Pydantic response models"
     Endpoints currently return ad-hoc `dict[str, Any]`, so `/openapi.json` lacks response schemas.
