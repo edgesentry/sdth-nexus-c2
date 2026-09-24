@@ -8,6 +8,7 @@ Metrics (fail = non-zero exit):
   Picture-to-Ack roundtrip   <  3.0 s  (approve → inbox → ack)
   Audit trace integrity      0 of n    (eds verify-chain or SHA-256 walk)
   Track-flood stress (p95)   < 50 ms   (100+ synthetic tracks; unauthorized=0)
+  Track-flood REST propose   < 250 ms  (ASGI propose p95; separate from gate SLO)
 
 Usage:
   uv run python scripts/benchmark.py
@@ -29,6 +30,7 @@ from pathlib import Path
 from app import c2_server
 from app.bench_stress import (
     FORBIDDEN_ZONES,
+    REST_PROPOSE_P95_MS,
     STRESS_PROPOSALS,
     STRESS_TRACKS,
     bench_track_flood_stress,
@@ -441,6 +443,7 @@ def main(argv: list[str] | None = None) -> int:
             f"  Picture-to-Ack           < {ROUNDTRIP_S:g} s\n"
             "  Audit integrity          = 100%\n"
             f"  Track-flood stress p95   < {GATE_P95_MS:g} ms (≥100 tracks)\n"
+            f"  Track-flood REST p95     < {REST_PROPOSE_P95_MS:g} ms\n"
             f"  Track-flood unauthorized = {UNAUTHORIZED_MAX}\n"
         ),
     )
