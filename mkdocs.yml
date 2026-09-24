@@ -57,6 +57,7 @@ nav:
     - Closed loop: architecture/index.md
     - Topology: architecture/topology.md
     - Space SAR & Sensor Pipeline: architecture/sar_pipeline.md
+    - Tactical Console Integration Proposal: archview-integration-proposal.md
   - C2 REST API (frozen): api/rest.md
   - Data provenance: data-provenance.md
   - Cloudflare Containers: deploy.md
