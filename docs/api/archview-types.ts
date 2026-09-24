@@ -180,6 +180,7 @@ export interface Tasking {
 export interface AckRequest {
   coa_id: string;
   unit_id: string;
+  status?: string;
   message?: string;
   telemetry?: Record<string, unknown>;
   signature?: string;

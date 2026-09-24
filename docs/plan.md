@@ -187,7 +187,7 @@ Verify: `wrangler dev` + `C2_BASE_URL=http://127.0.0.1:8787 ./scripts/picture_to
 
 ## 5. Quantitative Operational Benchmarks (Slide 11 Proof)
 
-**Revised 2026-09-21.** The previous table led with gate latency and claimed `0` and `100%`. Both were withdrawn: unfalsifiable absolutes invite exactly the audit a defence judge will run, and gate latency is the wrong headline because **the human decision loop, not the machine, is where the picture-to-tasking gap lives**. Full rationale: **[research §9 (canonical, `edgesentry-commercial`)](https://github.com/edgesentry/edgesentry-commercial/blob/main/docs/strategy/sdth2026/research-maritime-cop-to-tasking-gap.md)** — *not* the older English summary in this repo ([see its staleness notice](research-maritime-cop-to-tasking-gap.md)).
+**Revised 2026-09-21.** The previous table led with gate latency and claimed `0` and `100%`. Both were withdrawn: unfalsifiable absolutes invite exactly the audit a defence judge will run, and gate latency is the wrong headline because **the human decision loop, not the machine, is where the picture-to-tasking gap lives**. Full rationale: **[research §9 (canonical, `edgesentry-commercial`)](https://github.com/edgesentry/edgesentry-commercial/blob/main/docs/strategy/sdth2026/research-maritime-cop-to-tasking-gap.md)**.
 
 Every metric below carries an explicit statement of what it **cannot** show. State the limit before a judge asks.
 

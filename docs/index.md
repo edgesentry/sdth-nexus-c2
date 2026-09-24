@@ -36,6 +36,7 @@ flowchart LR
 - **[Architecture](architecture/index.md)** — Picture→Tasking closed loop
 - **[Topology](architecture/topology.md)** — laptop I/O + local / Cloudflare Core
 - **[Space SAR Pipeline](architecture/sar_pipeline.md)** — Sentinel-1 / Sentinel-Imagery-Analysis (SIA) ingress & fixture fail-safe
+- **[ARCHVIEW Integration Proposal](architecture/archview-integration-proposal.md)** — Tactical Console ↔ NexusGate C2 Core decoupling
 - **[C2 REST API](api/rest.md)** — Screen 1 / Screen 2 **frozen** contract (curl / TUI / verification WebUI)
 - **[Data provenance](data-provenance.md)** — Synthetic vs Real-processed vs Assumed-mock
 - **[Cloudflare Containers](deploy.md)** — Worker + container Core, `C2_BASE_URL`, local fallback
@@ -43,7 +44,6 @@ flowchart LR
 - **[Scenarios](scenarios.md)** — S1–S3 + optional open feeds
 - **[Demo & benchmarks](demo.md)** — two-laptop I/O (#17), pitch all-in-one runner (#75), verification WebUI (Path F), ARCHVIEW Path G (#99), streamer, Picture→Tasking, gate/latency benchmarks (pitch Slide 11), tests
 - **[E2E verification](verify-e2e.md)** — `/verify` Path F · [Path ARCHVIEW](verify-e2e.md#path-archview-hero-s3--issue-99) (#99); SIA/GLINT optional (fixtures default)
-- **[Research & Gap Analysis](research-maritime-cop-to-tasking-gap.md)** — Literature survey, failure paradigms, and NexusGate implementation status
 - **[Roadmap](roadmap.md)** — Phase 0–5
 - **[Plan](plan.md)** — full planning source
 

@@ -1,5 +1,7 @@
 # Topology
 
+Screen / process placement for MOSAIC C2. Closed-loop principles: [Closed loop](index.md). Doc roles: [architecture map](index.md#closed-loop).
+
 **Input and Ack stay on laptops.** MOSAIC C2 / NexusGate Core runs locally (`sdth-c2-server`) or, in Phase 2, on **Cloudflare Containers** with the same REST paths.
 
 ```text

@@ -52,12 +52,11 @@ nav:
   - Home: index.md
   - Executive Brief (1-Pager): one-pager.md
   - Defense FAQ & Pitch Q&A: faq.md
-  - Research & Gap Analysis: research-maritime-cop-to-tasking-gap.md
   - Architecture:
     - Closed loop: architecture/index.md
     - Topology: architecture/topology.md
     - Space SAR & Sensor Pipeline: architecture/sar_pipeline.md
-    - Tactical Console Integration Proposal: archview-integration-proposal.md
+    - Tactical Console Integration Proposal: architecture/archview-integration-proposal.md
   - C2 REST API (frozen): api/rest.md
   - Data provenance: data-provenance.md
   - Cloudflare Containers: deploy.md
