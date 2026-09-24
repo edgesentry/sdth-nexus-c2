@@ -121,9 +121,7 @@ def write_audit_records(path: Path, records: list[dict[str, Any]]) -> None:
             fh.write(json.dumps(rec, default=str) + "\n")
 
 
-def inject_one_char_tamper(
-    records: list[dict[str, Any]], index: int = 1
-) -> list[dict[str, Any]]:
+def inject_one_char_tamper(records: list[dict[str, Any]], index: int = 1) -> list[dict[str, Any]]:
     """Flip one character in record[index] payload without updating ``hash``.
 
     Demo / pitch helper (issues #74 / #88): content digest diverges while the
