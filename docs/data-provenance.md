@@ -40,14 +40,14 @@ Labels in the inventory below remain **Synthetic / Real-processed / Assumed-mock
 
 | What | Where |
 |------|--------|
-| C2 runtime (tracks, proposals, inbox) | In-memory `C2Runtime` |
+| C2 runtime (tracks, proposals, inbox) | In-memory `C2Runtime` **+** SQLite picture (`.audit/runtime.sqlite`; survives process restart; cleared by `/api/admin/reset`) |
 | Decision / Ack evidence | `.audit/gate.jsonl` |
 | Ingress replay | `.audit/ingress.jsonl` (not gate authority; `scripts/replay_ingress.py`) |
 | **AIS history & persistence** | **Indago (DuckDB/Parquet)** or **SIA local SQLite** — C2 does not store raw AIS |
 | **OSINT raw text & feeds** | **External Threat Intel / Social Lake** — C2 does not crawl or store raw social text |
 | SAR imagery / chips | SIA `static/output` |
 
-No C2 application RDB. Persistent AIS is decoupled to Indago/SIA, and raw OSINT ingestion/crawling is decoupled to external Threat Intel pipelines. C2 consumes only normalized Observation tracks and structured event claims via adapters.
+No C2 application RDB for sensor history. The SQLite runtime picture only reconstitutes the current tactical graph / proposals / inbox after a laptop restart; cryptographic gate seals remain in OCSF/EDS. Persistent AIS is decoupled to Indago/SIA, and raw OSINT ingestion/crawling is decoupled to external Threat Intel pipelines. C2 consumes only normalized Observation tracks and structured event claims via adapters.
 
 ## UI boundary (dual-tier)
 

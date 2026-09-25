@@ -16,7 +16,8 @@ from core.gate import LatencyBoundedGate
 from core.ingress_replay import IngressReplayLog
 from core.ontology import SpatialEntityGraph
 from core.policy import TieredPolicy
-from core.schema import DecisionToken, canonical_json, sha256_hex, utc_now
+from core.runtime_store import RuntimeStore
+from core.schema import DecisionToken, Observation, canonical_json, sha256_hex, utc_now
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -46,6 +47,13 @@ def _default_ingress_replay_path() -> Path:
     if override:
         return Path(override)
     return ROOT / ".audit" / "ingress.jsonl"
+
+
+def _default_runtime_db_path(*, audit_path: Path) -> Path:
+    override = os.environ.get("RUNTIME_DB_PATH")
+    if override:
+        return Path(override)
+    return audit_path.parent / "runtime.sqlite"
 
 
 DEFAULT_AUDIT = _default_audit_path()
@@ -205,10 +213,13 @@ class C2Runtime:
         policy_path: Path = DEFAULT_POLICY,
         audit_path: Path = DEFAULT_AUDIT,
         ingress_replay_path: Path = DEFAULT_INGRESS_REPLAY,
+        runtime_db_path: Path | None = None,
     ) -> None:
         self.policy = TieredPolicy.from_yaml(policy_path)
         self.audit = AuditLogger(audit_path)
         self.ingress_replay = IngressReplayLog(ingress_replay_path)
+        db_path = runtime_db_path or _default_runtime_db_path(audit_path=audit_path)
+        self.store = RuntimeStore(db_path)
         self.graph = SpatialEntityGraph(associate_radius_m=2_000.0)
         self.finding: Finding | None = None
         self.scenario_id: str | None = None
@@ -219,6 +230,47 @@ class C2Runtime:
         self.audit_pre_tamper: list[dict[str, Any]] | None = None
         self.eds_pre_tamper: list[dict[str, Any]] | None = None
         self.last_eds_verify: dict[str, Any] | None = None
+        self._hydrate_from_store()
+
+    def _hydrate_from_store(self) -> None:
+        picture = self.store.load_all()
+        observations: list[Observation] = picture["observations"]
+        if observations:
+            self.graph.ingest_many(observations)
+        finding_payload = picture["finding"]
+        if isinstance(finding_payload, dict):
+            try:
+                self.finding = Finding(**finding_payload)
+            except TypeError:
+                self.finding = None
+        self.scenario_id = picture["scenario_id"]
+        self.proposals = picture["proposals"]
+        self.inbox = picture["inbox"]
+        self.acked = set(picture["acked"])
+
+    def persist_observation(self, observation: Observation) -> None:
+        self.store.upsert_observation(observation)
+
+    def persist_picture(self) -> None:
+        """Replace SQLite observations + finding + scenario_id from memory."""
+        self.store.replace_observations(list(self.graph.observations))
+        self.store.set_finding(asdict(self.finding) if self.finding is not None else None)
+        self.store.set_meta("scenario_id", self.scenario_id)
+
+    def persist_proposal(self, coa_id: str, pending: dict[str, Any]) -> None:
+        coa = pending["coa"]
+        payload = {
+            "coa": coa.model_dump(mode="json") if isinstance(coa, CourseOfAction) else coa,
+            "unit_id": pending["unit_id"],
+            "queued_at": pending.get("queued_at"),
+        }
+        self.store.upsert_proposal(coa_id, payload)
+
+    def persist_inbox_item(self, coa_id: str, tasking: dict[str, Any]) -> None:
+        self.store.upsert_inbox(coa_id, tasking)
+
+    def persist_acked(self, coa_id: str) -> None:
+        self.store.add_acked(coa_id)
 
     def reset(self) -> None:
         self.graph = SpatialEntityGraph(associate_radius_m=2_000.0)
@@ -232,6 +284,7 @@ class C2Runtime:
         self.audit_pre_tamper = None
         self.eds_pre_tamper = None
         self.last_eds_verify = None
+        self.store.clear()
 
     def inject_audit_tamper(self, *, index: int = 1) -> dict[str, Any]:
         """Snapshot trail, inject 1-char OCSF tamper, optionally corrupt EDS sidecar."""
@@ -349,6 +402,7 @@ def _ingest_scenario(runtime: C2Runtime, scenario_id: str) -> Finding:
     runtime.finding = finding
     if finding is None:
         raise HTTPException(status_code=404, detail=f"No finding for scenario {scenario_id}")
+    runtime.persist_picture()
     return finding
 
 
@@ -508,6 +562,7 @@ async def ingress_candidate_event(req: CandidateEventIngressRequest) -> dict[str
         for payload in events:
             obs = candidate_event_to_observation(payload)
             track = runtime.graph.ingest(obs)
+            runtime.persist_observation(obs)
             runtime.audit.append(
                 "candidate_event_ingested",
                 "Info",
@@ -597,6 +652,7 @@ async def ingress_open_feed(req: OpenFeedIngressRequest) -> dict[str, Any]:
         resolved_sources[feed] = resolved
         for obs in observations:
             track = runtime.graph.ingest(obs)
+            runtime.persist_observation(obs)
             runtime.audit.append(
                 "open_feed_ingested",
                 "Info",
@@ -729,6 +785,7 @@ async def gate_proposals(req: ProposalRequest) -> dict[str, Any]:
             "status": "PENDING_ACK",
         }
         runtime.inbox[coa.coa_id] = tasking
+        runtime.persist_inbox_item(coa.coa_id, tasking)
         runtime.policy.interlock.register_active(coa)
         runtime.audit.append(
             "coa_auto_approved",
@@ -747,6 +804,7 @@ async def gate_proposals(req: ProposalRequest) -> dict[str, Any]:
         "unit_id": req.unit_id,
         "queued_at": utc_now().isoformat(),
     }
+    runtime.persist_proposal(coa.coa_id, runtime.proposals[coa.coa_id])
     runtime.audit.append(
         "coa_proposed",
         "Medium",
@@ -797,6 +855,7 @@ async def gate_approve(req: ApproveRequest) -> dict[str, Any]:
     )
     token.seal()
     del runtime.proposals[req.coa_id]
+    runtime.store.delete_proposal(req.coa_id)
 
     runtime.audit.append(
         "gate_decision",
@@ -818,6 +877,7 @@ async def gate_approve(req: ApproveRequest) -> dict[str, Any]:
             "status": "PENDING_ACK",
         }
         runtime.inbox[coa.coa_id] = tasking
+        runtime.persist_inbox_item(coa.coa_id, tasking)
         runtime.policy.interlock.register_active(coa)
         runtime.audit.append(
             "tasking_issued",
@@ -878,6 +938,8 @@ async def recipient_ack(req: AckRequest) -> dict[str, Any]:
     runtime.acked.add(req.coa_id)
     tasking["status"] = "ACKED"
     tasking["ack"] = ack_record
+    runtime.persist_acked(req.coa_id)
+    runtime.persist_inbox_item(req.coa_id, tasking)
     sealed = runtime.audit.append("recipient_ack", "High", ack_record)
     return {"status": "ACKED", "ack": ack_record, "audit_hash": sealed["hash"]}
 
@@ -940,7 +1002,7 @@ async def admin_audit_reverify() -> dict[str, Any]:
 
 @app.post("/api/admin/reset")
 async def admin_reset() -> dict[str, str]:
-    """Test helper: clear in-memory C2 state (does not wipe audit file)."""
+    """Test helper: clear in-memory C2 state + SQLite picture (does not wipe audit file)."""
     get_runtime().reset()
     return {"status": "reset"}
 
