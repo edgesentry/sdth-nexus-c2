@@ -249,6 +249,7 @@ async def verify_propose(
             "unit_id": unit_id,
             "created_at": utc_now().isoformat(),
         }
+        runtime.persist_proposal(coa.coa_id, runtime.proposals[coa.coa_id])
         runtime.audit.append(
             "coa_proposed",
             "Info",
@@ -324,6 +325,7 @@ async def verify_ingress(
                 raise ValueError("No AIS vessels to ingest")
             for obs in observations:
                 runtime.graph.ingest(obs)
+                runtime.persist_observation(obs)
             flash = f"Indago AIS (open-feed): ingested {len(observations)} · source={source}"
         else:
             label = mode
@@ -346,6 +348,7 @@ async def verify_ingress(
             for payload in events:
                 obs = candidate_event_to_observation(payload)
                 runtime.graph.ingest(obs)
+                runtime.persist_observation(obs)
             flash = f"{label}: ingested {len(events)} · source={source}"
     except (ValueError, OSError, TypeError, FileNotFoundError) as exc:
         error = str(exc)
