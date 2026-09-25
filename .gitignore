@@ -18,3 +18,4 @@ site/
 node_modules/
 .wrangler/
 .dev.vars
+.tmp-e2e/

@@ -1,409 +1,460 @@
-# End-to-end verification (NexusGate)
+# End-to-End Verification (NexusGate)
 
-How to rehearse **Picture → Gate → Ack** locally with `/verify` (Jinja2/HTMX on Core) or the external **ARCHVIEW** tactical console ([Path ARCHVIEW](#path-archview-hero-s3--issue-99)).  
-`/verify` is not the pitch UI. Contract: [C2 REST API](api/rest.md) · Path F: [Demo Path F](demo.md#demo-path-f-nexusgate-verification-webui-phase-2--issue-65-not-pitch-ui) · Path G: [Demo Path G](demo.md#demo-path-g-archview-tactical-console-issue-99).
+Comprehensive runbook for executing and validating the full **Picture → Gate → Ack** closed loop starting from a **clean zero-state reset** (all processes stopped, state cleared) to end-to-end execution and cryptographic data verification.
 
-## Do you need an SIA server?
+- **Primary Scenario**: **Hero S3 (Singapore Strait Dark Vessel Interdiction via Dual-SAR & AIS)**
+- **Console UIs**: Core `/verify` (Jinja2/HTMX Screen 1/2) or external **ARCHVIEW** tactical console (`:3001`)
+- **Key Specifications**: [C2 REST API](api/rest.md) · [Demo Guide](demo.md) · [Data Provenance](data-provenance.md) · [SAR Pipeline](architecture/sar_pipeline.md) · [Architecture Map](architecture/index.md)
 
-**No — not for the default E2E.** SIA is a **data / ingress source**, not a C2 dependency or database.
+---
 
-| Mode | SIA process on `:5050`? | What C2 uses |
-|------|-------------------------|--------------|
-| **Fixture (default / CI / venue primary)** | **Not required** | `tests/fixtures/sentinel_run_cv_sg_strait.json` via `use_sentinel_fixture` / Dual-SAR fixtures |
-| **Live pull (optional)** | Yes — sibling `Sentinel-Imagery-Analysis` | `POST {SAR_UPSTREAM_URL}/api/run_cv/...`; if unreachable → same fixture (**fail-safe**) |
+## 0. System Topology & Port Allocations
 
-Same idea for GLINT: Assumed-mock fixture is enough; `uv run sdth-mock-glint` (`:5051`) is optional for a live pull demo.
-
-C2 never stores AIS history — persistent data is decoupled to **Indago** (DuckDB) and **SIA’s** SQLite. C2 consumes current tracks via adapters. See [Data provenance](data-provenance.md) · [SAR pipeline](architecture/sar_pipeline.md).
+| Component | Port | Startup Command | Status | Role |
+|---|---|---|---|---|
+| **NexusGate Core** | `:8080` | `uv run sdth-c2-server` | **Required** | C2 server, in-memory ontology graph, deterministic gate, OCSF audit seal, `/verify` UI |
+| **GLINT Mock** | `:5051` | `uv run sdth-mock-glint` | Optional (Live pull) | Team 02 GLINT macro SAR corridor anomaly cluster mock |
+| **SIA Upstream** | `:5050` | `uv run sia-server` | Optional (Live pull) | In-house Sentinel-1 micro SAR CV metrology (automatic fail-safe fallback when offline) |
+| **USV Effector Mock** | `:8000` | `uv run uvicorn mocks.usv:app --port 8000` | Optional (Demo script) | CLEARBOT / autonomous USV telemetry & tasking mock |
+| **ARCHVIEW Vite** | `:3001` | `npm run dev` | Optional (ARCHVIEW) | External React/Vite tactical command cockpit (Screen 1) |
+| **ARCHVIEW BFF** | `:3102` | `npm run dev:api` | Optional (ARCHVIEW) | Evidence image/video BFF server |
 
 ```mermaid
-flowchart LR
-  subgraph optional [Optional upstreams]
-    GLINT["GLINT mock :5051"]
-    SIA["SIA :5050"]
-  end
-  FIX["Repo fixtures"]
-  C2["sdth-c2-server :8080"]
-  UI["/verify Screen 1/2"]
-  GLINT -.->|pull_glint / pull_dual_sar| C2
-  SIA -.->|pull_upstream / pull_dual_sar| C2
-  FIX -->|default| C2
-  C2 --> UI
+flowchart TD
+    subgraph IngressFeeds ["1. Ingress Feeds"]
+        AIS["Indago DuckDB / Live AIS<br/>(Singapore Strait T-0)"]
+        GLINT["GLINT Mock :5051<br/>(Macro SAR Cluster)"]
+        SIA["SIA :5050 / Fixtures<br/>(Micro SAR Metrology)"]
+    end
+
+    subgraph C2Core ["2. NexusGate C2 Core (:8080)"]
+        GRAPH["SpatialEntityGraph<br/>(Modality Separation)"]
+        KINEMATICS["Kinematic Engine<br/>(Lead Intercept POI)"]
+        GATE["Deterministic Gate<br/>(Amber Alert Interlock)"]
+        SEAL["DecisionToken Issuer<br/>(SHA-256 + Private Key)"]
+        AUDIT["OCSF Audit Logger<br/>(.audit/gate.jsonl Hash Chain)"]
+    end
+
+    subgraph Consoles ["3. Tactical Consoles (Screen 1)"]
+        VERIFY["Core /verify (Screen 1/2)<br/>(Jinja2 + HTMX)"]
+        ARCHVIEW["ARCHVIEW Vite :3001<br/>(External Frontend)"]
+    end
+
+    subgraph Effectors ["4. Field Effectors (Screen 2)"]
+        INBOX["Unit Tasking Inbox<br/>(CUE-NODE-01 / USV-02)"]
+        ACK["Signed Recipient Ack<br/>(Closed Loop Completed)"]
+    end
+
+    AIS -->|POST /api/ingress/open-feed| GRAPH
+    GLINT -->|POST /api/ingress/candidate-event| GRAPH
+    SIA -->|POST /api/ingress/candidate-event| GRAPH
+    GRAPH --> KINEMATICS
+    KINEMATICS --> GATE
+    GATE -->|POST /api/gate/approve| SEAL
+    SEAL --> AUDIT
+    SEAL --> INBOX
+    INBOX --> ACK
+    ACK -->|POST /api/recipient/ack| AUDIT
+
+    C2Core <--> VERIFY
+    C2Core <--> ARCHVIEW
 ```
 
 ---
 
-## Minimal E2E (Core only — recommended)
+## 1. Zero-State Clean Reset
 
-One process. No Node, no SIA, no GLINT mock.
+Follow these steps to kill any lingering processes, clear local storage and audit trails, and ensure a completely clean environment before running the E2E verification.
+
+### 1.1 Terminate Running Processes
+
+Stop any existing C2, mock, or frontend processes and free ports `:8080`, `:5051`, `:5050`, `:8000`, `:3001`, and `:3102`:
 
 ```bash
-cd /path/to/sdth-nexus-c2
-uv sync
-uv run sdth-c2-server          # http://127.0.0.1:8080
+# Terminate processes occupying target ports
+kill $(lsof -ti :8080 :5051 :5050 :8000 :3001 :3102) 2>/dev/null || true
+
+# Verify that all ports are freed (should return empty output)
+lsof -i :8080 -i :5051 -i :5050 -i :8000 -i :3001 -i :3102
 ```
 
-Browser (two tabs):
+### 1.2 Clear Audit Trails, Scratch Directories & Cache
 
-| Tab | URL | Actions |
-|-----|-----|---------|
-| Screen 1 | http://127.0.0.1:8080/verify/command | **Propose** `S3` (default / maritime hero) → **Approve** |
-| Screen 2 | http://127.0.0.1:8080/verify/recipient | Wait for HTMX poll (2s) → **Ack** |
-
-Optional on Screen 1 (still no SIA server):
-
-- **Ingress SIA only** — Sentinel fixture (OBB + chip, ~2 dark vessels)
-- **Ingress GLINT only** — Assumed-mock fixture (macro cluster; use **GLINT pull** if mock `:5051` is up)
-- **Ingress Dual-SAR (both)** — fused composite (`source_id=DUAL_SAR`, confidence boost, keeps SIA geometry)
-- **Ingress Indago AIS** — open-feed background traffic (Indago DuckDB → live → fixture; flash shows `source=`)
-- **Reset** — clear runtime between mode compares
-
-Hub: http://127.0.0.1:8080/verify
-
-### Tamper detection rehearsal (#88)
-
-After a closed loop (Propose → Approve → Ack), show that a 1-character edit of the sealed OCSF trail is caught. Requires the demo gate:
+Wipe previous audit records (`.audit/`), temporary test files (`.tmp-e2e/`), and compiled Python cache:
 
 ```bash
+cd /Users/yoheionishi/work/edgesentry/sdth-nexus-c2
+
+# Remove existing audit trails and temporary artifacts
+rm -rf .audit/gate.jsonl .audit/ingress.jsonl .tmp-e2e/
+mkdir -p .audit
+
+# Clean Python bytecode caches
+find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+```
+
+### 1.3 Sync Environment & Dependencies
+
+```bash
+uv sync
+```
+
+---
+
+## 2. Server Startup Options
+
+Select the deployment profile appropriate for your verification target:
+
+### Profile A: Core Only (Minimal & Recommended)
+
+No external processes (Node.js, SIA, or GLINT server) are required. C2 uses built-in fail-safe fixtures that emulate identical Dual-SAR fusion and closed-loop gating behavior.
+
+```bash
+# Terminal 1: Start C2 Core
+cd /Users/yoheionishi/work/edgesentry/sdth-nexus-c2
 export C2_DEMO_TAMPER=1
 uv run sdth-c2-server
+# => Running on http://127.0.0.1:8080
 ```
 
-On any `/verify` screen, the **Audit integrity** panel shows `OCSF Hash Chain: broken links 0 of n` and three actions:
+### Profile B: Full-Spectrum (With Live GLINT Mock)
 
-1. **Inject 1-char tamper** — flips one character in a sealed record (same semantics as `scripts/demo_tamper_detection.py`); pill turns warn (`hash mismatch @ record[i]`).
-2. **Re-verify** — re-walks the SHA-256 chain; when an EDS sidecar is present, also runs out-of-process `eds audit verify-chain` (`CHAIN_VALID` / fail).
-3. **Restore** — writes back the pre-tamper snapshot; status returns to `0 of n`.
-
-Never claim “100% integrity” — always report broken-link counts (KPI #5). CLI-only equivalent: `uv run python scripts/demo_tamper_detection.py`.
-
-### Macro vs micro SAR — when to use which
-
-Both feeds are **space-based SAR**, but they answer different operator questions. Full architecture: [SAR Pipeline §2.3 Dual-SAR Synergy](architecture/sar_pipeline.md#23-dual-sar-synergy-temporal-kinematic-bridge). Provenance / pitch roles: [Data provenance](data-provenance.md) (GLINT = S3 **macro**, SIA = S3 **micro**) · [Scenarios S3](scenarios.md).
-
-| Source | Viewpoint | Typical product | Use alone when… |
-|--------|-----------|-----------------|-----------------|
-| **GLINT** (Team 02) | **Macro** — corridor / sector scene-difference | Cluster alert (`…_CLUSTER`), bbox over a wide area, no vessel length / chip | Cueing: “something anomalous in sector B” before micro detail exists, or partner live demo without SIA |
-| **SIA** (in-house) | **Micro** — per-vessel metrology | Dark-vessel OBB (length, beam, angle) + evidence chip; optional AIS dark filter upstream | Tasking geometry / chip proof, or GLINT unavailable (Dual-SAR fail-safe is SIA-shaped) |
-| **Dual-SAR** (both) | Macro cue **corroborated by** micro metrology | Composite `source_id=DUAL_SAR`, `dual=corroborated`, SIA geometry + boosted confidence | Default **hero / gate** narrative: operator sees *why* the cluster is actionable |
-
-**How to choose on `/verify`:**
-
-1. **GLINT only** — show the macro cue in isolation (Ontology: 1 cluster row, no chip).
-2. **SIA only** — show micro detections without fusion (2 vessels + lengths + chip).
-3. **Dual-SAR (both)** — preferred for Path F / S3 story: same micro geometry as SIA, plus `dual=corroborated` and higher confidence when macro and micro align spatially (≤3 km / macro bbox). If macro cannot load or does not overlap, Dual-SAR degrades toward SIA-only (`sia_only`) — see §2.3.
-
-Do **not** treat the two sources as interchangeable duplicates: stacking GLINT + SIA without Dual-SAR leaves two unfused observations; Dual-SAR is the intentional joint path (`dual_sar` / `pull_dual_sar` on [REST candidate-event](api/rest.md)).
-
-### Compare SAR ingress modes (results must differ)
-
-Use this checklist to confirm SIA-only / GLINT-only / Dual-SAR are **observably different** on Screen 1. Core only; no SIA or GLINT process required.
-
-1. Open http://127.0.0.1:8080/verify/command (hard-refresh if the server was already running).
-2. For **each** row below: click **Reset** → click the ingress button → read **Ontology snapshot** and **Evidence chips**.
-3. Do **not** stack modes without Reset — observations accumulate and blur the compare.
-
-| Step | Button | Expect in Ontology | Evidence chips | Flash / provenance |
-|------|--------|--------------------|----------------|--------------------|
-| A | **Ingress SIA only** | **2** rows · `source_id=SENTINEL_IMAGERY_ANALYSIS` · `ingress=sentinel_imagery` · `L=78.2m` and `L=52.0m` · conf ≈ **0.91 / 0.84** · hint `UNANNOUNCED_DARK_VESSEL` | **Yes** — `sentinel_chip.jpg` | `SIA only … source=fixture` |
-| B | **Ingress GLINT only** | **1** row · `source_id=SPACE_SAR_SCENE_DIFF` · `ingress=glint` · **no** `L=` length · `n≈2` · conf ≈ **0.88** · hint `…_CLUSTER` | **No** (macro fixture has no chip) | `GLINT only (fixture) … source=glint_fixture` |
-| C | **Ingress Dual-SAR (both)** | **2** rows · `source_id=DUAL_SAR` · `ingress=dual_sar` · `dual=corroborated` · same lengths as SIA · conf ≈ **0.98** (boosted) | **Yes** — same SIA chip | `Dual-SAR … source=dual_sar` |
-
-**Pass when all of the following hold:**
-
-- Observation **count** changes: SIA=2, GLINT=1, Dual-SAR=2.
-- **`source_id` / `ingress`** strings differ per mode (never mix labels after a proper Reset).
-- Dual-SAR shows **`dual=corroborated`** and **higher confidence** than the matching SIA rows; GLINT alone never shows `dual=` or vessel length.
-- Evidence chips appear for SIA and Dual-SAR, and stay empty for GLINT-only.
-
-Optional curl equivalent (same Reset-between-modes rule via `/api/admin/reset`):
+To verify live macro SAR HTTP polling alongside SIA micro SAR fail-safe:
 
 ```bash
-export C2=http://127.0.0.1:8080
+# Terminal 1: C2 Core
+cd /Users/yoheionishi/work/edgesentry/sdth-nexus-c2
+export C2_DEMO_TAMPER=1
+uv run sdth-c2-server
 
-# A — SIA fixture
-curl -sf -X POST "$C2/api/admin/reset" >/dev/null
-curl -sf -X POST "$C2/api/ingress/candidate-event" \
-  -H 'content-type: application/json' -d '{"use_sentinel_fixture":true}' \
-  | jq '{source,count,ids:[.observations[].source_id],ingress:[.observations[].attributes.ingress]}'
-
-# B — GLINT fixture
-curl -sf -X POST "$C2/api/admin/reset" >/dev/null
-curl -sf -X POST "$C2/api/ingress/candidate-event" \
-  -H 'content-type: application/json' -d '{"use_glint_fixture":true}' \
-  | jq '{source,count,ids:[.observations[].source_id],ingress:[.observations[].attributes.ingress]}'
-
-# C — Dual-SAR fixture
-curl -sf -X POST "$C2/api/admin/reset" >/dev/null
-curl -sf -X POST "$C2/api/ingress/candidate-event" \
-  -H 'content-type: application/json' -d '{"dual_sar":true}' \
-  | jq '{source,count,ids:[.observations[].source_id],dual:[.observations[].attributes.dual_sar_status],conf:[.observations[].confidence]}'
+# Terminal 2: GLINT Mock (:5051)
+cd /Users/yoheionishi/work/edgesentry/sdth-nexus-c2
+uv run sdth-mock-glint
 ```
 
-Expect curl: A `count=2` + `SENTINEL_IMAGERY_ANALYSIS`; B `count=1` + `SPACE_SAR_SCENE_DIFF`; C `count=2` + `DUAL_SAR` + `corroborated` + conf near `0.98`.
-
-**Ingress GLINT pull** (optional): with `uv run sdth-mock-glint` on `:5051`, flash/source should say live `glint`; with mock down, fail-safe still returns the same Ontology shape as **GLINT only** (`glint_fixture`).
-
-### Curl checklist (same loop)
+### Profile C: ARCHVIEW Tactical Console Integration
 
 ```bash
-export C2=http://127.0.0.1:8080
-curl -sf -X POST "$C2/api/admin/reset" >/dev/null
+# Terminal 1: C2 Core (:8080)
+cd /Users/yoheionishi/work/edgesentry/sdth-nexus-c2
+uv run sdth-c2-server
 
-# Optional SAR data (fixtures — no SIA server)
-curl -sf -X POST "$C2/api/ingress/candidate-event" \
-  -H 'content-type: application/json' -d '{"dual_sar":true}' | jq '{source,count}'
-
-# Path F (S3 maritime hero — default)
-PROP=$(curl -sf -X POST "$C2/api/gate/proposals" \
-  -H 'content-type: application/json' \
-  -d '{"scenario_id":"S3","unit_id":"CUE-NODE-01"}')
-COA=$(echo "$PROP" | jq -r '.coa.coa_id')
-echo "$PROP" | jq '{amber: .finding.amber_alert, threat: .finding.threat_class, coa_id: .coa.coa_id}'
-
-curl -sf -X POST "$C2/api/gate/approve" \
-  -H 'content-type: application/json' \
-  -d "{\"coa_id\":\"$COA\",\"decision\":\"y\",\"operator_id\":\"e2e\"}" | jq .status
-
-curl -sf "$C2/api/recipient/inbox?unit_id=CUE-NODE-01" | jq '{count, coa: .taskings[0].coa.coa_id}'
-
-curl -sf -X POST "$C2/api/recipient/ack" \
-  -H 'content-type: application/json' \
-  -d "{\"coa_id\":\"$COA\",\"unit_id\":\"CUE-NODE-01\",\"status\":\"ACKED\"}" | jq .status
-```
-
-Expect: amber `SAR_DARK_CLUSTER_VS_AIS_SILENCE` / `APPROACH_PATROL` → `APPROVED` → inbox count `1` → `ACKED`.  
-(S2 non-pitch stretch still works with `"scenario_id":"S2"` → `COUNT_AND_BEARING_MISMATCH`.)
-
----
-
-## Path ARCHVIEW (Hero S3 — issue #99) {#path-archview-hero-s3--issue-99}
-
-Pitch closed loop via the external **ARCHVIEW** Screen-1 console ([`johnnyteoh8888/SDTH-2026`](https://github.com/johnnyteoh8888/SDTH-2026)) into Core seal/OCSF and Screen-2 Ack. Same frozen REST as Path A / Path F. Proposal Step 3: [ARCHVIEW integration](architecture/archview-integration-proposal.md). Demo entry: [Path G](demo.md#demo-path-g-archview-tactical-console-issue-99).
-
-### Split of ownership
-
-| Half | Owner | Process |
-|------|-------|---------|
-| **Screen 1** | ARCHVIEW (external) | Vite `127.0.0.1:3001` — Propose S3, Amber, Evidence, Approve, audit pill |
-| **Core** | This repo | `sdth-c2-server` `:8080` — ingress, gate, `DecisionToken` seal, OCSF |
-| **Screen 2** | Abort path (default) | `/verify/recipient` **or** curl inbox/ack — **not** RasPi (demo-excluded) |
-
-ARCHVIEW has **no Dual-SAR ingress button** — run fixture ingress on Core (curl) before Propose. Proxy / CORS: [REST · ARCHVIEW connection](api/rest.md#archview-connection). Types: [`archview-types.ts`](api/archview-types.ts).
-
-### Prerequisites
-
-| Process | Port | Start |
-|---------|------|-------|
-| NexusGate Core | `:8080` | `uv run sdth-c2-server` (this repo) |
-| ARCHVIEW Vite | `:3001` | Sibling checkout; `npm run dev` (path-split proxy → Core; evidence BFF stays `:3102`) |
-| ARCHVIEW evidence BFF | `:3102` | `npm run dev:api` or `npm start` as required by ARCHVIEW INSTALL |
-| Screen 2 (abort) | same Core | Browser tab `/verify/recipient` **or** curl (below) |
-
-```bash
-# Terminal A — Core
-cd /path/to/sdth-nexus-c2
-uv sync
-uv run sdth-c2-server          # http://127.0.0.1:8080
-
-# Terminal B — ARCHVIEW (sibling checkout; not a submodule)
+# Terminal 2: ARCHVIEW Tactical Console (:3001) & BFF (:3102)
 cd /path/to/SDTH-2026
-npm ci                         # first time
-npm run dev:api &              # evidence BFF :3102 (if not already up)
-npm run dev                    # http://127.0.0.1:3001
+npm run dev:api &   # Starts BFF on :3102
+npm run dev         # Starts Vite on :3001
 ```
 
-Do **not** replace ARCHVIEW’s `/api` → BFF proxy wholesale — Core routes are path-split (`/api/ontology`, `/api/gate`, `/api/audit`, `/api/recipient`, `/api/ingress`, `/static/fixtures`).
+### Startup Health Verification
 
-### Checklist (Hero S3)
-
-1. **Reset (optional):** `curl -sf -X POST http://127.0.0.1:8080/api/admin/reset`
-2. **Ingress Dual-SAR (+ optional coastal):**
-   ```bash
-   curl -sf -X POST http://127.0.0.1:8080/api/ingress/open-feed \
-     -H 'content-type: application/json' -d '{"feed":"all","use_fixture":true}'
-   curl -sf -X POST http://127.0.0.1:8080/api/ingress/candidate-event \
-     -H 'content-type: application/json' -d '{"dual_sar":true}' | jq '{source,count}'
-   # Expect: source=dual_sar, count=2
-   ```
-   (Same hops work through the Vite proxy: `http://127.0.0.1:3001/api/ingress/...`.)
-3. **ARCHVIEW — conflicting picture + Amber:** open `http://127.0.0.1:3001/` → scenario **S3 maritime hero** → **Propose**. Expect Amber `SAR_DARK_CLUSTER_VS_AIS_SILENCE`, COA `APPROACH_PATROL`, map/ontology tracks from Core.
-4. **Operator Approve:** review Evidence Inspector chips → **Approve** on the HITL card **within the window** (console shows `timeout` — often ~5s; if expired, **Propose** again then Approve immediately). Core alone seals `DecisionToken` and appends OCSF (`POST /api/gate/approve`).
-5. **Screen 2 Ack (abort default):**
-   - **Browser:** `http://127.0.0.1:8080/verify/recipient` → wait HTMX poll → **Ack**, **or**
-   - **curl:**
-     ```bash
-     COA=<coa_id from Propose>
-     curl -sf "http://127.0.0.1:8080/api/recipient/inbox?unit_id=CUE-NODE-01" | jq '{count}'
-     curl -sf -X POST http://127.0.0.1:8080/api/recipient/ack \
-       -H 'content-type: application/json' \
-       -d "{\"coa_id\":\"$COA\",\"unit_id\":\"CUE-NODE-01\",\"status\":\"ACKED\"}" | jq .status
-     ```
-6. **ARCHVIEW audit pill:** after Ack, pill shows verified (`GET /api/audit/health` → `verified: true`, `broken: 0`, label `0 of n`).
-
-### Abort (RasPi unavailable)
-
-Accepted split for Demo Day:
-
-| Role | Path |
-|------|------|
-| Screen 1 | **ARCHVIEW only** (Propose / Approve / audit pill) |
-| Screen 2 | `/verify/recipient`, Path A curl, **or** Core half of `SCENARIO=S3 ./scripts/picture_to_tasking.sh` after ARCHVIEW Approve |
-
-~~Raspberry Pi 5 GPIO blink (#20)~~ remains **excluded from the demo path**. Optional stretch only: `RASPI_ACK_BLINK=1` (see [demo.md](demo.md)).
-
-### Proxy-only smoke (no browser clicks)
-
-With Core + Vite up:
+Verify responsiveness in a separate terminal:
 
 ```bash
-# From ARCHVIEW checkout
-npm run smoke:nexusgate
-# Expect: smoke:nexusgate OK · audit health verified
-```
+curl -sf http://127.0.0.1:8080/health | jq .
+# Expected: {"status": "ok"}
 
-Full curl closed loop through the Vite proxy (Screen-1 hops) + Core Ack (Screen-2 abort):
-
-```bash
-export C2=http://127.0.0.1:3001   # ARCHVIEW Vite → Core path-split
-curl -sf -X POST http://127.0.0.1:8080/api/admin/reset >/dev/null
-curl -sf -X POST "$C2/api/ingress/candidate-event" \
-  -H 'content-type: application/json' -d '{"dual_sar":true}' | jq '{source,count}'
-PROP=$(curl -sf -X POST "$C2/api/gate/proposals" \
-  -H 'content-type: application/json' \
-  -d '{"scenario_id":"S3","unit_id":"CUE-NODE-01"}')
-COA=$(echo "$PROP" | jq -r '.coa.coa_id')
-echo "$PROP" | jq '{amber: .finding.amber_alert, intent: .coa.intent}'
-curl -sf -X POST "$C2/api/gate/approve" \
-  -H 'content-type: application/json' \
-  -d "{\"coa_id\":\"$COA\",\"decision\":\"y\",\"operator_id\":\"archview-e2e\"}" | jq .status
-curl -sf -X POST http://127.0.0.1:8080/api/recipient/ack \
-  -H 'content-type: application/json' \
-  -d "{\"coa_id\":\"$COA\",\"unit_id\":\"CUE-NODE-01\",\"status\":\"ACKED\"}" | jq .status
-curl -sf "$C2/api/audit/health" | jq .
-```
-
-### What “pass” looks like (Path ARCHVIEW)
-
-| Check | Pass |
-|-------|------|
-| Ingress | `source=dual_sar`, count `2` (fixture; coastal open-feed optional) |
-| ARCHVIEW Amber | `SAR_DARK_CLUSTER_VS_AIS_SILENCE` + COA `APPROACH_PATROL` after Propose S3 |
-| Approve | Core returns `APPROVED` + sealed `DecisionToken` digest |
-| Screen 2 | Inbox count `1` → `ACKED` via `/verify/recipient` or curl |
-| Audit pill | `verified: true`, `broken: 0`, label `0 of n` |
-| Invariant | UI never seals tokens — only `POST /api/gate/approve` |
-
-Browser UI E2E stays **local-only** (not CI). Contract/CORS coverage: `tests/integration/test_archview_contract_e2e.py` (#93).
-
----
-
-## Optional: live GLINT mock
-
-```bash
-# Terminal A
-uv run sdth-c2-server
-
-# Terminal B
-uv run sdth-mock-glint    # http://127.0.0.1:5051
-```
-
-```bash
-curl -sf -X POST http://127.0.0.1:8080/api/ingress/candidate-event \
-  -H 'content-type: application/json' -d '{"pull_glint":true}' | jq '{source,count}'
-# source=glint when mock is up; otherwise glint_fixture
+curl -sf http://127.0.0.1:8080/api/audit/health | jq .
+# Expected: {"verified": true, "broken": 0, "count": 0, "label": "0 of 0"}
 ```
 
 ---
 
-## Optional: live SIA sibling (not required for E2E)
+## 3. End-to-End Execution Workflows
 
-Only if you want a real `run_cv` HTTP pull instead of the recorded fixture.
+### Workflow 1: One-Shot Automated E2E (CLI)
 
-```bash
-# Terminal A — sibling checkout (not a git submodule)
-cd ~/work/Sentinel-Imagery-Analysis
-uv sync && uv run sia-server   # default http://127.0.0.1:5050
-
-# Terminal B
-export SAR_UPSTREAM_URL=http://127.0.0.1:5050
-export SAR_UPSTREAM_SCAN=<scan_folder>
-uv run sdth-c2-server
-```
+Executes the complete Propose → Approve → Inbox → Ack → Audit closed loop in `< 10ms`:
 
 ```bash
-curl -sf -X POST http://127.0.0.1:8080/api/ingress/candidate-event \
-  -H 'content-type: application/json' -d '{"pull_upstream":true}' | jq '{source,count}'
-# source=upstream when SIA is up; fixture when down (fail-safe)
+# Run S3 Maritime Hero closed loop
+SCENARIO=S3 uv run python scripts/picture_to_tasking.py --require-roundtrip
 ```
 
-Dual-SAR live pull (GLINT + SIA, each with its own fail-safe):
-
-```bash
-curl -sf -X POST http://127.0.0.1:8080/api/ingress/candidate-event \
-  -H 'content-type: application/json' -d '{"pull_dual_sar":true}' | jq '{source,count}'
-```
-
----
-
-## Full-Spectrum S3 E2E Verification (All Components Mobilized)
-
-This end-to-end rehearsal validates that **when every system component is simultaneously mobilized** in the maritime hero scenario (S3), NexusGate executes with zero-risk determinism, prevents over-fusion, and compresses operational cognitive load.
-
-### 1. Mobilized Architecture
-
-| Component | Operational State | Role in Full E2E |
-|---|---|---|
-| **Indago AIS** | Active (LaunchAgent, live Singapore Strait DuckDB) | Ingests 40 live background vessels via `open_feed` (`feed_source=indago:singapore.duckdb`) |
-| **GLINT mock** (`:5051`) | Running (`sdth-mock-glint`) | Ingests live macro anomaly (`SPACE_SAR_SCENE_DIFF`) |
-| **SIA** (`:5050`) | Intentionally Offline | Triggers automatic fail-safe fallback to high-res Sentinel-1 micro detection fixture (`SENTINEL_IMAGERY_ANALYSIS`) |
-| **NexusGate C2** (`:8080`) | Running (`sdth-c2-server`) | Corroborates Dual-SAR, maintains modality separation, evaluates deterministic gate, and logs immutable audit |
-
-### 2. Empirical Verification Results
-
-#### Ingress & Spatial Entity Graph
-- **Background AIS**: 40 vessels (`resolved_sources.ais=indago`) seamlessly layered into the operational picture.
-- **Dual-SAR Corroboration**: `source=dual_sar`, `dual=corroborated`, confidence boosted to **0.98**, vessel metrology extracted ($L=78.2\text{ m}, 52.0\text{ m}$).
-- **Evidence Chips**: High-resolution radar chips (`tests/fixtures/sentinel_chip.jpg`) attached to CandidateEvents.
-- **Modality Separation**: Graph ingested **42 observations** across **14 tracks** without blending AIS and SAR contacts into hallucinated composite entities.
-
-#### Gate Closed-Loop & Lead-Pursuit Tasking
-- **Amber Warning Picture**: `SAR_DARK_CLUSTER_VS_AIS_SILENCE` (threat `lane_sar_ais_dark_cluster`).
-- **Discrepancy Metrics**: Spatial mismatch **~4,973 m**, tactical warning time **~12 min**.
-- **Deterministic COA**: `APPROACH_PATROL` dispatched to dynamic **lead-pursuit POI** (Point of Interception calculated by quadratic collision-course kinematics [#58](https://github.com/edgesentry/sdth-nexus-c2/issues/58)) rather than stale historical coordinates.
-- **Human-in-the-Loop Gate**: Sealed `DecisionToken` generated upon Commander authorization (`approve`).
-- **Closed-Loop Ack**: Field Effector acknowledges tasking (`ACKED`) within latency bounds.
-
-#### Automation & Cryptographic Audit Proof
+**Expected output**:
 ```text
 picture_to_tasking S3: PASS
 Picture→Ack: 0.005s | Approve→Ack: 0.003s
-recipient_ack sealed; cryptographic audit chain intact (218+ links)
+recipient_ack sealed; cryptographic audit chain intact (3 links)
 ```
-
-### 3. Operational Interpretation (Why Evaluators Care)
-
-> **"SAR sees ship-like radar returns. AIS reports normal commercial traffic. Is this sea clutter, an AIS-silent dark vessel, or sensor latency?"**
-
-NexusGate solves this operational dilemma across three decoupled tiers:
-1. **Macro SAR (GLINT)** asks: *"Is there an anomaly in this corridor sector?"*
-2. **Micro SAR × AIS (SIA)** asks: *"Is this specific radar return unannounced at satellite pass time ($T - \Delta t$)?"*
-3. **Tactical C2 (NexusGate $\leftarrow$ Indago)** asks: *"How is live traffic moving now ($T \approx 0$), and what is the dynamic intercept POI?"*
-
-**The cognitive outcome**: The operator never conducts manual cross-database joins or pixel comparisons. The decision space is compressed from *"analyze raw sensor streams"* to **"authorize the pre-correlated, mathematically verified Amber Warning Picture"**.
 
 ---
 
-## What “pass” looks like
+### Workflow 2: Core WebUI (`/verify`) Rehearsal
 
-| Check | Pass |
-|-------|------|
-| Hub | `/verify` shows **MOSAIC C2 Verify** |
-| S3 hero loop | Propose (default S3) → Approve → Screen 2 Ack within a few seconds |
-| Path ARCHVIEW (#99) | Dual-SAR ingress → ARCHVIEW Propose S3 / Approve → Screen-2 Ack (abort) → audit pill verified — see [Path ARCHVIEW](#path-archview-hero-s3--issue-99) |
-| Dual-SAR fixture | `source=dual_sar`, evidence under `/static/fixtures/` |
-| SAR mode compare | After Reset: SIA (2 + length + chip) ≠ GLINT (1 + cluster, no chip) ≠ Dual-SAR (`DUAL_SAR` + `corroborated` + conf≈0.98) — see [Compare SAR ingress modes](#compare-sar-ingress-modes-results-must-differ) |
-| SIA down | `pull_upstream` / `pull_dual_sar` still **200** via fixture |
-| Invariant | UI never seals tokens — only `POST /api/gate/approve` |
+Interactive human-in-the-loop (HITL) verification using dual browser tabs:
 
-Stop Core with Ctrl+C in the `sdth-c2-server` terminal.
+1. **Open Consoles**:
+   - **Screen 1 (Command Cockpit)**: [http://127.0.0.1:8080/verify/command](http://127.0.0.1:8080/verify/command)
+   - **Screen 2 (Recipient Effector)**: [http://127.0.0.1:8080/verify/recipient](http://127.0.0.1:8080/verify/recipient)
+2. **Ingress Sensor Data on Screen 1**:
+   - Click **Ingress Dual-SAR (both)** → Ontology snapshot displays 2 dark vessels ($L=78.2\text{ m}, 52.0\text{ m}$) with attached high-resolution radar evidence chips.
+   - Click **Ingress Indago AIS** → Overlays ~40 live/synthetic commercial background tracks in the Singapore Strait without entity blending.
+3. **Propose Action**:
+   - Select Scenario **S3** (Maritime Hero / Dark Vessel) → Click **Propose**.
+   - Verify that the **Amber Warning Card** (`SAR_DARK_CLUSTER_VS_AIS_SILENCE`) and **Lead POI Card** (quadratic intercept calculation) are rendered.
+4. **Authorize (Approve)**:
+   - Within the approval countdown window (typically 30s), click **Approve**.
+   - An `APPROVED` status badge appears, and the cryptographically sealed `DecisionToken` digest is generated.
+5. **Acknowledge on Screen 2 (Ack)**:
+   - Switch to Screen 2. HTMX auto-polling (every 2s) populates the tasking for unit `CUE-NODE-01`.
+   - Click **Ack**.
+   - Status updates to `ACKED`, and the audit chain counter increments.
+
+---
+
+### Workflow 3: Complete Command-Line (curl) Closed Loop
+
+Replicate the entire operational flow via REST API calls without a browser:
+
+```bash
+export C2=http://127.0.0.1:8080
+
+# 1. Reset in-memory state
+curl -sf -X POST "$C2/api/admin/reset" | jq .
+# Expected: {"status": "reset"}
+
+# 2. Ingest background AIS traffic (Indago DuckDB or Fixture)
+curl -sf -X POST "$C2/api/ingress/open-feed" \
+  -H 'content-type: application/json' \
+  -d '{"feed":"all","use_fixture":true}' | jq '{status, count, resolved: .resolved_sources}'
+# Expected: status: "INGESTED", count >= 40
+
+# 3. Ingest Dual-SAR anomaly (GLINT macro cue + Sentinel-1 micro metrology)
+curl -sf -X POST "$C2/api/ingress/candidate-event" \
+  -H 'content-type: application/json' \
+  -d '{"dual_sar":true}' | jq '{source, count, ids:[.observations[].source_id]}'
+# Expected: source: "dual_sar", count: 2, ids: ["DUAL_SAR", "DUAL_SAR"]
+
+# 4. Propose S3 Course of Action
+PROP=$(curl -sf -X POST "$C2/api/gate/proposals" \
+  -H 'content-type: application/json' \
+  -d '{"scenario_id":"S3","unit_id":"CUE-NODE-01"}')
+COA_ID=$(echo "$PROP" | jq -r '.coa.coa_id')
+echo "=== Proposal Created: COA $COA_ID ==="
+echo "$PROP" | jq '{status, amber: .finding.amber_alert, threat: .finding.threat_class, poi: .coa.target_coordinates}'
+
+# 5. Commander Approve -> Seals DecisionToken
+APPROVE=$(curl -sf -X POST "$C2/api/gate/approve" \
+  -H 'content-type: application/json' \
+  -d "{\"coa_id\":\"$COA_ID\",\"decision\":\"y\",\"operator_id\":\"commander-01\"}")
+echo "$APPROVE" | jq '{status, coa_id: .coa.coa_id, token_digest: .decision_token.token_digest}'
+
+# 6. Recipient Effector Inbox Inspection
+curl -sf "$C2/api/recipient/inbox?unit_id=CUE-NODE-01" | jq '{count, tasking_coa: .taskings[0].coa.coa_id}'
+
+# 7. Recipient Effector Execution Acknowledgment (Ack)
+curl -sf -X POST "$C2/api/recipient/ack" \
+  -H 'content-type: application/json' \
+  -d "{\"coa_id\":\"$COA_ID\",\"unit_id\":\"CUE-NODE-01\",\"status\":\"ACKED\"}" | jq .
+
+# 8. Cryptographic Audit Health Check
+curl -sf "$C2/api/audit/health" | jq .
+```
+
+---
+
+### Workflow 4: Path ARCHVIEW (Hero S3) {#path-archview-hero-s3--issue-99}
+
+Closed-loop execution combining external **ARCHVIEW** (Vite `:3001`) with Core (`:8080`):
+
+```bash
+# 1. Reset Core & Ingest Dual-SAR
+curl -sf -X POST http://127.0.0.1:8080/api/admin/reset >/dev/null
+curl -sf -X POST http://127.0.0.1:8080/api/ingress/candidate-event \
+  -H 'content-type: application/json' -d '{"dual_sar":true}' | jq '{source,count}'
+# Expected: source: "dual_sar", count: 2
+
+# 2. ARCHVIEW UI Actions (http://127.0.0.1:3001)
+# - Scenario: Select S3 Maritime Hero -> Click [Propose]
+# - Inspect Amber Warning ("SAR_DARK_CLUSTER_VS_AIS_SILENCE") & Lead Intercept POI
+# - Click [Approve] on the HITL card within timeout (Core seals DecisionToken)
+
+# 3. Screen 2 Recipient Ack (Abort path default)
+# - Browser: http://127.0.0.1:8080/verify/recipient -> Click [Ack]
+# - Or CLI:
+COA_ID=$(curl -sf "http://127.0.0.1:8080/api/recipient/inbox?unit_id=CUE-NODE-01" | jq -r '.taskings[0].coa.coa_id')
+curl -sf -X POST http://127.0.0.1:8080/api/recipient/ack \
+  -H 'content-type: application/json' \
+  -d "{\"coa_id\":\"$COA_ID\",\"unit_id\":\"CUE-NODE-01\",\"status\":\"ACKED\"}" | jq .status
+
+# 4. Verify ARCHVIEW Audit Pill
+# ARCHVIEW console audit pill displays green ("0 of n", verified: true)
+curl -sf http://127.0.0.1:8080/api/audit/health | jq .
+```
+
+---
+
+### Workflow 5: Tamper Detection Rehearsal {#tamper-detection-rehearsal-88}
+
+Validates that a 1-character insider tampering of `gate.jsonl` is detected immediately by SHA-256 hash chaining and out-of-process EDS verification, halting execution until restored:
+
+1. **CLI Rehearsal**:
+   ```bash
+   uv run python scripts/demo_tamper_detection.py
+   # Expected: Exit 0 (Chain built -> 1-char tamper injected -> mismatch detected -> restored -> valid)
+   ```
+
+2. **WebUI Interactive Rehearsal**:
+   - Launch with `C2_DEMO_TAMPER=1 uv run sdth-c2-server`.
+   - Complete a cycle (Propose → Approve → Ack) on `/verify/command`.
+   - In the **Audit integrity** panel:
+     1. Click **Inject 1-char tamper** → Status badge changes to warning (`broken links 1 of n` / `hash mismatch`).
+     2. Click **Re-verify** → Confirms SHA-256 and EDS out-of-process verification failure.
+     3. Click **Restore** → Restores pre-tamper snapshot (`broken links 0 of n`).
+
+---
+
+## 4. Data Verification Procedures
+
+Checklist for verifying data correctness, mathematical integrity, and non-repudiation at each pipeline stage.
+
+### 4.1 Ingress & Ontology State Verification (`GET /api/ontology/state`)
+
+Execute inspection query:
+```bash
+curl -sf http://127.0.0.1:8080/api/ontology/state | jq '{
+  scenario: .scenario_id,
+  track_count: (.tracks | length),
+  obs_count: (.observations | length),
+  amber: .amber_alert.alert,
+  pending: .pending_proposals,
+  inbox: .inbox_depth
+}'
+```
+
+#### ✅ Verification Point 1: Modality Separation
+- **Check**: AIS commercial tracks and SAR radar observations must **never** be prematurely blended into a single hallucinated composite track.
+- **Pass Criteria**:
+  - `tracks[].modalities` preserves distinct values (`["ais"]` for AIS vessels, `["space_sar"]` for SAR detections).
+  - Unannounced dark vessels remain isolated as independent radar tracks rather than overwriting legitimate AIS tracks.
+
+#### ✅ Verification Point 2: Dual-SAR Corroboration
+- **Check**: Macro SAR (GLINT cluster cue) and micro SAR (Sentinel-1 metrology) spatially align within the sector corridor ($\le 3\text{ km}$ or macro bbox), yielding elevated confidence.
+- **Pass Criteria**:
+  - `source_id`: `"DUAL_SAR"`
+  - `attributes.dual_sar_status`: `"corroborated"`
+  - `confidence`: `0.98` (boosted from individual 0.91 / 0.84 scores)
+  - `attributes.metrology`: Length $L=78.2\text{ m}, 52.0\text{ m}$ preserved from SIA
+  - Evidence chip URL: Valid link to `/static/fixtures/sentinel_chip.jpg`
+
+#### ✅ Verification Point 3: SAR Ingress Mode Discrepancy {#compare-sar-ingress-modes-results-must-differ}
+When executing each mode after an `/api/admin/reset`, verify that outputs are observably distinct:
+
+| Mode | Trigger Payload | Expected `source_id` | Detections | Length ($L$) | Confidence | Radar Chip |
+|---|---|---|---|---|---|---|
+| **SIA only** | `{"use_sentinel_fixture":true}` | `SENTINEL_IMAGERY_ANALYSIS` | **2** | $78.2\text{m}, 52.0\text{m}$ | ~0.91 / 0.84 | **Yes** (`sentinel_chip.jpg`) |
+| **GLINT only** | `{"use_glint_fixture":true}` | `SPACE_SAR_SCENE_DIFF` | **1** | None (Macro cluster) | ~0.88 | **No** (Macro scene difference) |
+| **Dual-SAR** | `{"dual_sar":true}` | `DUAL_SAR` | **2** | Inherited from SIA | **~0.98** (Boosted) | **Yes** (Inherited from SIA) |
+
+---
+
+### 4.2 Gate / Amber Warning & Lead Intercept POI Verification (`POST /api/gate/proposals`)
+
+Inspect proposal payload:
+```bash
+curl -sf -X POST http://127.0.0.1:8080/api/gate/proposals \
+  -H 'content-type: application/json' \
+  -d '{"scenario_id":"S3","unit_id":"CUE-NODE-01"}' | jq '.finding, .coa'
+```
+
+#### ✅ Verification Point 1: Amber Alert Formulation
+- `finding.amber_alert`: `"SAR_DARK_CLUSTER_VS_AIS_SILENCE"`
+- `finding.threat_class`: `"lane_sar_ais_dark_cluster"`
+- `finding.mismatch_m`: $\approx 4,973\text{ m}$ (spatial disparity between AIS shipping lane and anomalous radar contact)
+
+#### ✅ Verification Point 2: Dynamic Lead Intercept Kinematics
+- **Check**: Action target coordinates must not point to stale historical detection positions. Instead, the system must calculate a dynamic **Point of Interception (POI)** using quadratic collision-course kinematics ([#58](https://github.com/edgesentry/sdth-nexus-c2/issues/58)).
+- **Pass Criteria**:
+  - `coa.intent`: `"APPROACH_PATROL"`
+  - `coa.target_coordinates`: Four-decimal latitude/longitude pair
+  - `coa.metadata.poi`: Contains calculated `bearing_deg`, `speed_mps`, and `eta_s`
+
+---
+
+### 4.3 Commander Authorization & DecisionToken Seal (`POST /api/gate/approve`)
+
+Inspect approval response:
+```bash
+curl -sf -X POST http://127.0.0.1:8080/api/gate/approve \
+  -H 'content-type: application/json' \
+  -d "{\"coa_id\":\"$COA_ID\",\"decision\":\"y\",\"operator_id\":\"commander-01\"}" | jq .
+```
+
+#### ✅ Verification Point 1: Cryptographic Seal Integrity
+- `status`: `"APPROVED"`
+- `decision_token`:
+  - `token_id`: Valid UUID
+  - `coa_id`: Exactly matches proposed COA ID
+  - `token_digest`: 64-character hexadecimal SHA-256 digest
+  - `sealed_at`: UTC ISO 8601 timestamp
+
+#### ✅ Verification Point 2: Core Authority Invariant
+- **The client UI or edge effector never issues or seals tokens independently.** Only Core `POST /api/gate/approve` has authority to issue a valid `DecisionToken`.
+
+---
+
+### 4.4 Recipient Tasking Delivery & Ack Verification
+
+```bash
+# 1. Inspect unit inbox
+curl -sf "http://127.0.0.1:8080/api/recipient/inbox?unit_id=CUE-NODE-01" | jq .
+# Pass: count == 1, taskings[0].coa.coa_id == $COA_ID
+
+# 2. Submit execution Ack
+curl -sf -X POST http://127.0.0.1:8080/api/recipient/ack \
+  -H 'content-type: application/json' \
+  -d "{\"coa_id\":\"$COA_ID\",\"unit_id\":\"CUE-NODE-01\",\"status\":\"ACKED\"}" | jq .
+# Pass: status == "ACKED"
+```
+
+---
+
+### 4.5 OCSF Audit Hash-Chain Integrity (`GET /api/audit/health`)
+
+Verify audit trail health:
+```bash
+curl -sf http://127.0.0.1:8080/api/audit/health | jq .
+```
+
+#### ✅ Expected Health Output
+```json
+{
+  "verified": true,
+  "broken": 0,
+  "count": 3,
+  "label": "0 of 3"
+}
+```
+- `verified`: Must be `true`.
+- `broken`: Must be `0`.
+- `count`: Minimum $\ge 3$ sequentially chained records (`coa_proposed`, `gate_decision`, `tasking_acked`).
+
+#### Physical Log Verification
+Inspect `.audit/gate.jsonl` to confirm cryptographic link chaining:
+```bash
+tail -n 3 .audit/gate.jsonl | jq '{class_name: .class_name, record_hash: .record_hash, prev_hash: .prev_record_hash}'
+```
+
+---
+
+## 5. Troubleshooting & Operational Notes
+
+| Issue | Likely Cause | Resolution |
+|---|---|---|
+| `Address already in use` error on startup | Stale C2 or mock server running in background | Run `kill $(lsof -ti :8080 :5051 :5050) 2>/dev/null \|\| true` |
+| `Duplicate COA` / `active_coa_ids` 400 error | Previous scenario state remains in memory | Execute `curl -sf -X POST http://127.0.0.1:8080/api/admin/reset` |
+| `Window expired` error during Approve | Operator exceeded HITL decision window (typically 30s) | Re-trigger proposal via `POST /api/gate/proposals` and approve promptly |
+| SIA upstream 500 / unreachable | Sibling SIA service `:5050` is not running | SIA is optional; C2 automatically falls back to deterministic Singapore Strait fixtures |
+| Audit health reports `broken > 0` | Audit file was tampered with or corrupted | Run `POST /api/admin/audit/restore` or remove `.audit/gate.jsonl` and reset |
+
+---
+
+## 6. Pass Criteria Checklist
+
+- [ ] **Reset**: Ports 8080, 5051, 5050 are cleared; zero-state starts cleanly.
+- [ ] **Ingress**: AIS and SAR observations populate the graph while maintaining strict modality separation.
+- [ ] **Dual-SAR**: GLINT macro cluster and SIA micro metrology corroborate (`source=dual_sar`, confidence 0.98).
+- [ ] **Gate**: Proposal emits Amber Warning (`SAR_DARK_CLUSTER_VS_AIS_SILENCE`) with dynamic Lead Intercept POI.
+- [ ] **Approve**: Sealed `DecisionToken` generated only by Core upon operator authorization.
+- [ ] **Ack**: Field effector retrieves tasking from inbox and submits signed `ACKED`.
+- [ ] **Audit**: `GET /api/audit/health` confirms `verified: true` with `broken: 0` (0 of n).

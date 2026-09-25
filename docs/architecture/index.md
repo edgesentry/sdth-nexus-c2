@@ -13,21 +13,121 @@ NexusGate splits **probabilistic interpretation** (app layer) from **determinist
 1. **Probabilistic** — noisy, conflicting feeds (social OSINT, radar, EO blur, AIS, RF) become a Warning Picture / candidate COA.
 2. **Deterministic** — kinematic corroboration, geofence/speed interlocks, latency-bounded HITL, sealed `DecisionToken`, immutable OCSF audit.
 
-## End-to-end path
+## Complete System Integration Architecture
+
+NexusGate C2 operates as the deterministic anchor in a distributed tactical ecosystem. The diagram below illustrates every integration point across upstream sensors, probabilistic inference, sovereign security sidecars, tactical consoles, and field effectors:
 
 ```mermaid
 flowchart TD
-  A[Multi-source ingress] --> B[SpatialEntityGraph]
-  B --> C[Discrepancy / Amber flag]
-  C --> D[Warning Picture]
-  D --> E[Latency-bounded gate]
-  E -->|deny / timeout| F[Default deny / safe hold]
-  E -->|approve| G[DecisionToken]
-  G --> H[Recipient inbox]
-  H --> I[Field Ack]
-  I --> J[OCSF hash-chain audit]
-  E --> J
+  subgraph UpstreamSensors ["1. Upstream Sensors & Ingress Feeds"]
+    SIA["SIA (Sentinel-1 SAR) :5050<br/>(Micro Metrology & Chips)"]
+    GLINT["Team 02 GLINT Mock :5051<br/>(Macro SAR Cluster)"]
+    AIS_INDAGO[("Indago DuckDB<br/>(Singapore AIS T-0)")]
+    OPEN_FEED["OpenSky / data.gov.sg<br/>(Air ADS-B & Coastal AIS)"]
+    OSINT_GW["External OSINT Gateway<br/>(Social Media / Civil Apps)"]
+    COASTAL["Coastal 3D Radar / CCTV<br/>(Tactical Slew-to-Cue)"]
+  end
+
+  subgraph C2Core ["2. NexusGate C2 Core (:8080)"]
+    INGRESS_ADAPT["Ingress Normalizer<br/>(Observation Adapter)"]
+    REPLAY_LOG[("Ingress Replay Log<br/>.audit/ingress.jsonl")]
+    GRAPH[("SpatialEntityGraph<br/>(Modality Separation)")]
+    KINEMATICS["Kinematic Dead-Reckoning<br/>(Reachability & Lead POI)"]
+    INTERLOCK{"Deterministic Interlock<br/>(<5ms Fast Reject)"}
+    GATE{"Latency-Bounded Gate<br/>(<50ms HITL Window)"}
+    TOKEN_SEAL["DecisionToken Issuer<br/>(SHA-256 Hash Seal)"]
+    INBOX["Effector Inbox Queue<br/>(Pull-based Tasking)"]
+  end
+
+  subgraph AIInterpretation ["3. Probabilistic Interpretation Layer"]
+    LITELLM["LiteLLM Proxy (:4000)<br/>(deploy/litellm/)"]
+    MODELS["Upstream LLMs<br/>(Gemini 3.8 Flash / GPT-4o / Claude)"]
+    HEURISTIC["Heuristic Fallback Engine<br/>(Zero-Internet Fallback)"]
+  end
+
+  subgraph SecurityAudit ["4. Dual Cryptographic Audit Fabric"]
+    OCSF_LOG[("OCSF Audit Hash-Chain<br/>.audit/gate.jsonl (SHA-256)")]
+    EDS_SIDECAR["EDS Rust Sidecar (.eds/)<br/>(edgesentry-rs C-ABI / CLI)"]
+  end
+
+  subgraph TacticalConsoles ["5. Tactical Consoles & Screen 1"]
+    ARCHVIEW["ARCHVIEW Tactical Console (:3001)<br/>(External Vite / React)"]
+    ARCHVIEW_BFF["ARCHVIEW Evidence BFF (:3102)<br/>(Local Image / Video Cache)"]
+    VERIFY_UI["Core /verify WebUI (:8080)<br/>(Screen 1 & 2 Jinja2/HTMX)"]
+  end
+
+  subgraph DownstreamEffectors ["6. Field Effectors & Screen 2"]
+    USV_MOCK["USV Effector Mock (:8000)<br/>(CLEARBOT / Telemetry Mock)"]
+    TACTICAL_USV["Tactical Effectors / USV-02<br/>(Field Recipient Client)"]
+    RASPI["Raspberry Pi 5 Node<br/>(Optional GPIO Ack Blink)"]
+  end
+
+  %% Ingress flows
+  SIA -->|POST /api/ingress/candidate-event| INGRESS_ADAPT
+  GLINT -->|POST /api/ingress/candidate-event| INGRESS_ADAPT
+  AIS_INDAGO -->|POST /api/ingress/open-feed| INGRESS_ADAPT
+  OPEN_FEED -->|POST /api/ingress/open-feed| INGRESS_ADAPT
+  OSINT_GW -->|POST /api/ingress/candidate-event| INGRESS_ADAPT
+  COASTAL --> INGRESS_ADAPT
+
+  INGRESS_ADAPT --> REPLAY_LOG
+  INGRESS_ADAPT --> GRAPH
+  GRAPH --> KINEMATICS
+  KINEMATICS --> INTERLOCK
+
+  %% AI Interpretation flow
+  GRAPH -.->|POST /api/interpret| LITELLM
+  LITELLM <--> MODELS
+  LITELLM -.->|Fallback if down| HEURISTIC
+  LITELLM -.->|Candidate COA| GATE
+
+  %% Gate and Decision flows
+  INTERLOCK -->|Passed| GATE
+  GATE -->|Approve| TOKEN_SEAL
+  GATE -->|Deny / Timeout| SAFE_HOLD["Safe Hold / Default Deny"]
+
+  %% Audit flows
+  TOKEN_SEAL --> OCSF_LOG
+  OCSF_LOG <-->|C-ABI ctypes & eds audit verify-chain| EDS_SIDECAR
+
+  %% Consoles interaction
+  ARCHVIEW <-->|Vite Proxy :3001 -> :8080| C2Core
+  ARCHVIEW <--> ARCHVIEW_BFF
+  VERIFY_UI <--> C2Core
+
+  %% Effector dispatch and ack
+  TOKEN_SEAL --> INBOX
+  INBOX -->|GET /api/recipient/inbox| TACTICAL_USV
+  INBOX -->|GET /api/recipient/inbox| USV_MOCK
+  TACTICAL_USV -->|POST /api/recipient/ack| C2Core
+  USV_MOCK -->|POST /api/recipient/ack| C2Core
+  TACTICAL_USV -.-> RASPI
+  C2Core -->|Ack Sealed| OCSF_LOG
 ```
+
+---
+
+## Exhaustive Integration Matrix
+
+NexusGate Core establishes structured, contract-bound interfaces with 12 distinct components across the intelligence-to-action cycle:
+
+| # | Integration Category | Target Component | Wire Protocol / Endpoint | Port / Transport | Operational Role | Fallback / Fail-Safe State |
+|---|---|---|---|---|---|---|
+| **1** | **Micro SAR Metrology** | `Sentinel-Imagery-Analysis` (SIA) | `POST /api/ingress/candidate-event` (`pull_upstream` / `run_cv`) | HTTP `:5050` / Local LAN | Physical vessel length/beam OBB & radar chips ($L=78.2\text{m}, 52.0\text{m}$). | Automatic fail-safe to `tests/fixtures/sentinel_run_cv_sg_strait.json`. |
+| **2** | **Macro SAR Cluster** | Team 02 GLINT | `POST /api/ingress/candidate-event` (`pull_glint`) | HTTP `:5051` / REST | Corridor-level statistical change detection & dark cluster warnings. | Automatic fallback to GLINT assumed fixture (`glint_fixture`). |
+| **3** | **Dual-SAR Synergy** | Dual-SAR Corroborator (`dual_sar.py`) | `POST /api/ingress/candidate-event` (`dual_sar` / `pull_dual_sar`) | In-memory sync | Fuses GLINT corridor cue with SIA micro metrology (boosts confidence to 0.98). | Degrades to `source=sia_only` if macro cannot overlap. |
+| **4** | **Maritime AIS Ground Truth** | Indago Stream Engine | `POST /api/ingress/open-feed` (`feed=ais`, `source=indago`) | DuckDB IPC (`~/.indago/...`) | Live commercial vessel tracks in Singapore Strait ($T \approx 0$). | Falls back to `data.gov.sg` live poll $\to$ golden fixture (`open_ais_datagovsg.json`). |
+| **5** | **Air / Surface Open Feeds** | OpenSky Network / data.gov.sg | `POST /api/ingress/open-feed` (`feed=air`) | HTTPS REST | Live ADS-B airspace tracking and coastal open telemetry. | Falls back to deterministic fixture (`open_air_traffic.json`). |
+| **6** | **OSINT Text Intelligence** | External Scraper Gateway (єВорог / Telegram) | `POST /api/ingress/candidate-event` (OSINT adapter) | TLS REST / Air-gap diode | Structured civilian reports and threat claims (S2 air swarm). | Fixed scenario events via `core.scenarios.s2`. |
+| **7** | **Probabilistic LLM Engine** | LiteLLM Proxy (`deploy/litellm/`) | `POST /api/interpret` | HTTP `:4000` / OpenAI Wire Spec | Generates contextual hypotheses & candidate COAs via Gemini 3.8 Flash, GPT-4o, or Claude. | Automatic fallback to rule-based heuristic interpreter (`source=heuristic`). |
+| **8** | **Tactical Console (Screen 1)** | ARCHVIEW Frontend | Vite Proxy (`/api/*` $\to$ `:8080`) | HTTP `:3001` (Vite) / `:3102` (BFF) | Primary tactical display for VIP evaluators: Amber alert, map tracks, HITL approval. | Zero-dependency Core WebUI (`/verify/command`). |
+| **9** | **Core Verification WebUI** | In-Repo Verify Harness | Server-Rendered Jinja2 + HTMX | HTTP `:8080` (`/verify`) | Zero-dependency verification harness on Core for Screen 1 & Screen 2 testing. | Headless CLI (`scripts/picture_to_tasking.py`). |
+| **10** | **Field Effector Tasking** | Tactical Effector Node (USV / MPA) | `GET /api/recipient/inbox`<br>`POST /api/recipient/ack` | HTTP `:8080` (REST) | Pull-based asynchronous task distribution and signed execution acknowledgment. | Simulated via curl / CLI runner. |
+| **11** | **USV Effector Simulator** | Mock Effector Service (`mocks/usv.py`) | `/api/v1/telemetry`<br>`/api/v1/task` | HTTP `:8000` (`EFFECTOR_BASE_URL`) | Simulates physical USV waypoint navigation, battery telemetry, and autonomous patrol state. | Internal inbox polling loop without physical effector. |
+| **12** | **Cryptographic Audit Fabric** | EDS Rust Sidecar (`edgesentry-rs`) | C-ABI ctypes bridge (`.eds/`)<br>`eds audit verify-chain` | In-process C-ABI + Subprocess CLI | Out-of-process dual-chain verification: Primary OCSF SHA-256 + Secondary BLAKE3/Postcard. | Pure Python SHA-256 hash-chain verification (`core/audit.py`). |
+| **13** | **Sensor Ingress Replay** | Ingress Replay Engine (`ingress_replay.py`) | JSONL Append (`.audit/ingress.jsonl`) | Local Disk I/O | Records raw incoming sensor payloads for zero-loss tactical debrief and replay. | Non-blocking best-effort logging. |
+
+---
 
 ## Decision path (code)
 
