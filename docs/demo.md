@@ -8,10 +8,32 @@ Phase 2 demos use **curl / scripts / two laptops**, plus the optional **MOSAIC C
 
 ```bash
 uv sync
-./scripts/demo.sh                 # default SCENARIO=S3 (maritime hero)
+./scripts/demo.sh                 # default SCENARIO=S2 (primary hero)
+SCENARIO=s1_trojan ./scripts/demo.sh # Pillar 2 (tri-service + CNI guardrail)
+SCENARIO=S3 ./scripts/demo.sh     # Pillar 3 (Dual-SAR dark vessel)
 SCENARIO=S1 ./scripts/demo.sh     # port clearance baseline
-SCENARIO=S2 ./scripts/demo.sh     # non-pitch stretch
 ```
+
+> **Primary hero is airborne `S2_osint_swarm`. Maritime secondary track is `S1_trojan` (tri-service + GLINT hull anchor) then `S3_sar_ais` (GLINT macro × SIA × AIS dark vessel). marun `scenario_02_conflicting` is a legacy fusion bench, not Nexus S2.**
+
+### The Three Operational Pillars (Pitch & Demo Order)
+
+```text
+Pitch / E2E Sequence
+  S2 (no GLINT)                    ← Cognitive cue / Autonomous saturation / Anti-exhaustion
+       │
+  S1_trojan (+GLINT stub/live)     ← Tri-service mismatch + Spatial SAR deck rail lock
+       │
+  S3_sar_ais (+GLINT macro + SIA)  ← Orbital latency → Reachable ellipse → Lead pursuit USV
+```
+
+| Rank | Nexus ID | Role | GLINT Usage |
+|------|----------|------|-------------|
+| **1 (Primary Hero)** | `S2_osint_swarm` | In-flight OSINT ~50 × radar 4 / RF silence → GNSS denial + GBAD (Cognitive / Autonomous Saturation / Anti-Exhaustion) | **Not used** (Air domain & social sensor) |
+| **2** | `S1_trojan` | Maritime + Land/Air: AIS vs coastal radar, CNI VETO, Option B (Tri-service contradiction + spatial SAR mothership lock) | **Used** — Mothership aft-deck / hull spatial anchor (already in narrative & export) |
+| **3** | `S3_sar_ais` | Dark vessel: Dual-SAR × thin AIS → Approach Patrol (Orbital latency → reachable ellipse → USV intercept) | **Primary showcase** — macro cluster (`:5051` / live) + SIA micro |
+
+*Auxiliary baseline*: `S1_ais_spoof` serves as a lightweight baseline outside the three pillars (no GLINT).
 
 ### Pitch-day all-in-one runner (issue #75)
 
@@ -29,12 +51,12 @@ SCENARIO=S2 ./scripts/demo.sh     # non-pitch stretch
 uv run python scripts/demo_pitch_run.py --base-url http://127.0.0.1:8080
 ```
 
-| Scene | Narrative |
-|-------|-----------|
-| **1 Maritime (S3) — hero** | Dual-SAR ingress → dark vessel kinematics + Lead POI → `APPROACH_PATROL` → Ack → **continuity ledger across the handoff** |
-| **2 Maritime (S1)** | Spoofed stationary AIS vs ~20 kt radar → Amber → `ISR_IDENTIFY_CONTACT` |
-| **3 Metrics** | **Total decision time vs manual baseline (lead with this)** · Ack < 3 s · gate p95 < 50 ms · refusal coverage `n/n` · chain re-verified by a separate binary |
-| ⛔ ~~Air (S2)~~ | **Out of scope** — air / drone domain dropped [2026-09-20](https://github.com/edgesentry/edgesentry-commercial/blob/main/docs/strategy/sdth2026/meeting-20260920-sdth-planning.md). Runnable for regression, **not for the pitch**. |
+| Scene | Pillar | Narrative |
+|-------|--------|-----------|
+| **Scene 1 (Primary Hero)** | **1: `S2_osint_swarm`** | Civilian in-flight passenger OSINT (~50 drones) vs radar 4 clutter contacts + RF silence → Autonomous GPS saturation detection → `GNSS_DENIAL_AND_GBAD_CUE` (Anti-exhaustion) |
+| **Scene 2** | **2: `S1_trojan`** | Tri-service contradiction (Navy AIS 6.1 kt vs Coastal Radar 120 kt + GLINT aft-deck anchor) → CNI Debris Hazard Hard VETO → Enforced Option B dual tasking |
+| **Scene 3** | **3: `S3_sar_ais`** | GLINT Macro corridor alert (`:5051`/live) + SIA Micro OBB metrology vs AIS radio silence → 15-min Reachable Ellipse → `APPROACH_PATROL` USV intercept |
+| **Scene 4** | **Metrics & Governance** | **Total decision time vs manual baseline (lead with this)** · Ack < 3 s · gate p95 < 50 ms · refusal coverage `n/n` · chain re-verified by a separate binary |
 
 ### Manual CLI (effector mock)
 

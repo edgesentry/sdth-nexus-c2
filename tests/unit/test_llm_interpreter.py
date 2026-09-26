@@ -55,7 +55,7 @@ def test_heuristic_interpret_s2_hypotheses() -> None:
     assert len(result.hypotheses) >= 2
     labels = {h.label for h in result.hypotheses}
     assert "sensor_contradiction" in labels
-    assert result.candidate_coa.intent == "CUE_AND_IDENTIFY"
+    assert result.candidate_coa.intent == "GNSS_DENIAL_AND_GBAD_CUE"
     assert result.candidate_coa.tier == ActionTier.TIER_1_HITL
     assert result.candidate_coa.metadata.get("interpreter") == "heuristic"
 
@@ -75,7 +75,7 @@ def test_interpret_falls_back_on_llm_failure(monkeypatch: pytest.MonkeyPatch) ->
     result = interpret(graph, finding)
     assert result.source == "heuristic"
     assert result.error == "llm_failed"
-    assert result.candidate_coa.intent == "CUE_AND_IDENTIFY"
+    assert result.candidate_coa.intent == "GNSS_DENIAL_AND_GBAD_CUE"
 
 
 def test_llm_interpret_parses_structured_json(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -94,7 +94,7 @@ def test_llm_interpret_parses_structured_json(monkeypatch: pytest.MonkeyPatch) -
             }
         ],
         "confidence": 0.8,
-        "intent": "CUE_AND_IDENTIFY",
+        "intent": "GNSS_DENIAL_AND_GBAD_CUE",
         "picture_summary": "LLM picture",
         "adversarial_hypothesis": "If social is false, swarm collapses",
     }
@@ -123,7 +123,7 @@ def test_llm_interpret_parses_structured_json(monkeypatch: pytest.MonkeyPatch) -
     assert result.source == "llm"
     assert result.model == "test-model"
     assert result.hypotheses[0].label == "count_mismatch"
-    assert result.candidate_coa.intent == "CUE_AND_IDENTIFY"
+    assert result.candidate_coa.intent == "GNSS_DENIAL_AND_GBAD_CUE"
     assert result.picture_summary == "LLM picture"
 
 
@@ -155,7 +155,7 @@ def test_llm_interpret_sends_gemini_38_flash_model(monkeypatch: pytest.MonkeyPat
                                         }
                                     ],
                                     "confidence": 0.8,
-                                    "intent": "CUE_AND_IDENTIFY",
+                                    "intent": "GNSS_DENIAL_AND_GBAD_CUE",
                                     "picture_summary": "gemini",
                                     "adversarial_hypothesis": "if social is false",
                                 }
@@ -194,7 +194,7 @@ def test_api_interpret_heuristic(client: TestClient, monkeypatch: pytest.MonkeyP
     assert body["status"] == "INTERPRETED"
     assert body["source"] == "heuristic"
     assert body["hypotheses"]
-    assert body["candidate_coa"]["intent"] == "CUE_AND_IDENTIFY"
+    assert body["candidate_coa"]["intent"] == "GNSS_DENIAL_AND_GBAD_CUE"
     assert body["finding"]["amber_alert"] == "COUNT_AND_BEARING_MISMATCH"
     # Interpreter must not seal a DecisionToken
     assert "token" not in body
@@ -240,7 +240,7 @@ def test_proposals_with_interpret_flag(client: TestClient, monkeypatch: pytest.M
     assert body["status"] == "QUEUED"
     assert body["interpreter_source"] == "heuristic"
     assert body["hypotheses"]
-    assert body["coa"]["intent"] == "CUE_AND_IDENTIFY"
+    assert body["coa"]["intent"] == "GNSS_DENIAL_AND_GBAD_CUE"
 
 
 def test_llm_interpret_http_error_raises() -> None:

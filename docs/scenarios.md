@@ -15,112 +15,76 @@ In modern hybrid littoral-maritime defense, sovereign security depends on breaki
 
 ---
 
+## 🏛️ The Three Operational Pillars
+
+> **Primary hero is airborne `S2_osint_swarm`. Maritime secondary track is `S1_trojan` (tri-service + GLINT hull anchor) then `S3_sar_ais` (GLINT macro × SIA × AIS dark vessel). marun `scenario_02_conflicting` is a legacy fusion bench, not Nexus S2.**
+
+### Pillar Hierarchy (Scenario Sequence)
+
+| Rank | Nexus ID | Role | GLINT Usage |
+|------|----------|------|-------------|
+| **1 (Primary Hero)** | **`S2_osint_swarm`** | In-flight OSINT ~50 × radar 4 / RF silence → GNSS denial + GBAD (Cognitive / Autonomous Saturation / Anti-Exhaustion) | **Not used** (Air domain & social sensor) |
+| **2** | **`S1_trojan`** | Maritime + Land/Air: AIS vs coastal radar, CNI VETO, Option B (Tri-service contradiction + spatial SAR mothership lock) | **Used** — Mothership aft-deck / hull spatial anchor (already in narrative & export) |
+| **3** | **`S3_sar_ais`** | Dark vessel: Dual-SAR × thin AIS → Approach Patrol (Orbital latency → reachable ellipse → USV intercept) | **Primary showcase** — macro cluster (`:5051` / live) + SIA micro |
+
+*Auxiliary baseline*: `S1_ais_spoof` serves as a lightweight baseline outside the three pillars (no GLINT).
+
+---
+
+### GLINT Integration Flow
+
+```text
+Pitch / E2E Sequence
+  S2 (no GLINT)                    ← Cognitive cue / Autonomous saturation / Anti-exhaustion
+       │
+  S1_trojan (+GLINT stub/live)     ← Tri-service mismatch + Spatial SAR deck rail lock
+       │
+  S3_sar_ais (+GLINT macro + SIA)  ← Orbital latency → Reachable ellipse → Lead pursuit USV
+```
+
+- **Trojan (Pillar 2):** GLINT is not the primary contradiction trigger, but a **physical anchor** (aft-deck rail verification). Offline uses fixture; demo supports mock `:5051`.
+- **S3 (Pillar 3):** GLINT is the **ingress event** (corridor-scale anomaly). SIA extracts micro OBB, and Nexus calculates kinematics / COA. This is the primary GLINT integration showcase.
+
+---
+
+### Data Alignment with marun
+
+| Data Feed | Storage Location | Role & Provenance |
+|-----------|------------------|-------------------|
+| **S2 Synthetic** (OSINT / radar 4 / acoustic / RF silent) | marun **new** `exports/s2_osint_swarm_*.jsonl` | Canonical export (*`scenario_02_conflicting` is a legacy fusion bench, not Nexus S2*) |
+| **Trojan Maritime + Land/Air + GLINT row** | Existing `synthetic_maritime_data/` → `exports/s1_trojan_*` | Canonical multi-service export |
+| **S3 Coastal AIS / Radar** | marun optional; **GLINT macro / SIA chip owned by Nexus / Team 02 / SIA** | Ingress feeds + live/fixture endpoints |
+
+---
+
 ## 🎯 Scenarios Realizing the Narrative
 
 | Scenario ID | Operational Title | Primary Contradiction | Final Resolution |
 |-------------|-------------------|-----------------------|------------------|
-| **`S1_trojan`** | **Trojan Mothership (Hero Scenario)** | Navy Happy Tug AIS ~6 kt vs coastal radar ~120 kt UAS; Air/Army EW LOB triangulation | Guardrail CNI VETO → `OFFSHORE_INTERCEPT_RF_SOFTKILL` (Option B) |
-| **`S3_sar_ais`** | **Shipping Lane & Coastal Anomaly** | Space-based SAR anomaly diff (GLINT macro + SIA micro) vs thin AIS; dead-reckoned reachability envelope | `APPROACH_PATROL` (Dynamic Lead-Pursuit) |
-| **`S1_ais_spoof`** | **Sea Approach Incursion** | Stationary AIS transponder vs ~20 kt radar/EO contact (~850 m spatial divergence) | `ISR_IDENTIFY_CONTACT` |
-| **`S2_osint_swarm`** | **Airborne OSINT & Autonomous Shahed Swarm** | In-flight civilian passenger OSINT (~50 Shahed spotted) vs gap-filler radar (clutter blindspots); RF-silent autonomous GPS navigation | `CUE_AND_IDENTIFY` → `GNSS_DENIAL_AND_GBAD_CUE` |
+| **`S2_osint_swarm`** *(Pillar 1 - Primary)* | **Airborne OSINT & Autonomous Shahed Swarm** | In-flight civilian passenger OSINT (~50 Shahed spotted) vs gap-filler radar (clutter blindspots); RF-silent autonomous GPS navigation | `CUE_AND_IDENTIFY` → `GNSS_DENIAL_AND_GBAD_CUE` |
+| **`S1_trojan`** *(Pillar 2)* | **Trojan Mothership (Tri-Service Contradiction)** | Navy Happy Tug AIS ~6 kt vs coastal radar ~120 kt UAS; Air/Army EW LOB triangulation + GLINT aft-deck anchor | Guardrail CNI VETO → `OFFSHORE_INTERCEPT_RF_SOFTKILL` (Option B) |
+| **`S3_sar_ais`** *(Pillar 3)* | **Shipping Lane & Dark Vessel (Dual-SAR)** | Space-based SAR anomaly diff (GLINT macro + SIA micro) vs thin AIS; dead-reckoned reachability envelope | `APPROACH_PATROL` (Dynamic Lead-Pursuit) |
+| `S1_ais_spoof` *(Auxiliary)* | **Sea Approach Incursion** | Stationary AIS transponder vs ~20 kt radar/EO contact (~850 m spatial divergence) | `ISR_IDENTIFY_CONTACT` |
 
 ### Core Demonstration Highlights
 
-* **1. `S1_trojan` (Tri-Service Disagreement & CNI Safety Guardrail):**  
-  Demonstrates cross-domain contradiction resolution across Navy, Air Force, and Army sensors.  
-  `SDTH-Sensor-Simulation` JSONL → Navy AIS (6.1 kt tug) vs Coastal Radar (120.4 kt UAV) velocity mismatch → Air ESM ∩ Army EW Line of Bearing (AoA) launch triangulation onto mothership *Happy Tug 8* → Hard VETO of terminal SAM engagement directly over Jurong Island petrochemical complex (`SAFETY_LOCKOUT_CNI_FALLOUT_HAZARD`) → Enforced failsafe roll-over to **Option B** dual tasking (Air Force GBAD offshore kinetic engagement + Navy PCG mothership interdiction).
-
-* **2. `S3_sar_ais` (Space SAR Ground Truth × AIS Dark Vessel Corroboration & Dynamic Intercept):**  
-  Demonstrates unmasking non-emitting vessels and bridging satellite temporal latency to tactical response.  
-  Connects macro space-based SAR scene-difference alerts (GLINT) and micro OBB metrology (SIA) to tactical C2 tasking. Solves 15-minute satellite orbital latency via dynamic **Reachable Ellipse** dead-reckoning and coastal radar handoff → Computes dynamic lead-pursuit **Point of Interception (POI)** collision kinematics rather than dispatching units to stale historical coordinates → Authorizes and dispatches Approach Patrol USV.
-
-* **3. `S2_osint_swarm` (Airborne Passenger OSINT & Multi-Stage Swarm Corroboration):**  
+* **1. `S2_osint_swarm` (Airborne Passenger OSINT & Multi-Stage Swarm Corroboration — Pillar 1 Primary Hero):**  
   Demonstrates how unverified civilian social reports serve as an initial trigger, progressively cross-referenced with military sensors to uncover an intentional saturation attack.  
-  A civilian passenger aboard a commercial flight bound for Japan accidentally spots a massive swarm of ~50 unknown delta-wing drones flying low below the aircraft and posts smartphone video/photos to social media without knowing where they were or where the drones are headed → NexusGate uses this OSINT post as an early-warning cue and initiates phased multi-modal sensor correlation → Ground EW/ESM detects complete RF silence, proving the drones exceed remote-control line-of-sight and navigate autonomously on pre-programmed GPS/INS waypoints (invalidating standard RF C2 jamming) → Coastal 3D gap-filler radar detects only 4 intermittent contacts due to low-altitude sea clutter, but coastal acoustic arrays and EO/IR cameras confirm the low-flying swarm → NexusGate extrapolates the autonomous waypoint trajectory, revealing the true operational picture: a 50-drone saturation ingress targeting Singapore critical infrastructure → Directs local GNSS denial alongside GBAD point-defense cueing.
+  A civilian passenger aboard a commercial flight bound for Japan accidentally spots a massive swarm of ~50 unknown delta-wing drones flying low below the aircraft and posts smartphone video/photos to social media without knowing where they were or where the drones are headed → NexusGate uses this OSINT post as an early-warning cue and initiates phased multi-modal sensor correlation → Ground EW/ESM detects complete RF silence, proving the drones exceed remote-control line-of-sight and navigate autonomously on pre-programmed GPS/INS waypoints (invalidating standard RF C2 jamming) → Coastal 3D gap-filler radar detects only 4 intermittent contacts due to low-altitude sea clutter, but coastal acoustic arrays and EO/IR cameras confirm the low-flying swarm → NexusGate extrapolates the autonomous waypoint trajectory, revealing the true operational picture: a 50-drone saturation ingress targeting Singapore critical infrastructure → Directs local GNSS denial alongside GBAD point-defense cueing (anti-exhaustion doctrine).
+
+* **2. `S1_trojan` (Tri-Service Disagreement & CNI Safety Guardrail — Pillar 2):**  
+  Demonstrates cross-domain contradiction resolution across Navy, Air Force, and Army sensors anchored by Space SAR.  
+  `SDTH-Sensor-Simulation` JSONL → Navy AIS (6.1 kt tug) vs Coastal Radar (120.4 kt UAV) velocity mismatch → Air ESM ∩ Army EW Line of Bearing (AoA) launch triangulation onto mothership *Happy Tug 8* → GLINT orbital SAR provides hull spatial anchor (12m linear aft-deck rail) → Hard VETO of terminal SAM engagement directly over Jurong Island petrochemical complex (`SAFETY_LOCKOUT_CNI_FALLOUT_HAZARD`) → Enforced failsafe roll-over to **Option B** dual tasking (Air Force GBAD offshore kinetic engagement + Navy PCG mothership interdiction).
+
+* **3. `S3_sar_ais` (Space SAR Ground Truth × AIS Dark Vessel Corroboration & Dynamic Intercept — Pillar 3):**  
+  Demonstrates unmasking non-emitting vessels and bridging satellite temporal latency to tactical response via GLINT macro corridor alert and SIA micro metrology.  
+  Connects macro space-based SAR scene-difference alerts (GLINT `:5051`/live) and micro OBB metrology (SIA `:5050`) to tactical C2 tasking. Solves 15-minute satellite orbital latency via dynamic **Reachable Ellipse** dead-reckoning and coastal radar handoff → Computes dynamic lead-pursuit **Point of Interception (POI)** collision kinematics rather than dispatching units to stale historical coordinates → Authorizes and dispatches Approach Patrol USV.
 
 ---
 
 ## ⏱️ Operational Chronicles: Chronological Storylines
 
-### 1. `S1_trojan` — The Trojan Mothership & Loitering Munition Incursion (Hero)
-
-```
-[T-00:00: Siloed Blindness]
-  Navy (AIS): "HAPPY TUG 8" proceeding eastbound at 6.1 kt. Status: routine commercial harbor craft.
-  Air Force (Radar): Fast radar blip (120.4 kt, Alt 71m, RCS 0.035 m²). Status: unconfirmed / possible sea-clutter.
-  Army (CCTV & EW): Perimeter camera locks silhouette; ground RF detects 2.4 GHz tactical link. Launch origin: unknown.
-       │
-       ▼
-[T+00:05: Deterministic Contradiction & Launch Origin Lock]
-  • Kinematic Decoupling: Radar velocity (120.4 kt) vs AIS velocity (6.1 kt) diverge from the exact same coordinates.
-  • LOB Triangulation: Air Force ESM (135.2°) and Army EW (195.4°) Lines of Bearing intersect cleanly on Happy Tug 8.
-  • Space SAR Anchor: Orbital radar backscatter reveals a 12m linear aft-deck metallic anomaly (pneumatic rail).
-       │
-       ▼
-[T+00:08: Threat Intent & Terminal Impact ETA]
-  • Trajectory extrapolation locks onto POI-01 (Jurong Island Petrochemical Complex).
-  • Terminal Impact Clock: 184 seconds to catastrophic impact on pressurized ethylene & crude oil tank farms.
-       │
-       ▼
-[T+00:10: Dangerous AI Proposal vs. Deterministic Guardrail VETO]
-  • AI raw recommendation (Option A): Proposes terminal SPYDER SAM missile engagement directly overhead Jurong Island.
-  • Deterministic Ballistic Engine: Computes falling debris scatter cone (Newtonian gravity + wind vector).
-  • HARD VETO (SAFETY_LOCKOUT_CNI_FALLOUT_HAZARD): Detonating directly over CNI would rain burning propellant
-    and shrapnel into tank farms, triggering a multi-billion dollar industrial catastrophe. Option A is locked out.
-       │
-       ▼
-[T+00:12: Enforced Failsafe Roll-Over & Coordinated Dual Tasking]
-  • Safe Roll-Over (Option B): Mandates Offshore Intercept (>1,200m seaward) + Shoreline Directional RF Soft-Kill.
-  • Closed-Loop Dual Dispatch:
-      ➔ Air Force GBAD: Tasked to execute offshore kinetic missile engagement over open water.
-      ➔ Navy PCG (PT-44): Dispatched to intercept and board the Trojan mothership Happy Tug 8.
-```
-
----
-
-### 2. `S3_sar_ais` — Space SAR Ground Truth × AIS Dark Vessel Corroboration
-
-```
-[T-15:00: Upstream Strategic SAR Pass]
-  • Orbit Sweep: GLINT SAR space pass over the Singapore Strait detects an anomalous backscatter cluster.
-  • Spatial Difference: High-RCS metallic hull returns present, but zero correlating AIS transponder signals.
-       │
-       ▼
-[T-05:00: Micro Metrology & Reachability Dead-Reckoning]
-  • SIA Fine-Grain SAR: Extracts Oriented Bounding Box (OBB) metrology: Length 82m, Beam 16m, Heading 074°.
-  • Kalman Temporal Extrapolation: Because satellite data is 15 minutes old, NexusGate projects the dark vessel's
-    kinematics into a dynamic Reachable Ellipse at current simulation time T_now.
-       │
-       ▼
-[T-00:00: Tactical Radar Handoff & Dynamic Intercept Tasking]
-  • Sensor Handoff: Coastal gap-filler radar detects a high-speed contact inside the predicted reachable ellipse.
-    The system binds the 15-minute-old satellite ground truth to the live radar contact without needing an MMSI.
-  • Indago Background Traffic: DuckDB AIS stream overlays surrounding civilian shipping lanes.
-  • Lead-Pursuit Intercept: Computes optimal Point of Interception (POI) and dispatches Approach Patrol USV-02.
-```
-
----
-
-### 3. `S1_ais_spoof` — Sea Approach Adversarial AIS Spoof
-
-```
-[T-00:00: Fictitious Calm]
-  • AIS Broadcast: Vessel reports stationary coordinates inside the southern fairway anchorage.
-       │
-       ▼
-[T+00:03: Physical Discrepancy Detected]
-  • Multi-Modal Contradiction: Coastal radar and long-range EO cameras track a 20-knot inbound watercraft,
-    revealing an 850-meter geodetic divergence from the declared stationary AIS transponder.
-       │
-       ▼
-[T+00:06: Sovereign Decision Gate]
-  • NexusGate surfaces amber SEA_APPROACH_DECEPTION alert (8 minutes of warning).
-  • Rejects kinetic action on spoofed coordinates; issues Tier-1 COA: ISR_IDENTIFY_CONTACT to cue interceptor USV.
-```
-
----
-
-### 4. `S2_osint_swarm` — Airborne Passenger OSINT & Autonomous Shahed Swarm Contradiction
+### 1. `S2_osint_swarm` — Airborne Passenger OSINT & Autonomous Shahed Swarm Contradiction (Pillar 1 Primary)
 
 ```
 [Stage 1 (T-00:00): Unknowing Civilian Passenger OSINT Trigger]
@@ -168,6 +132,84 @@ In modern hybrid littoral-maritime defense, sovereign security depends on breaki
 
 ---
 
+### 2. `S1_trojan` — The Trojan Mothership & Loitering Munition Incursion (Pillar 2)
+
+```
+[T-00:00: Siloed Blindness]
+  Navy (AIS): "HAPPY TUG 8" proceeding eastbound at 6.1 kt. Status: routine commercial harbor craft.
+  Air Force (Radar): Fast radar blip (120.4 kt, Alt 71m, RCS 0.035 m²). Status: unconfirmed / possible sea-clutter.
+  Army (CCTV & EW): Perimeter camera locks silhouette; ground RF detects 2.4 GHz tactical link. Launch origin: unknown.
+       │
+       ▼
+[T+00:05: Deterministic Contradiction & Launch Origin Lock]
+  • Kinematic Decoupling: Radar velocity (120.4 kt) vs AIS velocity (6.1 kt) diverge from the exact same coordinates.
+  • LOB Triangulation: Air Force ESM (135.2°) and Army EW (195.4°) Lines of Bearing intersect cleanly on Happy Tug 8.
+  • Space SAR Anchor (GLINT): Orbital radar backscatter reveals a 12m linear aft-deck metallic anomaly (pneumatic rail).
+       │
+       ▼
+[T+00:08: Threat Intent & Terminal Impact ETA]
+  • Trajectory extrapolation locks onto POI-01 (Jurong Island Petrochemical Complex).
+  • Terminal Impact Clock: 184 seconds to catastrophic impact on pressurized ethylene & crude oil tank farms.
+       │
+       ▼
+[T+00:10: Dangerous AI Proposal vs. Deterministic Guardrail VETO]
+  • AI raw recommendation (Option A): Proposes terminal SPYDER SAM missile engagement directly overhead Jurong Island.
+  • Deterministic Ballistic Engine: Computes falling debris scatter cone (Newtonian gravity + wind vector).
+  • HARD VETO (SAFETY_LOCKOUT_CNI_FALLOUT_HAZARD): Detonating directly over CNI would rain burning propellant
+    and shrapnel into tank farms, triggering a multi-billion dollar industrial catastrophe. Option A is locked out.
+       │
+       ▼
+[T+00:12: Enforced Failsafe Roll-Over & Coordinated Dual Tasking]
+  • Safe Roll-Over (Option B): Mandates Offshore Intercept (>1,200m seaward) + Shoreline Directional RF Soft-Kill.
+  • Closed-Loop Dual Dispatch:
+      ➔ Air Force GBAD: Tasked to execute offshore kinetic missile engagement over open water.
+      ➔ Navy PCG (PT-44): Dispatched to intercept and board the Trojan mothership Happy Tug 8.
+```
+
+---
+
+### 3. `S3_sar_ais` — Space SAR Ground Truth × AIS Dark Vessel Corroboration (Pillar 3)
+
+```
+[T-15:00: Upstream Strategic SAR Pass]
+  • Orbit Sweep: GLINT SAR space pass over the Singapore Strait detects an anomalous backscatter cluster.
+  • Spatial Difference: High-RCS metallic hull returns present, but zero correlating AIS transponder signals.
+       │
+       ▼
+[T-05:00: Micro Metrology & Reachability Dead-Reckoning]
+  • SIA Fine-Grain SAR: Extracts Oriented Bounding Box (OBB) metrology: Length 82m, Beam 16m, Heading 074°.
+  • Kalman Temporal Extrapolation: Because satellite data is 15 minutes old, NexusGate projects the dark vessel's
+    kinematics into a dynamic Reachable Ellipse at current simulation time T_now.
+       │
+       ▼
+[T-00:00: Tactical Radar Handoff & Dynamic Intercept Tasking]
+  • Sensor Handoff: Coastal gap-filler radar detects a high-speed contact inside the predicted reachable ellipse.
+    The system binds the 15-minute-old satellite ground truth to the live radar contact without needing an MMSI.
+  • Indago Background Traffic: DuckDB AIS stream overlays surrounding civilian shipping lanes.
+  • Lead-Pursuit Intercept: Computes optimal Point of Interception (POI) and dispatches Approach Patrol USV-02.
+```
+
+---
+
+### 4. `S1_ais_spoof` — Sea Approach Adversarial AIS Spoof (Auxiliary Baseline)
+
+```
+[T-00:00: Fictitious Calm]
+  • AIS Broadcast: Vessel reports stationary coordinates inside the southern fairway anchorage.
+       │
+       ▼
+[T+00:03: Physical Discrepancy Detected]
+  • Multi-Modal Contradiction: Coastal radar and long-range EO cameras track a 20-knot inbound watercraft,
+    revealing an 850-meter geodetic divergence from the declared stationary AIS transponder.
+       │
+       ▼
+[T+00:06: Sovereign Decision Gate]
+  • NexusGate surfaces amber SEA_APPROACH_DECEPTION alert (8 minutes of warning).
+  • Rejects kinetic action on spoofed coordinates; issues Tier-1 COA: ISR_IDENTIFY_CONTACT to cue interceptor USV.
+```
+
+---
+
 ## 🚀 End-to-End Execution & Operator Runbook
 
 For complete commands, automated test pipelines, and interactive CUI/UI operations across these scenarios, refer directly to:
@@ -176,8 +218,9 @@ For complete commands, automated test pipelines, and interactive CUI/UI operatio
 
 * **Workflow 1:** Automated end-to-end regression (`pytest tests/`, `scripts/picture_to_tasking.py`).
 * **Workflow 2:** Screen 1 (ARCHVIEW MapLibre) & Screen 2 (BattlePlan / Verify UI) live integration.
-* **Workflow 3a:** `S3_sar_ais` hero scenario replay with Indago DuckDB live AIS traffic overlay.
-* **Workflow 3b:** `S1_trojan` tri-service disagreement, CNI guardrail hard-VETO, and Option B dual tasking.
+* **Workflow 3a:** `S2_osint_swarm` primary hero scenario (airborne passenger OSINT, radar clutter contradiction, RF silence, and GNSS denial/GBAD anti-exhaustion cueing).
+* **Workflow 3b:** `S1_trojan` tri-service disagreement, GLINT aft-deck anchor, CNI guardrail hard-VETO, and Option B dual tasking.
+* **Workflow 3c:** `S3_sar_ais` dark vessel scenario replay with GLINT macro cluster, SIA micro SAR metrology, and Indago DuckDB live AIS traffic overlay.
 
 ---
 

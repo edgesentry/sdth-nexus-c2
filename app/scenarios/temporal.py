@@ -12,10 +12,11 @@ from app.scenarios.base import get_scenario
 _CUE_LAT, _CUE_LON = 1.3510, 103.9900
 _RADAR_LAT, _RADAR_LON = 1.3618, 103.9900
 
-_INTEL_RUMOR = "Telegram chatter: many drones over the coast - unverified."
+_INTEL_RUMOR = "Passenger chatter: weird lights below the wing — unverified."
 _INTEL_FILTERED = (
-    "Telegram/Instagram recon: ~20 cheap drones inbound - filtered OSINT estimate "
-    "3 Shahed-136 class airframes toward Objective Bravo, T+4 min."
+    "In-flight passenger OSINT (commercial flight bound for Japan): smartphone video/photos "
+    "of ~50 unknown delta-wing drones / Shahed-class airframes flying low below the aircraft. "
+    "No coordinates or destination stated. Estimated vector bearing 248° at ~105 kt."
 )
 
 # Wall-clock offsets (seconds before T-00) for steps 01-19
@@ -218,7 +219,7 @@ def _build_s2_timeline(t0: datetime) -> list[StreamStep]:
                     heading_deg=248.0,
                     note="high_speed_inbound_lock",
                     altitude_m_est=220,
-                    contact_count=0,  # building lock; count sealed later so detect sum == 1
+                    contact_count=0,  # building lock; count sealed later so detect sum == 4
                     vendor_track="RADAR-AIR-551",
                 )
             ],
@@ -286,7 +287,7 @@ def _build_s2_timeline(t0: datetime) -> list[StreamStep]:
             ],
         ),
         (
-            "radar_firm_single_contact",
+            "radar_firm_clutter_contacts",
             [
                 _evt(
                     t0=t0,
@@ -297,21 +298,21 @@ def _build_s2_timeline(t0: datetime) -> list[StreamStep]:
                     lat=_RADAR_LAT,
                     lon=_RADAR_LON,
                     confidence=0.84,
-                    speed_kt=90.0,
+                    speed_kt=105.0,
                     heading_deg=248.0,
-                    note="single_weak_return_fast_inbound",
+                    note="intermittent_low_rcs_clutter_contacts",
                     altitude_m_est=200,
-                    contact_count=1,
+                    contact_count=4,
                     vendor_track="RADAR-AIR-551",
                 )
             ],
         ),
     ]
 
-    # --- 11-15: EO blur + amber contradiction ---
+    # --- 11-15: EO blur + acoustic + amber contradiction ---
     amber: list[tuple[str, list[dict[str, Any]]]] = [
         (
-            "social_filtered_count_3",
+            "social_passenger_count_50",
             [
                 _evt(
                     t0=t0,
@@ -322,10 +323,10 @@ def _build_s2_timeline(t0: datetime) -> list[StreamStep]:
                     lat=_CUE_LAT,
                     lon=_CUE_LON,
                     confidence=0.55,
-                    note="exaggerated_then_filtered_swarm_claim",
+                    note="airborne_passenger_swarm_sighting",
                     intel_text=_INTEL_FILTERED,
-                    claimed_count=3,
-                    objective="Objective Bravo",
+                    claimed_count=50,
+                    objective="unknown_ingress",
                     vendor_track="OSINT-SWARM-CLAIM",
                 )
             ],
@@ -355,23 +356,36 @@ def _build_s2_timeline(t0: datetime) -> list[StreamStep]:
                     t0=t0,
                     t_minus=_T_MINUS[12],
                     source_id="EO_SKY_WATCH",
-                    entity_id="EO-BLUR-OBJ-BRAVO",
+                    entity_id="EO-DELTA-WING-BRAVO",
                     modality="optical",
                     lat=_CUE_LAT,
                     lon=_CUE_LON,
                     confidence=0.42,
-                    speed_kt=70.0,
-                    heading_deg=250.0,
-                    note="low_confidence_blur_yolo_box",
+                    speed_kt=100.0,
+                    heading_deg=248.0,
+                    note="delta_wing_thermal_silhouette",
                     altitude_m_est=160,
                     blur=True,
-                    vendor_track="EO-BLUR-OBJ-BRAVO",
+                    vendor_track="EO-DELTA-WING-BRAVO",
                 )
             ],
         ),
         (
-            "rf_silent_confirm",
+            "acoustic_and_rf_silent",
             [
+                _evt(
+                    t0=t0,
+                    t_minus=_T_MINUS[13],
+                    source_id="COASTAL_ACOUSTIC_ARRAY",
+                    entity_id="ACOUSTIC-SHADED-HARMONIC",
+                    modality="acoustic",
+                    lat=(_CUE_LAT + _RADAR_LAT) / 2,
+                    lon=_CUE_LON,
+                    confidence=0.72,
+                    note="two_stroke_moped_harmonic_shahed",
+                    engine_signature="2stroke_moped",
+                    vendor_track="ACOUSTIC-SHADED-HARMONIC",
+                ),
                 _evt(
                     t0=t0,
                     t_minus=_T_MINUS[13],
@@ -381,10 +395,11 @@ def _build_s2_timeline(t0: datetime) -> list[StreamStep]:
                     lat=(_CUE_LAT + _RADAR_LAT) / 2,
                     lon=_CUE_LON,
                     confidence=0.7,
-                    note="no_emitter_detected",
+                    note="no_emitter_detected_autonomous_gps_ins",
                     rf_silent=True,
+                    control_mode="GPS_INS_WAYPOINT",
                     vendor_track="RF-SILENT-SCAN",
-                )
+                ),
             ],
         ),
         (
@@ -401,8 +416,8 @@ def _build_s2_timeline(t0: datetime) -> list[StreamStep]:
                     confidence=0.58,
                     note="count_claim_holds",
                     intel_text=_INTEL_FILTERED,
-                    claimed_count=3,
-                    objective="Objective Bravo",
+                    claimed_count=50,
+                    objective="unknown_ingress",
                     vendor_track="OSINT-SWARM-CLAIM",
                 )
             ],

@@ -81,8 +81,8 @@ def test_verify_ui_osint_claim_badges_s2(c2_client: TestClient) -> None:
     )
     assert proposed.status_code == 200
     assert b"COUNT_AND_BEARING_MISMATCH" in proposed.content
-    assert b"OSINT: 3 UAVs (Telegram)" in proposed.content
-    assert b"Radar: 1 Contact" in proposed.content
+    assert b"OSINT: 50 UAVs (passenger)" in proposed.content
+    assert b"Radar: 4 Contacts" in proposed.content
     assert b"claim-tags" in proposed.content
     assert b'class="panel amber"' in proposed.content or b"panel amber" in proposed.content
 
@@ -110,7 +110,7 @@ def test_verify_ui_lead_poi_card_s3(c2_client: TestClient) -> None:
 
 
 def test_verify_ui_lead_poi_card_also_on_s2(c2_client: TestClient) -> None:
-    """S2 CUE_AND_IDENTIFY also surfaces Lead POI when metadata.poi is present."""
+    """S2 GNSS_DENIAL_AND_GBAD_CUE also surfaces Lead POI when metadata.poi is present."""
     c2_client.post("/api/admin/reset")
     proposed = c2_client.post(
         "/verify/command/propose",
@@ -120,7 +120,7 @@ def test_verify_ui_lead_poi_card_also_on_s2(c2_client: TestClient) -> None:
     assert b"Lead POI" in proposed.content
     assert b"poi-card" in proposed.content
     assert b"OCSF Hash Chain: broken links" in proposed.content
-    assert b"OSINT: 3 UAVs (Telegram)" in proposed.content
+    assert b"OSINT: 50 UAVs (passenger)" in proposed.content
 
 
 def test_verify_ui_tamper_detection_rehearsal(

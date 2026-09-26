@@ -76,15 +76,28 @@ Closed-loop narrative: [`docs/architecture/index.md`](docs/architecture/index.md
 
 ## 3. Operational Scenarios
 
-Pitch scope is **100% maritime** (Singapore Strait). Hierarchy:
+> **Primary hero is airborne `S2_osint_swarm`. Maritime secondary track is `S1_trojan` (tri-service + GLINT hull anchor) then `S3_sar_ais` (GLINT macro × SIA × AIS dark vessel). marun `scenario_02_conflicting` is a legacy fusion bench, not Nexus S2.**
 
-| ID | Domain & Focus | Sensor Contradiction | Deterministic Tasking |
-|----|----------------|----------------------|-----------------------|
-| **S3** | **Shipping Lane** (*Primary Hero*) | Dual-SAR anomaly (macro scene difference + Sentinel-1 ship detection) × 2 Hz coastal radar via dead-reckoning reachability — no shared MMSI | `APPROACH_PATROL` |
-| **S1** | **Sea Approach** (Port clearance) | Stationary AIS vs. ~20 kt coastal radar/EO | `ISR_IDENTIFY_CONTACT` |
-| ⛔ **S2** | **Air Corridor** (non-pitch stretch) | Social “3 drones” vs radar “1 track” + bearing mismatch — retained for CI / domain-agnostic discrepancy mechanism | `CUE_AND_IDENTIFY`<br/>*(strictly non-kinetic)* |
+### The Three Operational Pillars
 
-Scenario details: [`docs/scenarios.md`](docs/scenarios.md). Data provenance (4-tier sensor classes + Synthetic / Real-processed / Assumed-mock): [`docs/data-provenance.md`](docs/data-provenance.md).
+| Rank | Nexus ID | Role | GLINT Usage |
+|------|----------|------|-------------|
+| **1 (Primary Hero)** | `S2_osint_swarm` | In-flight OSINT ~50 × radar 4 / RF silence → GNSS denial + GBAD (Cognitive / Autonomous Saturation / Anti-Exhaustion) | **Not used** (Air domain & social sensor) |
+| **2** | `S1_trojan` | Maritime + Land/Air: AIS vs coastal radar, CNI VETO, Option B (Tri-service contradiction + spatial SAR mothership lock) | **Used** — Mothership aft-deck / hull spatial anchor (already in narrative & export) |
+| **3** | `S3_sar_ais` | Dark vessel: Dual-SAR × thin AIS → Approach Patrol (Orbital latency → reachable ellipse → USV intercept) | **Primary showcase** — macro cluster (`:5051` / live) + SIA micro |
+
+*Auxiliary baseline*: `S1_ais_spoof` serves as a lightweight baseline outside the three pillars (no GLINT).
+
+```text
+Pitch / E2E Sequence
+  S2 (no GLINT)                    ← Cognitive cue / Autonomous saturation / Anti-exhaustion
+       │
+  S1_trojan (+GLINT stub/live)     ← Tri-service mismatch + Spatial SAR deck rail lock
+       │
+  S3_sar_ais (+GLINT macro + SIA)  ← Orbital latency → Reachable ellipse → Lead pursuit USV
+```
+
+Scenario details: [`docs/scenarios.md`](docs/scenarios.md). Data provenance & marun role alignment: [`docs/data-provenance.md`](docs/data-provenance.md). E2E Runbook: [`docs/verify-e2e.md`](docs/verify-e2e.md).
 
 ---
 

@@ -111,9 +111,9 @@ def test_s2_two_screen_via_testclient(c2_client: TestClient) -> None:
     body = proposed.json()
     assert body["status"] == "QUEUED"
     assert body["finding"]["amber_alert"] == "COUNT_AND_BEARING_MISMATCH"
-    assert body["finding"]["source_breakdown"]["social"]["claimed_count"] == 3
-    assert body["finding"]["source_breakdown"]["radar"]["contact_count"] == 1
-    assert body["coa"]["intent"] == "CUE_AND_IDENTIFY"
+    assert body["finding"]["source_breakdown"]["social"]["claimed_count"] == 50
+    assert body["finding"]["source_breakdown"]["radar"]["contact_count"] == 4
+    assert body["coa"]["intent"] == "GNSS_DENIAL_AND_GBAD_CUE"
     coa_id = body["coa"]["coa_id"]
 
     state = c2_client.get("/api/ontology/state").json()

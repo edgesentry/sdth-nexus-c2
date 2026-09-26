@@ -4,7 +4,7 @@
 Narrative for VIP judging (Chief of Air Force / Chief Defence Scientist):
 
   Scene 1 — Air Hero (S2): OSINT 3 vs radar 1 → Amber → kinetic fast-reject
-             → approve CUE_AND_IDENTIFY → field Ack < 3 s
+             → approve GNSS_DENIAL_AND_GBAD_CUE → field Ack < 3 s
   Scene 2 — Maritime Hero (S3): Dual-SAR ingress → dead-reckoning + Lead POI
              → APPROACH_PATROL → Ack
   Scene 3 — Quantitative Proof (Slide 11): gate <50 ms, 0 unauthorized,
@@ -225,8 +225,8 @@ class PitchRunner:
     def scene1_air_hero(self) -> None:
         self.console.print(Rule("[bold]Scene 1 — Air Hero (S2)[/bold]"))
         self.console.print(
-            "[dim]Civilian OSINT claims 3 drones vs radar 1 track → Amber → "
-            "non-kinetic CUE_AND_IDENTIFY (not kinetic overkill)[/dim]\n"
+            "[dim]Passenger OSINT claims ~50 Shahed vs radar 4 clutter contacts → Amber → "
+            "GNSS denial + GBAD cue (not kinetic overkill)[/dim]\n"
         )
         self._reset()
         self._pause("S2 propose")
@@ -239,7 +239,7 @@ class PitchRunner:
             bd = finding.get("source_breakdown") or {}
             social = (bd.get("social") or {}).get("claimed_count")
             radar = (bd.get("radar") or {}).get("contact_count")
-            if social == 3 and radar == 1:
+            if social == 50 and radar == 4:
                 self._ok(f"Discrepancy OSINT={social} vs radar={radar}")
             else:
                 self._fail(f"count claim social={social} radar={radar}")
@@ -247,7 +247,7 @@ class PitchRunner:
         self._closed_loop(
             scenario_id="S2_osint_swarm",
             unit_id="CUE-NODE-01",
-            expect_intent="CUE_AND_IDENTIFY",
+            expect_intent="GNSS_DENIAL_AND_GBAD_CUE",
             assert_finding=_assert_s2,
         )
         self._pause("kinetic overkill probe")

@@ -23,7 +23,7 @@ def c2_client(tmp_path: Path) -> Iterator[TestClient]:
 @pytest.mark.parametrize(
     ("scenario_id", "unit_id", "intent"),
     [
-        ("S2_osint_swarm", "CUE-NODE-01", "CUE_AND_IDENTIFY"),
+        ("S2_osint_swarm", "CUE-NODE-01", "GNSS_DENIAL_AND_GBAD_CUE"),
         ("S3_sar_ais", "USV-02", "APPROACH_PATROL"),
     ],
 )

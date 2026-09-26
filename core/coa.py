@@ -11,7 +11,9 @@ from pydantic import BaseModel, Field
 from core.kinematics import LeadPursuitPOI
 
 # Intents that replace static historical coords with a lead-pursuit POI (#58).
-LEAD_PURSUIT_INTENTS = frozenset({"APPROACH_PATROL", "CUE_AND_IDENTIFY"})
+LEAD_PURSUIT_INTENTS = frozenset(
+    {"APPROACH_PATROL", "CUE_AND_IDENTIFY", "GNSS_DENIAL_AND_GBAD_CUE"}
+)
 
 
 class ActionTier(int, Enum):

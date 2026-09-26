@@ -38,13 +38,17 @@ flowchart LR
 
 ---
 
-## 3. Operational Scenarios
+## 3. Operational Scenarios (The Three Pillars)
 
-| ID | Operational Focus | Sensor Contradiction | Deterministic Action |
-|----|-------------------|----------------------|----------------------|
-| **S1** | **Sea Approach** | Spoofed AIS stationary vs. ~20 kt radar/EO blur (~850m offset) | `ISR_IDENTIFY_CONTACT` dispatched to verify track |
-| **S3** | **Shipping Lane** *(Hero)* | Space SAR cluster (Sentinel-1) vs. AIS radio silence + coastal radar | `APPROACH_PATROL` via dead-reckoning kinematics |
-| ⛔ ~~S2~~ | ~~Air Corridor~~ | **Out of scope** — air / drone domain dropped 2026-09-20 (100% maritime). Discrepancy mechanism reused by S1 / S3; not pitched. | — |
+> **Primary hero is airborne `S2_osint_swarm`. Maritime secondary track is `S1_trojan` (tri-service + GLINT hull anchor) then `S3_sar_ais` (GLINT macro × SIA × AIS dark vessel). marun `scenario_02_conflicting` is a legacy fusion bench, not Nexus S2.**
+
+| Rank | ID | Operational Focus | Sensor Contradiction | Deterministic Action | GLINT Usage |
+|---|---|---|---|---|---|
+| **1 (Primary Hero)** | **`S2_osint_swarm`** | **Airborne OSINT Swarm** *(Hero)* | Social passenger cue (~50) vs radar (4 clutter blips) + RF-silent autonomous navigation | `GNSS_DENIAL_AND_GBAD_CUE` *(Anti-exhaustion)* | **None** |
+| **2** | **`S1_trojan`** | **Trojan Mothership** | Navy AIS (~6 kt) vs coastal radar (~120 kt UAV); Air/Army EW LOB | Guardrail CNI VETO → `OFFSHORE_INTERCEPT_RF_SOFTKILL` (Option B) | **Aft-deck anchor** |
+| **3** | **`S3_sar_ais`** | **Shipping Lane Dark Vessel** | Space SAR cluster (GLINT macro + Sentinel-1 SIA) vs. AIS silence | `APPROACH_PATROL` via dead-reckoning kinematics | **Macro cluster + SIA** |
+
+*Auxiliary baseline*: `S1_ais_spoof` serves as a lightweight baseline outside the three pillars (no GLINT).
 
 ---
 

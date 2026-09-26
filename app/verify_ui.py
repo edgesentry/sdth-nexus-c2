@@ -90,7 +90,7 @@ def _claim_tags(finding: Any) -> list[dict[str, str]]:
         and radar.get("contact_count") is not None
     ):
         n = int(radar["contact_count"])
-        tags.append({"label": f"OSINT: {social['claimed_count']} UAVs (Telegram)", "role": "left"})
+        tags.append({"label": f"OSINT: {social['claimed_count']} UAVs (passenger)", "role": "left"})
         tags.append({"label": "vs", "role": "vs"})
         tags.append(
             {
