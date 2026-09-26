@@ -1,6 +1,5 @@
 """Capture screenshots of NexusGate verification harness for documentation."""
 
-import os
 import subprocess
 import threading
 import time

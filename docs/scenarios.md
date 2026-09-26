@@ -33,8 +33,8 @@ App-layer scenarios under `app/scenarios/`. Each run builds synthetic multi-vend
 > **S3 Cognitive Load Compression (Dual-SAR × Dual-AIS):**  
 > Resolves the core maritime dilemma (*"SAR detects returns, AIS indicates normal traffic: is it clutter, a dark vessel, or latency?"*) across three decoupled tiers:
 > 1. **GLINT (Macro SAR)**: Cues anomalous corridor sectors without requiring AIS.
-> 2. **SIA (Micro SAR × AIS)**: Correlates with pass-time AIS snapshot ($T - \Delta t$) to isolate dark vessels and extract OBB metrology ($L/B/\theta$).
-> 3. **NexusGate $\leftarrow$ Indago (Tactical C2)**: Overlays live background traffic ($T \approx 0$) and computes dynamic lead-pursuit POI, allowing the Commander to authorize a mathematically verified Amber Warning Picture rather than manually cross-referencing raw sensor feeds.
+> 2. **SIA (Micro SAR × AIS)**: Correlates with pass-time AIS snapshot (T - Δt) to isolate dark vessels and extract OBB metrology (L/B/θ).
+> 3. **NexusGate ← Indago (Tactical C2)**: Overlays live background traffic (T ≈ 0) and computes dynamic lead-pursuit POI, allowing the Commander to authorize a mathematically verified Amber Warning Picture rather than manually cross-referencing raw sensor feeds.
 
 Each CLI / TUI run prints a **WARNING PICTURE** (threat class, minutes of warning, sources, “if false collapses when…”) before the gate.
 
