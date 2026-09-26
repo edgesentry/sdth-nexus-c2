@@ -6,7 +6,7 @@ step, and prints Warning Picture / HITL / tasking cues in the final band.
 
 Usage:
   uv run python scripts/stream_events.py
-  uv run python scripts/stream_events.py --scenario S2 --interval 0.25
+  uv run python scripts/stream_events.py --scenario S2_osint_swarm --interval 0.25
   uv run python scripts/stream_events.py --mode print          # JSONL to stdout
   uv run python scripts/stream_events.py --fast                # no sleep
 """

@@ -99,7 +99,9 @@ def test_verify_glint_and_sia_ingress_modes(client: TestClient) -> None:
     assert b"SIA only" in sia.content
     assert b"SENTINEL_IMAGERY_ANALYSIS" in sia.content
 
-    client.post("/verify/command/reset", data={"unit_id": "CUE-NODE-01", "scenario_id": "S3_sar_ais"})
+    client.post(
+        "/verify/command/reset", data={"unit_id": "CUE-NODE-01", "scenario_id": "S3_sar_ais"}
+    )
     glint = client.post(
         "/verify/command/ingress",
         data={"mode": "glint", "unit_id": "CUE-NODE-01", "scenario_id": "S3_sar_ais"},
