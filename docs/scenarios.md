@@ -4,31 +4,31 @@ App-layer scenarios under `app/scenarios/`. Each run builds synthetic multi-vend
 
 | ID | Title | Conflict | Tasking |
 |----|-------|----------|---------|
+| **s1_trojan** | Trojan Mothership — Tri-Service disagreement + CNI guardrail (#116) | Navy Happy Tug AIS ~6 kt vs coastal radar ~120 kt UAS; Air/Army EW LOB triangulation; terminal SAM over Jurong CNI is hard-VETO'd | Guardrail → `OFFSHORE_INTERCEPT_RF_SOFTKILL` (Option B) |
+| **S3** | Shipping Lane & Coastal Anomaly — SAR Difference vs AIS | Space-based SAR anomaly diff (unannounced dark cluster with length/beam/heading metrology) vs thin AIS; coastal radar joined via dead-reckoned reachability envelope (#57) | `APPROACH_PATROL` |
 | **S1** | Sea Approach — Adversarial AIS Spoof | Stationary AIS vs ~20 kt radar/EO (~850 m) | `ISR_IDENTIFY_CONTACT` |
-| ⛔ **S2** | Air Corridor — Shahed Swarm Contradiction (**out of scope**) | Social claims 3; radar 1 (~1.2 km N); EO blur 0.42; RF silent; no ADS-B | Amber `COUNT_AND_BEARING_MISMATCH` → `CUE_AND_IDENTIFY` |
-| **S3** | Shipping Lane & Coastal Anomaly — SAR Difference vs AIS | Space-based SAR anomaly diff (unannounced dark cluster with length/beam/heading metrology) vs thin AIS; coastal radar joined via dead-reckoned reachability envelope (#57), not a shared MMSI | `APPROACH_PATROL` |
-| **s1_trojan** | Trojan Mothership — AIS vs radar disagreement + CNI guardrail (#116) | Happy Tug AIS ~6 kt vs coastal radar ~120 kt UAS; EW LOB triangulation optional; terminal SAM over Jurong CNI is hard-VETO'd | Guardrail → `OFFSHORE_INTERCEPT_RF_SOFTKILL` (Option B) |
+| **S2** | Air Corridor — OSINT vs Radar Contradiction | Social claims 3; radar 1 (~1.2 km N); EO blur 0.42; RF silent; no ADS-B | Amber `COUNT_AND_BEARING_MISMATCH` → `CUE_AND_IDENTIFY` |
 
-> ## ⛔ S2 is no longer the hero (2026-09-20)
+> ## 🌐 Tri-Service Multi-Domain Unification Narrative
 >
-> The [team decision](https://github.com/edgesentry/edgesentry-commercial/blob/main/docs/strategy/sdth2026/meeting-20260920-sdth-planning.md) locked scope to **100% maritime** (Singapore Strait vessel incursions, dark vessels, STS) and **formally dropped the air / drone domain**. **S3 is the hero; S1 is the second maritime scenario.**
+> In modern littoral-maritime defense, sovereign security relies on unifying siloed sensor networks across **Army (IDTF)**, **Navy (RSN / PCG)**, **Air Force (RSAF)**, and **Space Reconnaissance (GLINT SAR)**:
+> 1. **Army:** Coastal CCTV and ground EW monitor shorelines, but lack visibility into maritime launch origins or radar tracking over water.
+> 2. **Navy:** Monitors commercial maritime traffic via AIS, but cannot detect transponder spoofing, concealed launch rails, or low-RCS air incursions on its own.
+> 3. **Air Force:** Tracks fast-moving air radar contacts, but struggles to differentiate sea clutter/civilian drones from hostile loitering munitions without maritime context or emitter triangulation.
+> 4. **Space SAR (GLINT):** Captures physical hull dimensions and orbital radar backscatter, providing an unalterable ground truth against spoofed declarations.
 >
-> S2 stays in the repo and in CI because its **discrepancy mechanism (count / bearing mismatch) is domain-agnostic and reused by S1 and S3**. It must not appear in the pitch. The OSINT argument below transfers directly to maritime: fishermen, port workers, and ferry passengers report dark craft and STS transfers before a track is firmly held.
+> **NexusGate** ingests these disparate streams, triggers deterministic contradiction checks, and dispatches coordinated multi-service tasking (Air GBAD + Naval PCG interdiction).
 
-**Principle (applies to all scenarios):** do not fuse into one hallucinated track — cue identify only.
+**Principle (applies to all scenarios):** do not fuse into one hallucinated track — surface deterministic contradictions and cue identify/interlock.
 
-> **(Out-of-scope reference) S2 Operational & Cognitive Value (Why OSINT in C2?):**  
-> 1. **Human as a Distributed Sensor**: Low-flying attritable drones (e.g., Shahed-136) often slip beneath radar horizons or clutter filters in urban/coastal corridors. Eyewitness social media and recon text often provide the *first operational cue* before radar acquires track lock.
-> 2. **Preventing Kinetic Over-Reaction**: Social chatter is prone to panic, exaggeration, and enemy deception (*"20 swarm drones incoming!"*). An un-governed C2 risks launching million-dollar surface-to-air interceptors prematurely. NexusGate surfaces the **Amber contradiction** (Social claims filtered 3 vs Radar detects 1) and routes tasking to non-kinetic **`CUE_AND_IDENTIFY`** (slew cameras/recon drones to verify) rather than lethal over-kill.
-> 3. **Decoupled Ingress Architecture**: Just as AIS history is decoupled to Indago, raw social media scraping/crawling lives in external OSINT Threat Intelligence services. NexusGate ingests only structured semantic extracts (`claimed_count`, `bearing`, `objective`) via [`app/adapters/osint_text.py`](data-provenance.md) without maintaining an internal social database.
+### Core Demonstration Scenarios
 
-**S3** is the hero maritime SAR×AIS scenario. **`s1_trojan`** is the tri-service
-disagreement + CNI guardrail demo ([#116](https://github.com/edgesentry/sdth-nexus-c2/issues/116)):
-SensorSim (`SDTH-Sensor-Simulation`) JSONL → velocity mismatch amber → hard VETO of terminal SAM over Jurong
-CNI → enforced offshore Option B. CUI runbook: [verify-e2e.md](verify-e2e.md)
-(Workflows 1 / 3b).
+* **`s1_trojan` (Tri-Service Disagreement & CNI Guardrail — Hero Scenario):**
+  Demonstrates cross-domain contradiction resolution ([#116](https://github.com/edgesentry/sdth-nexus-c2/issues/116)):
+  SensorSim (`SDTH-Sensor-Simulation`) JSONL → Navy AIS vs Coastal Radar velocity mismatch amber → Air ESM ∩ Army EW LOB launch triangulation → Hard VETO of terminal SAM over Jurong CNI (`SAFETY_LOCKOUT_CNI_FALLOUT_HAZARD`) → Enforced offshore Option B dual tasking. Runbook: [verify-e2e.md](verify-e2e.md) (Workflows 1 / 3b).
 
-**S3** connects macro space-based SAR scene-difference alerts (GLINT) and micro OBB metrology (SIA) to tactical C2 tasking via dead-reckoning kinematics ([#57](https://github.com/edgesentry/sdth-nexus-c2/issues/57)) and lead-pursuit interception ([#58](https://github.com/edgesentry/sdth-nexus-c2/issues/58)) (see [SAR Pipeline Architecture](architecture/sar_pipeline.md)).
+* **`S3` (Space SAR × AIS Dark Vessel Corroboration):**
+  Connects macro space-based SAR scene-difference alerts (GLINT) and micro OBB metrology (SIA) to tactical C2 tasking via dead-reckoning kinematics ([#57](https://github.com/edgesentry/sdth-nexus-c2/issues/57)) and lead-pursuit interception ([#58](https://github.com/edgesentry/sdth-nexus-c2/issues/58)) (see [SAR Pipeline Architecture](architecture/sar_pipeline.md)).
 
 > **S3 Cognitive Load Compression (Dual-SAR × Dual-AIS):**  
 > Resolves the core maritime dilemma (*"SAR detects returns, AIS indicates normal traffic: is it clutter, a dark vessel, or latency?"*) across three decoupled tiers:
