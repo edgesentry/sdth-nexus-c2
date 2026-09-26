@@ -8,10 +8,11 @@ Phase 2 demos use **curl / scripts / two laptops**, plus the optional **MOSAIC C
 
 ```bash
 uv sync
-./scripts/demo.sh                 # default SCENARIO=S2 (primary hero)
-SCENARIO=s1_trojan ./scripts/demo.sh # Pillar 2 (tri-service + CNI guardrail)
-SCENARIO=S3 ./scripts/demo.sh     # Pillar 3 (Dual-SAR dark vessel)
-SCENARIO=S1 ./scripts/demo.sh     # port clearance baseline
+./scripts/demo.sh                              # default SCENARIO=S2_osint_swarm (Pillar 1)
+SCENARIO=S2_osint_swarm ./scripts/demo.sh      # Pillar 1 primary hero
+SCENARIO=S1_trojan ./scripts/demo.sh           # Pillar 2 (tri-service + CNI guardrail)
+SCENARIO=S3_sar_ais ./scripts/demo.sh          # Pillar 3 (Dual-SAR dark vessel)
+SCENARIO=S1_ais_spoof ./scripts/demo.sh        # auxiliary sea-approach baseline
 ```
 
 > **Primary hero is airborne `S2_osint_swarm`. Maritime secondary track is `S1_trojan` (tri-service + GLINT hull anchor) then `S3_sar_ais` (GLINT macro × SIA × AIS dark vessel). marun `scenario_02_conflicting` is a legacy fusion bench, not Nexus S2.**
@@ -62,9 +63,9 @@ uv run python scripts/demo_pitch_run.py --base-url http://127.0.0.1:8080
 
 ```bash
 uv run uvicorn mocks.usv:app --port 8000 &
-EFFECTOR_BASE_URL=http://127.0.0.1:8000 uv run python -m app.main --scenario S1 --yes
-uv run python -m app.main --scenario S2            # interactive y/n
-uv run python -m app.main --scenario S3 --stub --yes
+EFFECTOR_BASE_URL=http://127.0.0.1:8000 uv run python -m app.main --scenario S1_ais_spoof --yes
+uv run python -m app.main --scenario S2_osint_swarm            # interactive y/n
+uv run python -m app.main --scenario S3_sar_ais --stub --yes
 ```
 
 ---
