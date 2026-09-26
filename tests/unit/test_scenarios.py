@@ -46,7 +46,8 @@ def test_s2_hero_count_and_bearing_amber() -> None:
     events = scenario.build_events()
     social = [e for e in events if e.get("modality") == "social"]
     assert social
-    assert social[0].get("claimed_count") == 3
+    assert social[0].get("claimed_count") == 50
+    assert any(e.get("modality") == "acoustic" for e in events)
     assert "intel_text" in social[0]
     optical = [e for e in events if e.get("modality") == "optical"]
     assert optical and optical[0]["confidence"] == 0.42
@@ -57,11 +58,12 @@ def test_s2_hero_count_and_bearing_amber() -> None:
     assert finding is not None
     assert finding.amber_alert == "COUNT_AND_BEARING_MISMATCH"
     assert finding.mismatch_m >= 1_000.0
-    assert finding.source_breakdown.get("social", {}).get("claimed_count") == 3
-    assert finding.source_breakdown.get("radar", {}).get("contact_count") == 1
+    assert finding.source_breakdown.get("social", {}).get("claimed_count") == 50
+    assert finding.source_breakdown.get("radar", {}).get("contact_count") == 4
     assert "AMBER" in finding.picture_summary or "COUNT_AND_BEARING" in finding.picture_summary
+    assert finding.source_breakdown.get("rf", {}).get("finding") == "RF_SILENT_AUTONOMOUS"
     coa = scenario.build_coa(graph, finding, timeout_seconds=5.0)
-    assert coa.intent == "CUE_AND_IDENTIFY"
+    assert coa.intent == "GNSS_DENIAL_AND_GBAD_CUE"
     assert coa.metadata.get("amber_alert") == "COUNT_AND_BEARING_MISMATCH"
 
 

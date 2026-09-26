@@ -96,7 +96,11 @@ def _play_local(
     else:
         print("  Amber: not raised (unexpected for S2 full timeline)")
         return 1
-    if scenario_id.upper() in {"S2", "S2_OSINT_SWARM"} and amber_step is not None and amber_step < 11:
+    if (
+        scenario_id.upper() in {"S2", "S2_OSINT_SWARM"}
+        and amber_step is not None
+        and amber_step < 11
+    ):
         print("  FAIL: Amber fired before band 11-15")
         return 1
     print("  RESULT: timeline complete")

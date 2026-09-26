@@ -50,8 +50,8 @@ def test_s2_amber_only_after_band_11() -> None:
         if finding is not None and first_amber is None:
             first_amber = step.step
             assert finding.amber_alert == "COUNT_AND_BEARING_MISMATCH"
-            assert finding.source_breakdown["social"]["claimed_count"] == 3
-            assert finding.source_breakdown["radar"]["contact_count"] == 1
+            assert finding.source_breakdown["social"]["claimed_count"] == 50
+            assert finding.source_breakdown["radar"]["contact_count"] == 4
 
     assert first_amber is not None
     assert first_amber >= 11

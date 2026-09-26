@@ -100,7 +100,7 @@ COA_KEYS = {
 _SAFE_COA = {
     "target_entity_id": "cue-target",
     "target_coordinates": [1.3618, 103.99],
-    "intent": "CUE_AND_IDENTIFY",
+    "intent": "GNSS_DENIAL_AND_GBAD_CUE",
     "confidence": 0.9,
     "corroborating_sources": ["A", "B"],
     "raw_input_digest": "b" * 64,

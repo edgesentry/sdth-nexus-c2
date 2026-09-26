@@ -30,7 +30,7 @@ _DEFAULT_INTENTS: dict[str, str] = {
     "S1_trojan": "OFFSHORE_INTERCEPT_RF_SOFTKILL",
     "S3_sar_ais": "APPROACH_PATROL",
     "S1_ais_spoof": "ISR_IDENTIFY_CONTACT",
-    "S2_osint_swarm": "CUE_AND_IDENTIFY",
+    "S2_osint_swarm": "GNSS_DENIAL_AND_GBAD_CUE",
 }
 
 
@@ -233,7 +233,10 @@ def _build_prompt(graph: SpatialEntityGraph, finding: Finding) -> str:
                 }
             ],
             "confidence": "0..1",
-            "intent": "CUE_AND_IDENTIFY | ISR_IDENTIFY_CONTACT | APPROACH_PATROL | INSPECT_TARGET",
+            "intent": (
+                "CUE_AND_IDENTIFY | GNSS_DENIAL_AND_GBAD_CUE | "
+                "ISR_IDENTIFY_CONTACT | APPROACH_PATROL | INSPECT_TARGET"
+            ),
             "picture_summary": "string",
             "adversarial_hypothesis": "string",
         },
@@ -274,6 +277,7 @@ def _coa_from_llm_payload(
     intent = str(payload.get("intent") or _intent_for(finding)).strip().upper()
     if intent not in {
         "CUE_AND_IDENTIFY",
+        "GNSS_DENIAL_AND_GBAD_CUE",
         "ISR_IDENTIFY_CONTACT",
         "APPROACH_PATROL",
         "INSPECT_TARGET",

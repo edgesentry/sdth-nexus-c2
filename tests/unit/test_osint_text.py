@@ -9,13 +9,12 @@ from app.scenarios.s2_air_corridor_attritable import _INTEL_TEXT
 from core.ontology import SpatialEntityGraph
 
 
-def test_parse_s2_intel_prefers_filtered_estimate() -> None:
+def test_parse_s2_intel_passenger_swarm_count() -> None:
     result = parse_osint_text(_INTEL_TEXT)
-    assert result.claimed_count == 3
-    assert result.objective == "Objective Bravo"
-    assert "filtered_estimate" in result.notes
+    assert result.claimed_count == 50
+    assert result.bearing_deg == 248.0
     assert result.raw_count_match is not None
-    assert "3" in result.raw_count_match
+    assert "50" in result.raw_count_match
 
 
 def test_parse_avoids_exaggerated_lead_number() -> None:
@@ -36,30 +35,29 @@ def test_parse_bearing_numeric_and_cardinal() -> None:
 
 
 def test_parse_fallback_when_unparseable() -> None:
-    result = parse_osint_text("Telegram chatter: many drones — unverified.", fallback_count=3)
-    assert result.claimed_count == 3
+    result = parse_osint_text("Telegram chatter: many drones — unverified.", fallback_count=50)
+    assert result.claimed_count == 50
     assert "fallback_count" in result.notes
 
 
 def test_parse_empty_uses_fallback() -> None:
-    assert parse_osint_text("", fallback_count=3).claimed_count == 3
+    assert parse_osint_text("", fallback_count=50).claimed_count == 50
     assert parse_osint_text(None).claimed_count is None
 
 
 def test_enrich_social_event_fills_claimed_count() -> None:
     event = enrich_social_event(
         {"modality": "social", "intel_text": _INTEL_TEXT},
-        fallback_count=3,
+        fallback_count=50,
     )
-    assert event["claimed_count"] == 3
-    assert event.get("objective") == "Objective Bravo"
+    assert event["claimed_count"] == 50
     assert "osint_parse_notes" in event
 
 
 def test_enrich_keeps_explicit_claimed_count() -> None:
     event = enrich_social_event(
         {"modality": "social", "intel_text": _INTEL_TEXT, "claimed_count": 5},
-        fallback_count=3,
+        fallback_count=50,
     )
     assert event["claimed_count"] == 5
 
@@ -68,14 +66,17 @@ def test_s2_scenario_uses_parsed_count() -> None:
     scenario = get_scenario("S2_osint_swarm")
     events = scenario.build_events()
     social = [e for e in events if e.get("modality") == "social"]
+    acoustic = [e for e in events if e.get("modality") == "acoustic"]
     assert social
-    assert social[0]["claimed_count"] == 3
+    assert acoustic
+    assert social[0]["claimed_count"] == 50
     assert "intel_text" in social[0]
-    assert "filtered_estimate" in social[0].get("osint_parse_notes", [])
 
     graph = SpatialEntityGraph(associate_radius_m=2_000.0)
     graph.ingest_many([normalize_sensor_event(e) for e in events])
     finding = scenario.detect(graph)
     assert finding is not None
     assert finding.amber_alert == "COUNT_AND_BEARING_MISMATCH"
-    assert finding.source_breakdown["social"]["claimed_count"] == 3
+    assert finding.source_breakdown["social"]["claimed_count"] == 50
+    assert finding.source_breakdown["radar"]["contact_count"] == 4
+    assert finding.source_breakdown["rf"]["finding"] == "RF_SILENT_AUTONOMOUS"

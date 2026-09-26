@@ -18,14 +18,37 @@ Later sections use only these aliases.
 - **SIA** — Sentinel-1 micro SAR CV × AIS (live optional; Nexus fixtures if offline)
 - **Indago** — optional maritime AIS history in DuckDB for S3 background traffic (`open-feed`); not required for Profile A or `s1_trojan`
 
-- **Primary scenarios** (see [scenarios.md](scenarios.md)):
-  - **S3** — Singapore Strait dark vessel (Dual-SAR × AIS) — hero maritime loop
-  - **s1_trojan** — Happy Tug AIS vs coastal radar disagreement + CNI debris VETO (#116)
-- **s1_trojan data source**: sibling **SensorSim** `exports/`; **Nexus** falls back to
-  `tests/fixtures/s1_trojan_*` when SensorSim is absent (CI / Nexus-only checkout)
+> **Primary hero is airborne `S2_osint_swarm`. Maritime secondary track is `S1_trojan` (tri-service + GLINT hull anchor) then `S3_sar_ais` (GLINT macro × SIA × AIS dark vessel). marun `scenario_02_conflicting` is a legacy fusion bench, not Nexus S2.**
+
+### The Three Operational Pillars (Pitch & E2E Order)
+
+| Rank | Nexus ID | Role | GLINT Usage |
+|------|----------|------|-------------|
+| **1 (Primary Hero)** | `S2_osint_swarm` | In-flight OSINT ~50 × radar 4 / RF silence → GNSS denial + GBAD (Cognitive / Autonomous Saturation / Anti-Exhaustion) | **Not used** (Air domain & social sensor) |
+| **2** | `S1_trojan` | Maritime + Land/Air: AIS vs coastal radar, CNI VETO, Option B (Tri-service contradiction + spatial SAR mothership lock) | **Used** — Mothership aft-deck / hull spatial anchor (already in narrative & export) |
+| **3** | `S3_sar_ais` | Dark vessel: Dual-SAR × thin AIS → Approach Patrol (Orbital latency → reachable ellipse → USV intercept) | **Primary showcase** — macro cluster (`:5051` / live) + SIA micro |
+
+*Auxiliary baseline*: `S1_ais_spoof` serves as a lightweight baseline outside the three pillars (no GLINT).
+
+```text
+Pitch / E2E Sequence
+  S2 (no GLINT)                    ← Cognitive cue / Autonomous saturation / Anti-exhaustion
+       │
+  S1_trojan (+GLINT stub/live)     ← Tri-service mismatch + Spatial SAR deck rail lock
+       │
+  S3_sar_ais (+GLINT macro + SIA)  ← Orbital latency → Reachable ellipse → Lead pursuit USV
+```
+
+- **Trojan (Pillar 2):** GLINT is not the primary contradiction trigger, but a **physical anchor** (aft-deck rail verification). Offline uses fixture; demo supports mock `:5051`.
+- **S3 (Pillar 3):** GLINT is the **ingress event** (corridor-scale anomaly). SIA extracts micro OBB, and Nexus calculates kinematics / COA. This is the primary GLINT integration showcase.
+
+- **Data Sources & Repositories**:
+  - `s1_trojan`: sibling **SensorSim** `exports/s1_trojan_scenario.jsonl` (Nexus falls back to `tests/fixtures/s1_trojan_*` in CI)
+  - `s2_osint_swarm`: marun planned export `exports/s2_osint_swarm_*.jsonl` (Nexus in-tree scenario adapter active)
+  - `s3_sar_ais`: **GLINT mock** (`:5051` / live) + **SIA** (`:5050` / Sentinel-1 micro fixture) + **Indago DuckDB** AIS
 - **CUI (no browser)**: pytest (in-process) · `scripts/picture_to_tasking.py` · curl against `:8080`
 - **Console UIs**: Core `/verify` (Jinja2/HTMX Screen 1/2) or external **ARCHVIEW** (`:3001`)
-- **Key Specifications**: [C2 REST API](api/rest.md) · [Demo Guide](demo.md) · [Data Provenance](data-provenance.md) · [SAR Pipeline](architecture/sar_pipeline.md) · [Architecture Map](architecture/index.md) · repo `tests/README.md`
+- **Key Specifications**: [Scenarios Guide](scenarios.md) · [C2 REST API](api/rest.md) · [Demo Guide](demo.md) · [Data Provenance](data-provenance.md) · [SAR Pipeline](architecture/sar_pipeline.md)
 
 ---
 
@@ -366,61 +389,56 @@ SCENARIO=S2 uv run python scripts/picture_to_tasking.py --require-roundtrip
 Do **not** pass `SCENARIO=s1_trojan` here — plain propose is hard-rejected by the CNI
 interlock. Use Workflow 3b instead.
 
----
+### Workflow 3a: curl closed loop — `S2_osint_swarm` (Pillar 1: Primary Hero)
 
-### Workflow 3a: curl closed loop — Hero S3
+Validates the airborne passenger OSINT trigger cross-referenced with coastal radar clutter blindspots, RF silence, and GNSS denial/GBAD anti-exhaustion point defense.
 
 ```bash
 export C2=http://127.0.0.1:8080
 
-# 0. Health
+# 0. Health check
 curl -sf "$C2/health" | jq .
 curl -sf "$C2/api/audit/health" | jq .
 
 # 1. Reset in-memory + SQLite runtime picture
 curl -sf -X POST "$C2/api/admin/reset" | jq .
 
-# 2. Optional background AIS
-#    Prefer Indago DuckDB when present (§0.2); else fixture (venue-safe):
-# curl … -d '{"feed":"ais","source":"indago","limit":80}'
-curl -sf -X POST "$C2/api/ingress/open-feed" \
-  -H 'content-type: application/json' \
-  -d '{"feed":"ais","use_fixture":true,"limit":40}' | jq '{status, count}'
-
-# 3. Dual-SAR anomaly (GLINT macro + SIA micro fixtures)
-curl -sf -X POST "$C2/api/ingress/candidate-event" \
-  -H 'content-type: application/json' \
-  -d '{"dual_sar":true}' | jq '{source, count}'
-
-# 4. Propose S3 COA
+# 2. Propose S2 COA
+# Ingests viral civilian passenger in-flight upload (~50 drones) + radar (4 clutter blips) + RF silence
 PROP=$(curl -sf -X POST "$C2/api/gate/proposals" \
   -H 'content-type: application/json' \
-  -d '{"scenario_id":"S3","unit_id":"CUE-NODE-01"}')
-echo "$PROP" | jq '{status, amber: .finding.amber_alert, threat: .finding.threat_class}'
+  -d '{"scenario_id":"S2_osint_swarm","unit_id":"CUE-NODE-01"}')
+echo "$PROP" | jq '{
+  status,
+  amber: .finding.amber_alert,
+  threat: .finding.threat_class,
+  discrepancy: .finding.discrepancy_score,
+  rule: .finding.rule_id
+}'
 COA_ID=$(echo "$PROP" | jq -r '.coa.coa_id')
 test "$COA_ID" != null && test -n "$COA_ID"
 
-# 5. Commander Approve -> Seals DecisionToken
+# 3. Commander Approve -> Seals DecisionToken (GNSS_DENIAL_AND_GBAD_CUE)
 APPROVE=$(curl -sf -X POST "$C2/api/gate/approve" \
   -H 'content-type: application/json' \
   -d "{\"coa_id\":\"$COA_ID\",\"decision\":\"y\",\"operator_id\":\"commander-01\"}")
 echo "$APPROVE" | jq '{status, coa_id: .coa.coa_id, token_digest: .decision_token.token_digest}'
 
-# 6. Recipient Effector Inbox Inspection
+# 4. Recipient Effector Inbox Inspection (CUE-NODE-01)
 curl -sf "$C2/api/recipient/inbox?unit_id=CUE-NODE-01" | jq '{count, tasking_coa: .taskings[0].coa.coa_id}'
 
-# 7. Recipient Effector Execution Acknowledgment (Ack)
+# 5. Recipient Effector Execution Acknowledgment (Ack)
 curl -sf -X POST "$C2/api/recipient/ack" \
   -H 'content-type: application/json' \
   -d "{\"coa_id\":\"$COA_ID\",\"unit_id\":\"CUE-NODE-01\",\"status\":\"ACKED\"}" | jq .
 
-# 8. Cryptographic Audit Health Check
+# 6. Cryptographic Audit Health Check
 curl -sf "$C2/api/audit/health" | jq .
 ```
 
 ---
 
-### Workflow 3b: curl closed loop — `s1_trojan` (CNI guardrail, #116)
+### Workflow 3b: curl closed loop — `s1_trojan` (Pillar 2: CNI Guardrail + GLINT Anchor, #116)
 
 Requires **Nexus** Core running (`uv run sdth-c2-server`). Picture data comes from
 **SensorSim** exports via `arun_canonical` (§0.1), or Nexus fixtures if SensorSim
@@ -496,6 +514,78 @@ curl -sf "$C2/api/ontology/state" | jq '{
 
 Ontology after guardrail should still carry the disagreement finding (AIS ~6 kt vs
 radar ~120 kt) and POI ETA flags under `amber_alert.source_breakdown.poi_eta_sec`.
+
+---
+
+### Workflow 3c: curl closed loop — `S3_sar_ais` (Pillar 3: Dual-SAR × SIA × AIS Dark Vessel)
+
+Demonstrates the 3rd pillar: Space SAR ground truth unmasking non-emitting vessels, bridging 15-minute orbital latency via dynamic reachable ellipse dead-reckoning and coastal radar handoff to compute dynamic lead-pursuit interception (`APPROACH_PATROL`).
+
+#### GLINT Ingress Routes (Pillar 3 Primary Battlefield)
+
+* **Route A (Fixture Fallback / Offline):**  
+  Uses built-in dual-SAR fixtures combining GLINT macro scene-diff cluster and SIA micro Sentinel-1 CV metrology (`d_obb`).  
+  `curl -sf -X POST "$C2/api/ingress/candidate-event" -H 'content-type: application/json' -d '{"dual_sar":true}'`
+* **Route B (Live / Mock `:5051`):**  
+  Run GLINT Mock in background: `uv run sdth-mock-glint` (listens on `:5051`). Ingests live macro SAR corridor anomaly cluster, cross-referenced with SIA on `:5050` or SIA fixtures.
+
+#### Execution Steps
+
+```bash
+export C2=http://127.0.0.1:8080
+
+# 0. Health check
+curl -sf "$C2/health" | jq .
+curl -sf "$C2/api/audit/health" | jq .
+
+# 1. Reset in-memory + SQLite runtime picture
+curl -sf -X POST "$C2/api/admin/reset" | jq .
+
+# 2. Ingress background AIS traffic (Indago DuckDB or fixture)
+curl -sf -X POST "$C2/api/ingress/open-feed" \
+  -H 'content-type: application/json' \
+  -d '{"feed":"ais","use_fixture":true,"limit":40}' | jq '{status, count}'
+
+# 3. Dual-SAR Anomaly Ingress (Pillar 3 GLINT + SIA)
+# Route A (Fixture):
+curl -sf -X POST "$C2/api/ingress/candidate-event" \
+  -H 'content-type: application/json' \
+  -d '{"dual_sar":true}' | jq '{source, count}'
+# Route B (Live GLINT mock :5051 if running):
+# curl -sf -X POST "$C2/api/ingress/candidate-event" \
+#   -H 'content-type: application/json' \
+#   -d '{"source":"glint_macro","endpoint":"http://127.0.0.1:5051/api/v1/corridor-anomalies"}' | jq .
+
+# 4. Propose S3 COA (Reachable Ellipse + Dynamic Lead-Pursuit Intercept)
+PROP=$(curl -sf -X POST "$C2/api/gate/proposals" \
+  -H 'content-type: application/json' \
+  -d '{"scenario_id":"S3","unit_id":"CUE-NODE-01"}')
+echo "$PROP" | jq '{
+  status,
+  amber: .finding.amber_alert,
+  threat: .finding.threat_class,
+  poi: .coa.parameters.target_lat
+}'
+COA_ID=$(echo "$PROP" | jq -r '.coa.coa_id')
+test "$COA_ID" != null && test -n "$COA_ID"
+
+# 5. Commander Approve -> Seals DecisionToken (APPROACH_PATROL)
+APPROVE=$(curl -sf -X POST "$C2/api/gate/approve" \
+  -H 'content-type: application/json' \
+  -d "{\"coa_id\":\"$COA_ID\",\"decision\":\"y\",\"operator_id\":\"commander-01\"}")
+echo "$APPROVE" | jq '{status, coa_id: .coa.coa_id, token_digest: .decision_token.token_digest}'
+
+# 6. Recipient Effector Inbox Inspection (CUE-NODE-01)
+curl -sf "$C2/api/recipient/inbox?unit_id=CUE-NODE-01" | jq '{count, tasking_coa: .taskings[0].coa.coa_id}'
+
+# 7. Recipient Effector Execution Acknowledgment (Ack)
+curl -sf -X POST "$C2/api/recipient/ack" \
+  -H 'content-type: application/json' \
+  -d "{\"coa_id\":\"$COA_ID\",\"unit_id\":\"CUE-NODE-01\",\"status\":\"ACKED\"}" | jq .
+
+# 8. Cryptographic Audit Health Check
+curl -sf "$C2/api/audit/health" | jq .
+```
 
 ---
 

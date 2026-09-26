@@ -26,10 +26,9 @@ def c2_client(tmp_path: Path) -> Iterator[TestClient]:
 
 
 def test_osint_parser_feeds_s2_gate_proposal(c2_client: TestClient) -> None:
-    """S2 propose uses OSINT-parsed claimed_count=3 from intel_text."""
+    """S2 propose uses OSINT-parsed claimed_count=50 from passenger intel_text."""
     parsed = parse_osint_text(_INTEL_TEXT)
-    assert parsed.claimed_count == 3
-    assert "filtered_estimate" in parsed.notes
+    assert parsed.claimed_count == 50
 
     proposed = c2_client.post(
         "/api/gate/proposals",
@@ -41,10 +40,10 @@ def test_osint_parser_feeds_s2_gate_proposal(c2_client: TestClient) -> None:
     social = finding["source_breakdown"]["social"]
 
     assert finding["amber_alert"] == "COUNT_AND_BEARING_MISMATCH"
-    assert social["claimed_count"] == 3
+    assert social["claimed_count"] == 50
     assert "intel_text" in social
-    assert "filtered OSINT estimate" in social["intel_text"] or "3" in social["intel_text"]
-    assert body["coa"]["intent"] == "CUE_AND_IDENTIFY"
+    assert "50" in social["intel_text"]
+    assert body["coa"]["intent"] == "GNSS_DENIAL_AND_GBAD_CUE"
 
     coa_id = body["coa"]["coa_id"]
     approved = c2_client.post(
@@ -80,7 +79,7 @@ def test_osint_fallback_when_intel_unparseable() -> None:
     finding = scenario.detect(graph)
     assert finding is not None
     assert finding.amber_alert == "COUNT_AND_BEARING_MISMATCH"
-    assert finding.source_breakdown["social"]["claimed_count"] == 3
+    assert finding.source_breakdown["social"]["claimed_count"] == 50
 
 
 def test_osint_s2_verify_ui_propose_approve_ack(c2_client: TestClient) -> None:
@@ -92,8 +91,8 @@ def test_osint_s2_verify_ui_propose_approve_ack(c2_client: TestClient) -> None:
     assert proposed.status_code == 200
     assert b"COUNT_AND_BEARING_MISMATCH" in proposed.content
     assert b"Queued" in proposed.content
-    assert b"OSINT: 3 UAVs (Telegram)" in proposed.content
-    assert b"Radar: 1 Contact" in proposed.content
+    assert b"OSINT: 50 UAVs (passenger)" in proposed.content
+    assert b"Radar: 4 Contacts" in proposed.content
     assert b"OCSF Hash Chain: broken links" in proposed.content
 
     body = proposed.text
@@ -117,7 +116,7 @@ def test_osint_s2_verify_ui_propose_approve_ack(c2_client: TestClient) -> None:
     inbox = c2_client.get("/verify/recipient", params={"unit_id": "CUE-NODE-01"})
     assert inbox.status_code == 200
     assert coa_id.encode() in inbox.content
-    assert b"CUE_AND_IDENTIFY" in inbox.content or b"PENDING_ACK" in inbox.content
+    assert b"GNSS_DENIAL_AND_GBAD_CUE" in inbox.content or b"PENDING_ACK" in inbox.content
     assert b"OCSF Hash Chain: broken links" in inbox.content
 
     acked = c2_client.post(

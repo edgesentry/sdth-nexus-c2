@@ -28,7 +28,7 @@ def test_evaluate_accepts_live_llm_payload() -> None:
             "source": "llm",
             "model": "gemini-3.8-flash",
             "hypotheses": [{"label": "sensor_contradiction", "claim": "3 vs 1"}],
-            "candidate_coa": {"intent": "CUE_AND_IDENTIFY"},
+            "candidate_coa": {"intent": "GNSS_DENIAL_AND_GBAD_CUE"},
         }
     )
     assert ok is True

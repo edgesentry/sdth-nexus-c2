@@ -160,8 +160,8 @@ def test_verify_osint_claim_badges(client: TestClient) -> None:
     )
     assert proposed.status_code == 200
     assert b"COUNT_AND_BEARING_MISMATCH" in proposed.content
-    assert b"OSINT: 3 UAVs (Telegram)" in proposed.content
-    assert b"Radar: 1 Contact" in proposed.content
+    assert b"OSINT: 50 UAVs (passenger)" in proposed.content
+    assert b"Radar: 4 Contacts" in proposed.content
     assert b"claim-tags" in proposed.content or b"claim-tag" in proposed.content
 
 
