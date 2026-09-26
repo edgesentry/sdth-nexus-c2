@@ -2,12 +2,30 @@
 
 Comprehensive runbook for executing and validating the full **Picture → Gate → Ack** closed loop starting from a **clean zero-state reset** (all processes stopped, state cleared) to end-to-end execution and cryptographic data verification.
 
+### Repositories (aliases)
+
+| Alias | Repository | URL | Local sibling (typical) |
+|---|---|---|---|
+| **Nexus** | `sdth-nexus-c2` | https://github.com/edgesentry/sdth-nexus-c2 | `sdth-nexus-c2/` (this repo) |
+| **SensorSim** | `SDTH-Sensor-Simulation` | https://github.com/marun6207/SDTH-Sensor-Simulation | `marun-sensor-simulation/` (loader path; clone name may differ) |
+| **SIA** | `Sentinel-Imagery-Analysis` | https://github.com/StrixGoldhorn/Sentinel-Imagery-Analysis | `Sentinel-Imagery-Analysis/` (`:5050`) |
+| **Indago** | `indago` | https://github.com/edgesentry/indago | DuckDB under `~/.indago/…` (optional; not a port) |
+
+Later sections use only these aliases.
+
+- **Nexus** — C2 Core under test (`:8080`)
+- **SensorSim** — `s1_trojan` AIS / coastal radar / GLINT SAR / POI exports
+- **SIA** — Sentinel-1 micro SAR CV × AIS (live optional; Nexus fixtures if offline)
+- **Indago** — optional maritime AIS history in DuckDB for S3 background traffic (`open-feed`); not required for Profile A or `s1_trojan`
+
 - **Primary scenarios** (see [scenarios.md](scenarios.md)):
   - **S3** — Singapore Strait dark vessel (Dual-SAR × AIS) — hero maritime loop
   - **s1_trojan** — Happy Tug AIS vs coastal radar disagreement + CNI debris VETO (#116)
+- **s1_trojan data source**: sibling **SensorSim** `exports/`; **Nexus** falls back to
+  `tests/fixtures/s1_trojan_*` when SensorSim is absent (CI / Nexus-only checkout)
 - **CUI (no browser)**: pytest (in-process) · `scripts/picture_to_tasking.py` · curl against `:8080`
 - **Console UIs**: Core `/verify` (Jinja2/HTMX Screen 1/2) or external **ARCHVIEW** (`:3001`)
-- **Key Specifications**: [C2 REST API](api/rest.md) · [Demo Guide](demo.md) · [Data Provenance](data-provenance.md) · [SAR Pipeline](architecture/sar_pipeline.md) · [Architecture Map](architecture/index.md)
+- **Key Specifications**: [C2 REST API](api/rest.md) · [Demo Guide](demo.md) · [Data Provenance](data-provenance.md) · [SAR Pipeline](architecture/sar_pipeline.md) · [Architecture Map](architecture/index.md) · [tests/README](../tests/README.md)
 
 ---
 
@@ -15,9 +33,11 @@ Comprehensive runbook for executing and validating the full **Picture → Gate �
 
 | Component | Port | Startup Command | Status | Role |
 |---|---|---|---|---|
-| **NexusGate Core** | `:8080` | `uv run sdth-c2-server` | **Required** | C2 server, in-memory ontology graph, deterministic gate, OCSF audit seal, `/verify` UI |
-| **GLINT Mock** | `:5051` | `uv run sdth-mock-glint` | Optional (Live pull) | Team 02 GLINT macro SAR corridor anomaly cluster mock |
-| **SIA Upstream** | `:5050` | `uv run sia-server` | Optional (Live pull) | In-house Sentinel-1 micro SAR CV metrology (automatic fail-safe fallback when offline) |
+| **Nexus** (Core) | `:8080` | `uv run sdth-c2-server` | **Required** | C2 server, in-memory ontology graph, deterministic gate, OCSF audit seal, `/verify` UI |
+| **SensorSim** | — (filesystem) | sibling checkout + optional regenerate | **Recommended for `s1_trojan`** | Canonical AIS / radar / GLINT / POI JSONL (`exports/`); see §0.1 |
+| **Indago** | — (DuckDB) | pipeline fills `~/.indago/…`; see §0.2 | **Optional (S3 AIS)** | Local AIS history for `POST /api/ingress/open-feed`; fixture/live fallback if absent |
+| **GLINT Mock** | `:5051` | `uv run sdth-mock-glint` | Optional (Live pull) | Team 02 GLINT macro SAR corridor anomaly cluster mock (S3 Dual-SAR; Nexus-owned) |
+| **SIA** | `:5050` | sibling: `uv run sia-server` / `python app.py` | Optional (Live pull) | Sentinel-1 micro SAR CV metrology; Nexus falls back to fixtures when offline |
 | **USV Effector Mock** | `:8000` | `uv run uvicorn mocks.usv:app --port 8000` | Optional (Demo script) | CLEARBOT / autonomous USV telemetry & tasking mock |
 | **ARCHVIEW Vite** | `:3001` | `npm run dev` | Optional (ARCHVIEW) | External React/Vite tactical command cockpit (Screen 1) |
 | **ARCHVIEW BFF** | `:3102` | `npm run dev:api` | Optional (ARCHVIEW) | Evidence image/video BFF server |
@@ -25,12 +45,15 @@ Comprehensive runbook for executing and validating the full **Picture → Gate �
 ```mermaid
 flowchart TD
     subgraph IngressFeeds ["1. Ingress Feeds"]
-        AIS["Indago DuckDB / Live AIS<br/>(Singapore Strait T-0)"]
+        SENSORSIM["SensorSim exports/<br/>s1_trojan_scenario.jsonl"]
+        INDAGO["Indago DuckDB AIS history<br/>(optional S3 background)"]
+        AIS["Live AIS / Nexus fixture<br/>(open-feed ladder)"]
         GLINT["GLINT Mock :5051<br/>(Macro SAR Cluster)"]
-        SIA["SIA :5050 / Fixtures<br/>(Micro SAR Metrology)"]
+        SIA["SIA :5050 / Nexus fixtures<br/>(Micro SAR Metrology)"]
+        FIX["Nexus tests/fixtures/s1_trojan_*<br/>(CI fail-safe)"]
     end
 
-    subgraph C2Core ["2. NexusGate C2 Core (:8080)"]
+    subgraph C2Core ["2. Nexus Core (:8080)"]
         GRAPH["SpatialEntityGraph<br/>(Modality Separation)"]
         KINEMATICS["Kinematic Engine<br/>(Lead Intercept POI)"]
         GATE["Deterministic Gate<br/>(Amber Alert Interlock)"]
@@ -48,6 +71,9 @@ flowchart TD
         ACK["Signed Recipient Ack<br/>(Closed Loop Completed)"]
     end
 
+    SENSORSIM -->|arun_canonical loader<br/>s1_trojan| GRAPH
+    FIX -.->|fallback when SensorSim absent| GRAPH
+    INDAGO -->|open-feed source=indago| GRAPH
     AIS -->|POST /api/ingress/open-feed| GRAPH
     GLINT -->|POST /api/ingress/candidate-event| GRAPH
     SIA -->|POST /api/ingress/candidate-event| GRAPH
@@ -62,6 +88,100 @@ flowchart TD
     C2Core <--> VERIFY
     C2Core <--> ARCHVIEW
 ```
+
+### 0.1 SensorSim exports (`s1_trojan`)
+
+Issue #116 E2E (Workflows 1, 3b, 4) loads the Trojan mothership picture through
+[`app/adapters/arun_canonical.py`](../app/adapters/arun_canonical.py) in **Nexus**.
+**Source of truth** is the sibling **SensorSim** checkout; vendored Nexus fixtures are
+a CI fail-safe only.
+
+| Priority | Path | When |
+|---|---|---|
+| 1 | `MARUN_EXPORT_DIR` (env) | Explicit override to a SensorSim `exports/` tree |
+| 2 | `../marun-sensor-simulation/exports/` | Sibling next to **Nexus** (default local folder name) |
+| 3 | `tests/fixtures/s1_trojan_*` | SensorSim missing / CI |
+
+Clone **SensorSim** next to **Nexus** (rename the directory if the clone used the GitHub name):
+
+```bash
+cd /Users/yoheionishi/work/SDTH2026
+git clone https://github.com/marun6207/SDTH-Sensor-Simulation.git marun-sensor-simulation
+```
+
+Expected sibling layout:
+
+```text
+SDTH2026/
+  sdth-nexus-c2/                 # Nexus (Core :8080)
+  marun-sensor-simulation/       # SensorSim — synthetic maritime + land/air
+    exports/
+      s1_trojan_scenario.jsonl
+      pois.json
+      site_origins.json
+```
+
+For a full E2E rehearsal against **live SensorSim exports** (not the fixture copy):
+
+```bash
+# Terminal / one-shot: confirm sibling exports exist
+ls ../marun-sensor-simulation/exports/s1_trojan_scenario.jsonl
+
+# Or point Nexus at a non-sibling SensorSim checkout
+export MARUN_EXPORT_DIR=/path/to/SDTH-Sensor-Simulation/exports
+
+cd /Users/yoheionishi/work/SDTH2026/sdth-nexus-c2
+export C2_DEMO_TAMPER=1
+uv run sdth-c2-server
+```
+
+Regenerate SensorSim exports after changing maritime/land generators:
+
+```bash
+cd /Users/yoheionishi/work/SDTH2026/marun-sensor-simulation
+# see exports/README.md — generate_canonical_stream.py
+```
+
+Then refresh **Nexus** fixtures if CI must stay in sync:
+
+```bash
+cp ../marun-sensor-simulation/exports/s1_trojan_scenario.jsonl tests/fixtures/
+cp ../marun-sensor-simulation/exports/pois.json tests/fixtures/s1_trojan_pois.json
+cp ../marun-sensor-simulation/exports/site_origins.json tests/fixtures/s1_trojan_site_origins.json
+```
+
+Details: [SensorSim `exports/README`](../../marun-sensor-simulation/exports/README.md) ·
+[tests/README](../tests/README.md).
+
+### 0.2 Indago AIS history (optional, S3)
+
+**Indago** ([`edgesentry/indago`](https://github.com/edgesentry/indago)) is the
+optional maritime OSINT / AIS data layer. When a local DuckDB AIS store is
+present, **Nexus** can overlay Singapore Strait background traffic via
+`POST /api/ingress/open-feed` without calling live public APIs.
+
+Not required for Profile A, pytest, Dual-SAR fixture paths, or **`s1_trojan`**
+(SensorSim owns that picture). Useful for S3 pitch realism when Wi-Fi is poor
+but a pre-built DuckDB exists.
+
+| Priority (`source`) | Behavior |
+|---|---|
+| `auto` (default) | Indago DuckDB → live poll → Nexus `tests/fixtures/open_ais_datagovsg.json` |
+| `indago` | DuckDB only (`INDAGO_DUCKDB_PATH` or `~/.indago/data/raw/ais/singapore.duckdb`) |
+| `live` | Public AIS poll |
+| `fixture` / `use_fixture:true` | Deterministic Nexus fixture (venue-safe) |
+
+```bash
+# Point Nexus at an Indago DuckDB (path is env-only — not a request field)
+export INDAGO_DUCKDB_PATH="$HOME/.indago/data/raw/ais/singapore.duckdb"
+
+curl -sf -X POST http://127.0.0.1:8080/api/ingress/open-feed \
+  -H 'content-type: application/json' \
+  -d '{"feed":"ais","source":"indago","limit":80}' | jq '{status, count, resolved_sources}'
+```
+
+Build / refresh the DuckDB from the **Indago** repo pipelines (see that repo’s
+README). Adapter: [`app/adapters/open_feed.py`](../app/adapters/open_feed.py).
 
 ---
 
@@ -110,11 +230,16 @@ Select the deployment profile appropriate for your verification target:
 
 ### Profile A: Core Only (Minimal & Recommended)
 
-No external processes (Node.js, SIA, or GLINT server) are required. C2 uses built-in fail-safe fixtures that emulate identical Dual-SAR fusion and closed-loop gating behavior.
+No external **processes** (Node.js, SIA, or GLINT server) are required. Dual-SAR
+S3 uses built-in fail-safe fixtures. For **`s1_trojan`**, prefer a sibling
+**SensorSim** checkout (§0.1); without it, **Nexus** still runs from
+`tests/fixtures/s1_trojan_*`.
 
 ```bash
-# Terminal 1: Start C2 Core
+# Terminal 1: Start Nexus Core
 cd /Users/yoheionishi/work/SDTH2026/sdth-nexus-c2
+# Optional: pin SensorSim exports (default = sibling ../marun-sensor-simulation/exports)
+# export MARUN_EXPORT_DIR=/Users/yoheionishi/work/SDTH2026/marun-sensor-simulation/exports
 export C2_DEMO_TAMPER=1
 uv run sdth-c2-server
 # => Running on http://127.0.0.1:8080
@@ -256,7 +381,9 @@ curl -sf "$C2/api/audit/health" | jq .
 # 1. Reset in-memory + SQLite runtime picture
 curl -sf -X POST "$C2/api/admin/reset" | jq .
 
-# 2. Optional background AIS (Indago ladder / fixture)
+# 2. Optional background AIS
+#    Prefer Indago DuckDB when present (§0.2); else fixture (venue-safe):
+# curl … -d '{"feed":"ais","source":"indago","limit":80}'
 curl -sf -X POST "$C2/api/ingress/open-feed" \
   -H 'content-type: application/json' \
   -d '{"feed":"ais","use_fixture":true,"limit":40}' | jq '{status, count}'
@@ -296,12 +423,17 @@ curl -sf "$C2/api/audit/health" | jq .
 
 ### Workflow 3b: curl closed loop — `s1_trojan` (CNI guardrail, #116)
 
-Requires Core running (`uv run sdth-c2-server`). Plain propose is expected to
-hard-reject; the demo path evaluates Option A through the live CNI interlock and
-queues enforced Option B for dual-unit authorize.
+Requires **Nexus** Core running (`uv run sdth-c2-server`). Picture data comes from
+**SensorSim** exports via `arun_canonical` (§0.1), or Nexus fixtures if SensorSim
+is not checked out.
+Plain propose is expected to hard-reject; the demo path evaluates Option A
+through the live CNI interlock and queues enforced Option B for dual-unit
+authorize.
 
 ```bash
 export C2=http://127.0.0.1:8080
+# Optional: confirm which export dir the loader will prefer
+# ls ../marun-sensor-simulation/exports/s1_trojan_scenario.jsonl
 
 curl -sf -X POST "$C2/api/admin/reset" | jq .
 
@@ -581,7 +713,8 @@ tail -n 3 .audit/gate.jsonl | jq '{class_name: .class_name, record_hash: .record
 | `Address already in use` error on startup | Stale C2 or mock server running in background | Run `kill $(lsof -ti :8080 :5051 :5050) 2>/dev/null \|\| true` |
 | `Duplicate COA` / `active_coa_ids` 400 error | Previous scenario state remains in memory | Execute `curl -sf -X POST http://127.0.0.1:8080/api/admin/reset` |
 | `Window expired` error during Approve | Operator exceeded HITL decision window (typically 30s) | Re-trigger proposal via `POST /api/gate/proposals` and approve promptly |
-| SIA upstream 500 / unreachable | Sibling SIA service `:5050` is not running | SIA is optional; C2 automatically falls back to deterministic Singapore Strait fixtures |
+| `s1_trojan` picture stale / missing AIS–radar mismatch | Sibling **SensorSim** `exports/` absent or out of date vs Nexus fixtures | Clone SensorSim next to Nexus as `marun-sensor-simulation`, or `export MARUN_EXPORT_DIR=…`, regenerate per §0.1 |
+| SIA upstream 500 / unreachable | Sibling **SIA** (`Sentinel-Imagery-Analysis`) `:5050` is not running | SIA is optional; **Nexus** automatically falls back to deterministic Singapore Strait fixtures |
 | Audit health reports `broken > 0` | Audit file was tampered with or corrupted | Run `POST /api/admin/audit/restore` or remove `.audit/gate.jsonl` and reset |
 
 ---
@@ -596,6 +729,7 @@ tail -n 3 .audit/gate.jsonl | jq '{class_name: .class_name, record_hash: .record
 - [ ] **Approve / Ack / Audit**: sealed token → inbox → `ACKED` → `verified: true`, `broken: 0`.
 
 ### s1_trojan (#116)
+- [ ] **SensorSim data**: sibling `marun-sensor-simulation/exports/` present **or** intentional Nexus fixture fallback (§0.1).
 - [ ] **pytest** Workflow 1 green (or curl Workflow 3b).
 - [ ] Plain `POST /api/gate/proposals` → `REJECTED_FAST` + `SAFETY_LOCKOUT_CNI_FALLOUT_HAZARD`.
 - [ ] `POST /api/gate/demo-evaluate-with-guardrail` → Option B queued; amber includes velocity mismatch.

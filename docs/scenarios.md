@@ -24,7 +24,7 @@ App-layer scenarios under `app/scenarios/`. Each run builds synthetic multi-vend
 
 **S3** is the hero maritime SAR×AIS scenario. **`s1_trojan`** is the tri-service
 disagreement + CNI guardrail demo ([#116](https://github.com/edgesentry/sdth-nexus-c2/issues/116)):
-Arun/marun JSONL → velocity mismatch amber → hard VETO of terminal SAM over Jurong
+SensorSim (`SDTH-Sensor-Simulation`) JSONL → velocity mismatch amber → hard VETO of terminal SAM over Jurong
 CNI → enforced offshore Option B. CUI runbook: [verify-e2e.md](verify-e2e.md)
 (Workflows 1 / 3b).
 
