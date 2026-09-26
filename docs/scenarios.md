@@ -1,31 +1,36 @@
-# Defense scenarios
+# Multi-Domain Defense Scenarios
 
-App-layer scenarios under `app/scenarios/`. Each run builds synthetic multi-vendor observations **without shared track IDs**, detects a Finding, and proposes a Tier-1 COA.
+## 🌐 The Tri-Service Multi-Domain Unification Narrative
 
-| ID | Title | Conflict | Tasking |
-|----|-------|----------|---------|
-| **s1_trojan** | Trojan Mothership — Tri-Service disagreement + CNI guardrail (#116) | Navy Happy Tug AIS ~6 kt vs coastal radar ~120 kt UAS; Air/Army EW LOB triangulation; terminal SAM over Jurong CNI is hard-VETO'd | Guardrail → `OFFSHORE_INTERCEPT_RF_SOFTKILL` (Option B) |
-| **S3** | Shipping Lane & Coastal Anomaly — SAR Difference vs AIS | Space-based SAR anomaly diff (unannounced dark cluster with length/beam/heading metrology) vs thin AIS; coastal radar joined via dead-reckoned reachability envelope (#57) | `APPROACH_PATROL` |
-| **S1** | Sea Approach — Adversarial AIS Spoof | Stationary AIS vs ~20 kt radar/EO (~850 m) | `ISR_IDENTIFY_CONTACT` |
-| **S2** | Air Corridor — OSINT vs Radar Contradiction | Social claims 3; radar 1 (~1.2 km N); EO blur 0.42; RF silent; no ADS-B | Amber `COUNT_AND_BEARING_MISMATCH` → `CUE_AND_IDENTIFY` |
+In modern littoral-maritime defense, sovereign security relies on unifying siloed sensor networks across **Army (IDTF)**, **Navy (RSN / PCG)**, **Air Force (RSAF)**, and **Space Reconnaissance (GLINT SAR)**:
 
-> ## 🌐 Tri-Service Multi-Domain Unification Narrative
->
-> In modern littoral-maritime defense, sovereign security relies on unifying siloed sensor networks across **Army (IDTF)**, **Navy (RSN / PCG)**, **Air Force (RSAF)**, and **Space Reconnaissance (GLINT SAR)**:
-> 1. **Army:** Coastal CCTV and ground EW monitor shorelines, but lack visibility into maritime launch origins or radar tracking over water.
-> 2. **Navy:** Monitors commercial maritime traffic via AIS, but cannot detect transponder spoofing, concealed launch rails, or low-RCS air incursions on its own.
-> 3. **Air Force:** Tracks fast-moving air radar contacts, but struggles to differentiate sea clutter/civilian drones from hostile loitering munitions without maritime context or emitter triangulation.
-> 4. **Space SAR (GLINT):** Captures physical hull dimensions and orbital radar backscatter, providing an unalterable ground truth against spoofed declarations.
->
-> **NexusGate** ingests these disparate streams, triggers deterministic contradiction checks, and dispatches coordinated multi-service tasking (Air GBAD + Naval PCG interdiction).
+1. **Army (IDTF):** Coastal CCTV and ground EW monitor shorelines, but lack visibility into maritime launch origins or radar tracking over water.
+2. **Navy (RSN / PCG):** Monitors commercial maritime traffic via AIS, but cannot detect transponder spoofing, concealed launch rails, or low-RCS air incursions on its own.
+3. **Air Force (RSAF):** Tracks fast-moving air radar contacts, but struggles to differentiate sea clutter/civilian drones from hostile loitering munitions without maritime context or emitter triangulation.
+4. **Space Recon (GLINT SAR):** Captures physical hull dimensions and orbital radar backscatter, providing an unalterable ground truth against spoofed declarations.
 
-**Principle (applies to all scenarios):** do not fuse into one hallucinated track — surface deterministic contradictions and cue identify/interlock.
+**NexusGate** ingests these disparate streams into a unified data core, triggers deterministic contradiction checks, and dispatches coordinated multi-service tasking (Air Force GBAD kinetic intercept + Navy PCG mothership interdiction).
 
-### Core Demonstration Scenarios
+> **Core Architectural Principle:** Do not fuse disparate tracks into one hallucinated "super-track." Preserve raw modality boundaries, surface deterministic kinematic and spatial contradictions, and enforce mathematical safety interlocks before human commanders authorize action.
 
-* **`s1_trojan` (Tri-Service Disagreement & CNI Guardrail — Hero Scenario):**
+---
+
+## 🎯 Scenarios Realizing the Narrative
+
+To demonstrate and rigorously verify this multi-domain integration, NexusGate implements distinct app-layer scenarios under `app/scenarios/`. Each scenario builds synthetic multi-vendor observations **without shared track IDs**, detects a Finding, surfaces contradiction badges, and proposes a Tier-1 COA:
+
+| ID | Title | Contradiction / Conflict | Tasking / Resolution |
+|----|-------|--------------------------|----------------------|
+| **`s1_trojan`** | **Trojan Mothership (Hero Scenario)** | Navy Happy Tug AIS ~6 kt vs coastal radar ~120 kt UAS; Air/Army EW LOB triangulation; terminal SAM over Jurong CNI is hard-VETO'd | Guardrail → `OFFSHORE_INTERCEPT_RF_SOFTKILL` (Option B) |
+| **`S3`** | **Shipping Lane & Coastal Anomaly** | Space-based SAR anomaly diff (GLINT macro + SIA micro) vs thin AIS; coastal radar joined via dead-reckoned reachability envelope (#57) | `APPROACH_PATROL` (Dynamic Lead-Pursuit) |
+| **`S1`** | **Sea Approach** | Stationary AIS transponder vs ~20 kt radar/EO contact (~850 m mismatch) | `ISR_IDENTIFY_CONTACT` |
+| **`S2`** | **Air Corridor** | OSINT social claims (3 drones) vs radar (1 contact); EO blur; RF silence | `CUE_AND_IDENTIFY` |
+
+### Core Demonstration Highlights
+
+* **`s1_trojan` (Tri-Service Disagreement & CNI Safety Guardrail):**
   Demonstrates cross-domain contradiction resolution ([#116](https://github.com/edgesentry/sdth-nexus-c2/issues/116)):
-  SensorSim (`SDTH-Sensor-Simulation`) JSONL → Navy AIS vs Coastal Radar velocity mismatch amber → Air ESM ∩ Army EW LOB launch triangulation → Hard VETO of terminal SAM over Jurong CNI (`SAFETY_LOCKOUT_CNI_FALLOUT_HAZARD`) → Enforced offshore Option B dual tasking. Runbook: [verify-e2e.md](verify-e2e.md) (Workflows 1 / 3b).
+  SensorSim (`SDTH-Sensor-Simulation`) JSONL → Navy AIS vs Coastal Radar velocity mismatch amber → Air ESM ∩ Army EW LOB launch triangulation → Hard VETO of terminal SAM over Jurong CNI (`SAFETY_LOCKOUT_CNI_FALLOUT_HAZARD`) → Enforced offshore Option B dual tasking (Air GBAD + PCG interdiction).
 
 * **`S3` (Space SAR × AIS Dark Vessel Corroboration):**
   Connects macro space-based SAR scene-difference alerts (GLINT) and micro OBB metrology (SIA) to tactical C2 tasking via dead-reckoning kinematics ([#57](https://github.com/edgesentry/sdth-nexus-c2/issues/57)) and lead-pursuit interception ([#58](https://github.com/edgesentry/sdth-nexus-c2/issues/58)) (see [SAR Pipeline Architecture](architecture/sar_pipeline.md)).
@@ -36,7 +41,18 @@ App-layer scenarios under `app/scenarios/`. Each run builds synthetic multi-vend
 > 2. **SIA (Micro SAR × AIS)**: Correlates with pass-time AIS snapshot (T - Δt) to isolate dark vessels and extract OBB metrology (L/B/θ).
 > 3. **NexusGate ← Indago (Tactical C2)**: Overlays live background traffic (T ≈ 0) and computes dynamic lead-pursuit POI, allowing the Commander to authorize a mathematically verified Amber Warning Picture rather than manually cross-referencing raw sensor feeds.
 
-Each CLI / TUI run prints a **WARNING PICTURE** (threat class, minutes of warning, sources, “if false collapses when…”) before the gate.
+---
+
+## 🚀 End-to-End Execution & Verification
+
+For hands-on execution, operational commands, and live CUI/UI workflows across these scenarios, refer to the complete runbook:
+
+👉 **[End-to-End Verification & Operator Runbook (`verify-e2e.md`)](verify-e2e.md)**
+
+* **Workflow 1:** Automated end-to-end test execution (`pytest`, `picture_to_tasking`).
+* **Workflow 2:** Screen 1 (ARCHVIEW MapLibre) & Screen 2 (BattlePlan / Verify UI) integration.
+* **Workflow 3a:** `S3` hero scenario pitch replay and Indago DuckDB live AIS overlay.
+* **Workflow 3b:** `s1_trojan` tri-service disagreement, CNI guardrail hard-VETO, and Option B dual tasking.
 
 ## Modalities
 
