@@ -7,6 +7,7 @@ App-layer scenarios under `app/scenarios/`. Each run builds synthetic multi-vend
 | **S1** | Sea Approach — Adversarial AIS Spoof | Stationary AIS vs ~20 kt radar/EO (~850 m) | `ISR_IDENTIFY_CONTACT` |
 | ⛔ **S2** | Air Corridor — Shahed Swarm Contradiction (**out of scope**) | Social claims 3; radar 1 (~1.2 km N); EO blur 0.42; RF silent; no ADS-B | Amber `COUNT_AND_BEARING_MISMATCH` → `CUE_AND_IDENTIFY` |
 | **S3** | Shipping Lane & Coastal Anomaly — SAR Difference vs AIS | Space-based SAR anomaly diff (unannounced dark cluster with length/beam/heading metrology) vs thin AIS; coastal radar joined via dead-reckoned reachability envelope (#57), not a shared MMSI | `APPROACH_PATROL` |
+| **s1_trojan** | Trojan Mothership — AIS vs radar disagreement + CNI guardrail (#116) | Happy Tug AIS ~6 kt vs coastal radar ~120 kt UAS; EW LOB triangulation optional; terminal SAM over Jurong CNI is hard-VETO'd | Guardrail → `OFFSHORE_INTERCEPT_RF_SOFTKILL` (Option B) |
 
 > ## ⛔ S2 is no longer the hero (2026-09-20)
 >
@@ -21,7 +22,13 @@ App-layer scenarios under `app/scenarios/`. Each run builds synthetic multi-vend
 > 2. **Preventing Kinetic Over-Reaction**: Social chatter is prone to panic, exaggeration, and enemy deception (*"20 swarm drones incoming!"*). An un-governed C2 risks launching million-dollar surface-to-air interceptors prematurely. NexusGate surfaces the **Amber contradiction** (Social claims filtered 3 vs Radar detects 1) and routes tasking to non-kinetic **`CUE_AND_IDENTIFY`** (slew cameras/recon drones to verify) rather than lethal over-kill.
 > 3. **Decoupled Ingress Architecture**: Just as AIS history is decoupled to Indago, raw social media scraping/crawling lives in external OSINT Threat Intelligence services. NexusGate ingests only structured semantic extracts (`claimed_count`, `bearing`, `objective`) via [`app/adapters/osint_text.py`](data-provenance.md) without maintaining an internal social database.
 
-**S3** is the hero scenario: connects macro space-based SAR scene-difference alerts (GLINT) and micro OBB metrology (SIA) to tactical C2 tasking via dead-reckoning kinematics ([#57](https://github.com/edgesentry/sdth-nexus-c2/issues/57)) and lead-pursuit interception ([#58](https://github.com/edgesentry/sdth-nexus-c2/issues/58)) (see [SAR Pipeline Architecture](architecture/sar_pipeline.md)).
+**S3** is the hero maritime SAR×AIS scenario. **`s1_trojan`** is the tri-service
+disagreement + CNI guardrail demo ([#116](https://github.com/edgesentry/sdth-nexus-c2/issues/116)):
+Arun/marun JSONL → velocity mismatch amber → hard VETO of terminal SAM over Jurong
+CNI → enforced offshore Option B. CUI runbook: [verify-e2e.md](verify-e2e.md)
+(Workflows 1 / 3b).
+
+**S3** connects macro space-based SAR scene-difference alerts (GLINT) and micro OBB metrology (SIA) to tactical C2 tasking via dead-reckoning kinematics ([#57](https://github.com/edgesentry/sdth-nexus-c2/issues/57)) and lead-pursuit interception ([#58](https://github.com/edgesentry/sdth-nexus-c2/issues/58)) (see [SAR Pipeline Architecture](architecture/sar_pipeline.md)).
 
 > **S3 Cognitive Load Compression (Dual-SAR × Dual-AIS):**  
 > Resolves the core maritime dilemma (*"SAR detects returns, AIS indicates normal traffic: is it clutter, a dark vessel, or latency?"*) across three decoupled tiers:

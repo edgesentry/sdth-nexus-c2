@@ -2,8 +2,11 @@
 
 Comprehensive runbook for executing and validating the full **Picture → Gate → Ack** closed loop starting from a **clean zero-state reset** (all processes stopped, state cleared) to end-to-end execution and cryptographic data verification.
 
-- **Primary Scenario**: **Hero S3 (Singapore Strait Dark Vessel Interdiction via Dual-SAR & AIS)**
-- **Console UIs**: Core `/verify` (Jinja2/HTMX Screen 1/2) or external **ARCHVIEW** tactical console (`:3001`)
+- **Primary scenarios** (see [scenarios.md](scenarios.md)):
+  - **S3** — Singapore Strait dark vessel (Dual-SAR × AIS) — hero maritime loop
+  - **s1_trojan** — Happy Tug AIS vs coastal radar disagreement + CNI debris VETO (#116)
+- **CUI (no browser)**: pytest (in-process) · `scripts/picture_to_tasking.py` · curl against `:8080`
+- **Console UIs**: Core `/verify` (Jinja2/HTMX Screen 1/2) or external **ARCHVIEW** (`:3001`)
 - **Key Specifications**: [C2 REST API](api/rest.md) · [Demo Guide](demo.md) · [Data Provenance](data-provenance.md) · [SAR Pipeline](architecture/sar_pipeline.md) · [Architecture Map](architecture/index.md)
 
 ---
@@ -83,7 +86,7 @@ lsof -i :8080 -i :5051 -i :5050 -i :8000 -i :3001 -i :3102
 Wipe previous audit records (`.audit/`), temporary test files (`.tmp-e2e/`), and compiled Python cache:
 
 ```bash
-cd /Users/yoheionishi/work/edgesentry/sdth-nexus-c2
+cd /Users/yoheionishi/work/SDTH2026/sdth-nexus-c2
 
 # Remove existing audit trails and temporary artifacts
 rm -rf .audit/gate.jsonl .audit/ingress.jsonl .tmp-e2e/
@@ -111,7 +114,7 @@ No external processes (Node.js, SIA, or GLINT server) are required. C2 uses buil
 
 ```bash
 # Terminal 1: Start C2 Core
-cd /Users/yoheionishi/work/edgesentry/sdth-nexus-c2
+cd /Users/yoheionishi/work/SDTH2026/sdth-nexus-c2
 export C2_DEMO_TAMPER=1
 uv run sdth-c2-server
 # => Running on http://127.0.0.1:8080
@@ -123,12 +126,12 @@ To verify live macro SAR HTTP polling alongside SIA micro SAR fail-safe:
 
 ```bash
 # Terminal 1: C2 Core
-cd /Users/yoheionishi/work/edgesentry/sdth-nexus-c2
+cd /Users/yoheionishi/work/SDTH2026/sdth-nexus-c2
 export C2_DEMO_TAMPER=1
 uv run sdth-c2-server
 
 # Terminal 2: GLINT Mock (:5051)
-cd /Users/yoheionishi/work/edgesentry/sdth-nexus-c2
+cd /Users/yoheionishi/work/SDTH2026/sdth-nexus-c2
 uv run sdth-mock-glint
 ```
 
@@ -136,7 +139,7 @@ uv run sdth-mock-glint
 
 ```bash
 # Terminal 1: C2 Core (:8080)
-cd /Users/yoheionishi/work/edgesentry/sdth-nexus-c2
+cd /Users/yoheionishi/work/SDTH2026/sdth-nexus-c2
 uv run sdth-c2-server
 
 # Terminal 2: ARCHVIEW Tactical Console (:3001) & BFF (:3102)
@@ -161,77 +164,115 @@ curl -sf http://127.0.0.1:8080/api/audit/health | jq .
 
 ## 3. End-to-End Execution Workflows
 
-### Workflow 1: One-Shot Automated E2E (CLI)
+CUI first. Browser `/verify` is optional rehearsal (Workflow 4).
 
-Executes the complete Propose → Approve → Inbox → Ack → Audit closed loop in `< 10ms`:
+| Mode | Server needed? | Scenarios | What it proves |
+|---|---|---|---|
+| **pytest** | No (in-process `TestClient`) | `s1_trojan` (+ S2 claim-tags via verify UI tests) | Gate CNI VETO, Navy silo, claim-tags, guardrail queue |
+| **`picture_to_tasking.py`** | Yes (`uv run sdth-c2-server`) | `S1` / `S2` / `S3` | Propose → Approve → Inbox → Ack → audit seal |
+| **curl** | Yes | `S3` and `s1_trojan` | Same loops; `s1_trojan` must use the guardrail endpoint |
+
+> **`s1_trojan` note:** `POST /api/gate/proposals` with `scenario_id=s1_trojan` returns
+> `REJECTED_FAST` / `SAFETY_LOCKOUT_CNI_FALLOUT_HAZARD` by design (terminal SAM over
+> Jurong CNI). Use `POST /api/gate/demo-evaluate-with-guardrail` to VETO Option A and
+> queue enforced Option B.
+
+---
+
+### Workflow 1: pytest (CUI, no server)
+
+Fastest check for issue #116 acceptance without starting uvicorn:
 
 ```bash
-# Run S3 Maritime Hero closed loop
+cd /Users/yoheionishi/work/SDTH2026/sdth-nexus-c2
+uv sync
+
+uv run python -m pytest \
+  tests/unit/test_tri_service_interlocks.py \
+  tests/integration/test_trojan_mothership_e2e.py \
+  tests/unit/test_verify_ui.py \
+  -q
+```
+
+**Expected**: all tests `PASSED` (≈22+ depending on suite growth). Covers CNI VETO,
+offshore Option B, Verify propose claim-tags, Navy silo, and guardrail panel.
+
+One-shot Trojan mothership only:
+
+```bash
+uv run python -m pytest tests/integration/test_trojan_mothership_e2e.py -q
+```
+
+---
+
+### Workflow 2: One-shot Picture→Tasking script (CUI, S1/S2/S3)
+
+Starts (or reuses) Core and runs Propose → Approve → Inbox → Ack → audit.
+
+```bash
+# Terminal A — Core
+cd /Users/yoheionishi/work/SDTH2026/sdth-nexus-c2
+export C2_DEMO_TAMPER=1
+uv run sdth-c2-server
+# => http://127.0.0.1:8080
+
+# Terminal B — closed loop (default scenario S2)
 SCENARIO=S3 uv run python scripts/picture_to_tasking.py --require-roundtrip
+
+# Or one process (script starts Core if C2_BASE_URL is local):
+SCENARIO=S3 ./scripts/picture_to_tasking.sh
 ```
 
-**Expected output**:
+**Expected** (stdout ends with PASS / Ack sealed):
+
 ```text
-picture_to_tasking S3: PASS
-Picture→Ack: 0.005s | Approve→Ack: 0.003s
-recipient_ack sealed; cryptographic audit chain intact (3 links)
+NexusGate — Picture→Tasking demo (no UI)
+  Scenario   : S3
+...
+PASS: Ack sealed in OCSF audit chain within target
 ```
 
----
+Other scenarios:
 
-### Workflow 2: Core WebUI (`/verify`) Rehearsal
+```bash
+SCENARIO=S1 uv run python scripts/picture_to_tasking.py
+SCENARIO=S2 uv run python scripts/picture_to_tasking.py --require-roundtrip
+```
 
-Interactive human-in-the-loop (HITL) verification using dual browser tabs:
-
-1. **Open Consoles**:
-   - **Screen 1 (Command Cockpit)**: [http://127.0.0.1:8080/verify/command](http://127.0.0.1:8080/verify/command)
-   - **Screen 2 (Recipient Effector)**: [http://127.0.0.1:8080/verify/recipient](http://127.0.0.1:8080/verify/recipient)
-2. **Ingress Sensor Data on Screen 1**:
-   - Click **Ingress Dual-SAR (both)** → Ontology snapshot displays 2 dark vessels ($L=78.2\text{ m}, 52.0\text{ m}$) with attached high-resolution radar evidence chips.
-   - Click **Ingress Indago AIS** → Overlays ~40 live/synthetic commercial background tracks in the Singapore Strait without entity blending.
-3. **Propose Action**:
-   - Select Scenario **S3** (Maritime Hero / Dark Vessel) → Click **Propose**.
-   - Verify that the **Amber Warning Card** (`SAR_DARK_CLUSTER_VS_AIS_SILENCE`) and **Lead POI Card** (quadratic intercept calculation) are rendered.
-4. **Authorize (Approve)**:
-   - Within the approval countdown window (typically 30s), click **Approve**.
-   - An `APPROVED` status badge appears, and the cryptographically sealed `DecisionToken` digest is generated.
-5. **Acknowledge on Screen 2 (Ack)**:
-   - Switch to Screen 2. HTMX auto-polling (every 2s) populates the tasking for unit `CUE-NODE-01`.
-   - Click **Ack**.
-   - Status updates to `ACKED`, and the audit chain counter increments.
+Do **not** pass `SCENARIO=s1_trojan` here — plain propose is hard-rejected by the CNI
+interlock. Use Workflow 3b instead.
 
 ---
 
-### Workflow 3: Complete Command-Line (curl) Closed Loop
-
-Replicate the entire operational flow via REST API calls without a browser:
+### Workflow 3a: curl closed loop — Hero S3
 
 ```bash
 export C2=http://127.0.0.1:8080
 
-# 1. Reset in-memory state
-curl -sf -X POST "$C2/api/admin/reset" | jq .
-# Expected: {"status": "reset"}
+# 0. Health
+curl -sf "$C2/health" | jq .
+curl -sf "$C2/api/audit/health" | jq .
 
-# 2. Ingest background AIS traffic (Indago DuckDB or Fixture)
+# 1. Reset in-memory + SQLite runtime picture
+curl -sf -X POST "$C2/api/admin/reset" | jq .
+
+# 2. Optional background AIS (Indago ladder / fixture)
 curl -sf -X POST "$C2/api/ingress/open-feed" \
   -H 'content-type: application/json' \
-  -d '{"feed":"all","use_fixture":true}' | jq '{status, count, resolved: .resolved_sources}'
-# Expected: status: "INGESTED", count >= 40
+  -d '{"feed":"ais","use_fixture":true,"limit":40}' | jq '{status, count}'
 
-# 3. Ingest Dual-SAR anomaly (GLINT macro cue + Sentinel-1 micro metrology)
+# 3. Dual-SAR anomaly (GLINT macro + SIA micro fixtures)
 curl -sf -X POST "$C2/api/ingress/candidate-event" \
   -H 'content-type: application/json' \
-  -d '{"dual_sar":true}' | jq '{source, count, ids:[.observations[].source_id]}'
-# Expected: source: "dual_sar", count: 2, ids: ["DUAL_SAR", "DUAL_SAR"]
+  -d '{"dual_sar":true}' | jq '{source, count}'
 
-# 4. Propose S3 Course of Action
+# 4. Propose S3 COA
 PROP=$(curl -sf -X POST "$C2/api/gate/proposals" \
   -H 'content-type: application/json' \
   -d '{"scenario_id":"S3","unit_id":"CUE-NODE-01"}')
+echo "$PROP" | jq '{status, amber: .finding.amber_alert, threat: .finding.threat_class}'
 COA_ID=$(echo "$PROP" | jq -r '.coa.coa_id')
-echo "=== Proposal Created: COA $COA_ID ==="
-echo "$PROP" | jq '{status, amber: .finding.amber_alert, threat: .finding.threat_class, poi: .coa.target_coordinates}'
+test "$COA_ID" != null && test -n "$COA_ID"
 
 # 5. Commander Approve -> Seals DecisionToken
 APPROVE=$(curl -sf -X POST "$C2/api/gate/approve" \
@@ -253,7 +294,103 @@ curl -sf "$C2/api/audit/health" | jq .
 
 ---
 
-### Workflow 4: Path ARCHVIEW (Hero S3) {#path-archview-hero-s3--issue-99}
+### Workflow 3b: curl closed loop — `s1_trojan` (CNI guardrail, #116)
+
+Requires Core running (`uv run sdth-c2-server`). Plain propose is expected to
+hard-reject; the demo path evaluates Option A through the live CNI interlock and
+queues enforced Option B for dual-unit authorize.
+
+```bash
+export C2=http://127.0.0.1:8080
+
+curl -sf -X POST "$C2/api/admin/reset" | jq .
+
+# Optional: show that plain propose is hard-rejected (CNI debris)
+curl -sf -X POST "$C2/api/gate/proposals" \
+  -H 'content-type: application/json' \
+  -d '{"scenario_id":"s1_trojan","unit_id":"GBAD-RSAF-01"}' \
+  | jq '{status, reason}'
+# Expected: status == "REJECTED_FAST", reason contains SAFETY_LOCKOUT_CNI_FALLOUT_HAZARD
+
+# Guardrail path: VETO Option A, queue Option B
+GR=$(curl -sf -X POST "$C2/api/gate/demo-evaluate-with-guardrail" \
+  -H 'content-type: application/json' \
+  -d '{
+    "scenario_id":"s1_trojan",
+    "unit_id":"GBAD-RSAF-01",
+    "navy_unit_id":"PCG-PT-44"
+  }')
+echo "$GR" | jq '{
+  status,
+  veto_code,
+  veto_reason,
+  option_b_intent: .fallback_coa.intent,
+  finding_amber: .finding.amber_alert,
+  queued_for
+}'
+# Expected:
+#   status == "GUARDRAIL_VETO_OPTION_B_QUEUED"
+#   veto_code == "SAFETY_LOCKOUT_CNI_FALLOUT_HAZARD"
+#   fallback_coa.intent == "OFFSHORE_INTERCEPT_RF_SOFTKILL"
+#   finding.amber_alert contains VELOCITY_MISMATCH_AIS_VS_RADAR
+#   queued_for == ["GBAD-RSAF-01","PCG-PT-44"]
+
+COA_ID=$(echo "$GR" | jq -r '.fallback_coa.coa_id')
+
+# Authorize Option B (dual dispatch: GBAD + Navy)
+curl -sf -X POST "$C2/api/gate/approve" \
+  -H 'content-type: application/json' \
+  -d "{\"coa_id\":\"$COA_ID\",\"decision\":\"y\",\"operator_id\":\"commander-01\"}" \
+  | jq '{status}'
+
+# Both inboxes should receive tasking
+curl -sf "$C2/api/recipient/inbox?unit_id=GBAD-RSAF-01" | jq '{unit_id, count}'
+curl -sf "$C2/api/recipient/inbox?unit_id=PCG-PT-44" | jq '{unit_id, count}'
+
+# Ack from GBAD line (repeat for Navy sister coa_id if dual-issued)
+GBAD_COA=$(curl -sf "$C2/api/recipient/inbox?unit_id=GBAD-RSAF-01" | jq -r '.taskings[0].coa.coa_id')
+curl -sf -X POST "$C2/api/recipient/ack" \
+  -H 'content-type: application/json' \
+  -d "{\"coa_id\":\"$GBAD_COA\",\"unit_id\":\"GBAD-RSAF-01\",\"status\":\"ACKED\"}" \
+  | jq '{status}'
+
+curl -sf "$C2/api/audit/health" | jq .
+curl -sf "$C2/api/ontology/state" | jq '{
+  scenario_id,
+  amber: .amber_alert.alert,
+  obs: (.observations|length),
+  pending: (.pending_proposals|length)
+}'
+```
+
+Ontology after guardrail should still carry the disagreement finding (AIS ~6 kt vs
+radar ~120 kt) and POI ETA flags under `amber_alert.source_breakdown.poi_eta_sec`.
+
+---
+
+### Workflow 4: Core WebUI (`/verify`) rehearsal
+
+Interactive HITL using dual browser tabs (optional after CUI pass):
+
+1. Open:
+   - Screen 1: [http://127.0.0.1:8080/verify/command](http://127.0.0.1:8080/verify/command)
+   - Screen 2: [http://127.0.0.1:8080/verify/recipient](http://127.0.0.1:8080/verify/recipient)
+2. **S3 path**: Ingress Dual-SAR → Propose `S3` → Approve → Ack on Screen 2.
+3. **`s1_trojan` path (#116)**:
+   - Select scenario `s1_trojan` → Propose (Warning Picture shows claim-tags AIS vs radar).
+   - Service silo → **Navy** (Happy Tug AIS / coastal radar visible).
+   - Guardrail panel → **Evaluate Option A (live VETO)** → AUTHORIZE Option B.
+   - Screen 2: Ack for `GBAD-RSAF-01` (and Navy unit if dual-queued).
+
+Deep-link:
+
+```text
+http://127.0.0.1:8080/verify/command?scenario_id=s1_trojan&service_view=navy
+```
+
+---
+
+### Workflow 5: Path ARCHVIEW (Hero S3) {#path-archview-hero-s3--issue-99}
 
 Closed-loop execution combining external **ARCHVIEW** (Vite `:3001`) with Core (`:8080`):
 
@@ -262,7 +399,7 @@ Closed-loop execution combining external **ARCHVIEW** (Vite `:3001`) with Core (
 curl -sf -X POST http://127.0.0.1:8080/api/admin/reset >/dev/null
 curl -sf -X POST http://127.0.0.1:8080/api/ingress/candidate-event \
   -H 'content-type: application/json' -d '{"dual_sar":true}' | jq '{source,count}'
-# Expected: source: "dual_sar", count: 2
+# Expected: dual_sar observations ingested (count >= 1)
 
 # 2. ARCHVIEW UI Actions (http://127.0.0.1:3001)
 # - Scenario: Select S3 Maritime Hero -> Click [Propose]
@@ -284,7 +421,7 @@ curl -sf http://127.0.0.1:8080/api/audit/health | jq .
 
 ---
 
-### Workflow 5: Tamper Detection Rehearsal {#tamper-detection-rehearsal-88}
+### Workflow 6: Tamper Detection Rehearsal {#tamper-detection-rehearsal-88}
 
 Validates that a 1-character insider tampering of `gate.jsonl` is detected immediately by SHA-256 hash chaining and out-of-process EDS verification, halting execution until restored:
 
@@ -451,10 +588,16 @@ tail -n 3 .audit/gate.jsonl | jq '{class_name: .class_name, record_hash: .record
 
 ## 6. Pass Criteria Checklist
 
-- [ ] **Reset**: Ports 8080, 5051, 5050 are cleared; zero-state starts cleanly.
-- [ ] **Ingress**: AIS and SAR observations populate the graph while maintaining strict modality separation.
-- [ ] **Dual-SAR**: GLINT macro cluster and SIA micro metrology corroborate (`source=dual_sar`, confidence 0.98).
-- [ ] **Gate**: Proposal emits Amber Warning (`SAR_DARK_CLUSTER_VS_AIS_SILENCE`) with dynamic Lead Intercept POI.
-- [ ] **Approve**: Sealed `DecisionToken` generated only by Core upon operator authorization.
-- [ ] **Ack**: Field effector retrieves tasking from inbox and submits signed `ACKED`.
-- [ ] **Audit**: `GET /api/audit/health` confirms `verified: true` with `broken: 0` (0 of n).
+### S3 (maritime hero)
+- [ ] **Reset**: Ports 8080 (+ optional mocks) cleared; zero-state starts cleanly.
+- [ ] **Ingress**: AIS and SAR observations populate the graph with modality separation.
+- [ ] **Dual-SAR**: GLINT macro + SIA micro corroborate (`dual_sar`).
+- [ ] **Gate**: Amber (`SAR_DARK_CLUSTER_VS_AIS_SILENCE` / equivalent) + Lead Intercept POI.
+- [ ] **Approve / Ack / Audit**: sealed token → inbox → `ACKED` → `verified: true`, `broken: 0`.
+
+### s1_trojan (#116)
+- [ ] **pytest** Workflow 1 green (or curl Workflow 3b).
+- [ ] Plain `POST /api/gate/proposals` → `REJECTED_FAST` + `SAFETY_LOCKOUT_CNI_FALLOUT_HAZARD`.
+- [ ] `POST /api/gate/demo-evaluate-with-guardrail` → Option B queued; amber includes velocity mismatch.
+- [ ] Navy silo / ontology shows Happy Tug AIS; claim-tags show AIS vs radar.
+- [ ] Approve Option B → GBAD (+ Navy) inbox → Ack → audit healthy.
