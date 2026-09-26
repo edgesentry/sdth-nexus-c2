@@ -15,7 +15,7 @@ SCENARIO=S3_sar_ais ./scripts/demo.sh          # Pillar 3 (Dual-SAR dark vessel)
 SCENARIO=S1_ais_spoof ./scripts/demo.sh        # auxiliary sea-approach baseline
 ```
 
-> **Primary hero is airborne `S2_osint_swarm`. Maritime secondary track is `S1_trojan` (tri-service + GLINT hull anchor) then `S3_sar_ais` (GLINT macro × SIA × AIS dark vessel). marun `scenario_02_conflicting` is a legacy fusion bench, not Nexus S2.**
+> **Primary hero is airborne `S2_osint_swarm`. Maritime secondary track is `S1_trojan` (tri-service + GLINT hull anchor) then `S3_sar_ais` (GLINT macro × SIA × AIS dark vessel). SensorSim (`SDTH-Sensor-Simulation`) `scenario_02_conflicting` is a legacy fusion bench, not Nexus S2.**
 
 ### The Three Operational Pillars (Pitch & Demo Order)
 

@@ -76,7 +76,7 @@ Closed-loop narrative: [`docs/architecture/index.md`](docs/architecture/index.md
 
 ## 3. Operational Scenarios
 
-> **Primary hero is airborne `S2_osint_swarm`. Maritime secondary track is `S1_trojan` (tri-service + GLINT hull anchor) then `S3_sar_ais` (GLINT macro × SIA × AIS dark vessel). marun `scenario_02_conflicting` is a legacy fusion bench, not Nexus S2.**
+> **Primary hero is airborne `S2_osint_swarm`. Maritime secondary track is `S1_trojan` (tri-service + GLINT hull anchor) then `S3_sar_ais` (GLINT macro × SIA × AIS dark vessel). SensorSim (`SDTH-Sensor-Simulation`) `scenario_02_conflicting` is a legacy fusion bench, not Nexus S2.**
 
 ### The Three Operational Pillars
 
@@ -97,7 +97,7 @@ Pitch / E2E Sequence
   S3_sar_ais (+GLINT macro + SIA)  ← Orbital latency → Reachable ellipse → Lead pursuit USV
 ```
 
-Scenario details: [`docs/scenarios.md`](docs/scenarios.md). Data provenance & marun role alignment: [`docs/data-provenance.md`](docs/data-provenance.md). E2E Runbook: [`docs/verify-e2e.md`](docs/verify-e2e.md).
+Scenario details: [`docs/scenarios.md`](docs/scenarios.md). Data provenance & SensorSim role alignment: [`docs/data-provenance.md`](docs/data-provenance.md). E2E Runbook: [`docs/verify-e2e.md`](docs/verify-e2e.md).
 
 ---
 

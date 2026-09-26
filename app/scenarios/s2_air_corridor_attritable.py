@@ -8,8 +8,8 @@ from core.coa import CourseOfAction
 from core.ontology import SpatialEntityGraph, haversine_m
 from core.schema import Observation
 
-from app.adapters.arun_canonical import load_scenario_jsonl
 from app.adapters.osint_text import enrich_social_event, parse_osint_text
+from app.adapters.sensorsim_canonical import load_scenario_jsonl
 from app.agent import make_tier1_coa
 from app.scenarios.base import Finding, Scenario
 
@@ -27,7 +27,7 @@ _INTEL_TEXT = (
 
 
 def _build_events() -> list[dict[str, Any]]:
-    """Load Pillar-1 events from marun export (or CI fixture); enrich social OSINT."""
+    """Load Pillar-1 events from SensorSim export (or CI fixture); enrich social OSINT."""
     events = load_scenario_jsonl("S2_osint_swarm")
     out: list[dict[str, Any]] = []
     for ev in events:

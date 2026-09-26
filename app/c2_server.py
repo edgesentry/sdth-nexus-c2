@@ -26,8 +26,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from app.adapters.arun_canonical import load_pois
 from app.adapters.sar_candidate_event import candidate_event_to_observation
+from app.adapters.sensorsim_canonical import load_pois
 from app.adapters.southbound_sensor import normalize_sensor_event
 from app.llm_interpreter import InterpretationResult, interpret
 from app.scenarios.base import Finding, get_scenario

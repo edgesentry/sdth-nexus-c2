@@ -1,4 +1,4 @@
-"""Load marun-sensor-simulation / CI fixture JSONL for Nexus scenarios."""
+"""Load SensorSim (SDTH-Sensor-Simulation) / CI fixture JSONL for Nexus scenarios."""
 
 from __future__ import annotations
 
@@ -12,22 +12,28 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_FIXTURE = ROOT / "tests" / "fixtures" / "s1_trojan_scenario.jsonl"
 DEFAULT_POIS = ROOT / "tests" / "fixtures" / "s1_trojan_pois.json"
 DEFAULT_S2_FIXTURE = ROOT / "tests" / "fixtures" / "s2_osint_swarm_scenario.jsonl"
-SIBLING_EXPORT = ROOT.parent / "marun-sensor-simulation" / "exports"
+DEFAULT_S4_FIXTURE = ROOT / "tests" / "fixtures" / "s4_fusion_disagreement_scenario.jsonl"
+SIBLING_EXPORT = ROOT.parent / "SDTH-Sensor-Simulation" / "exports"
+SIBLING_EXPORT_COMPAT = ROOT.parent / "marun-sensor-simulation" / "exports"
 
 _SCENARIO_FILES: dict[str, str] = {
     "S1_trojan": "s1_trojan_scenario.jsonl",
     "S2_osint_swarm": "s2_osint_swarm_scenario.jsonl",
+    "S4_fusion_disagreement": "s4_fusion_disagreement_scenario.jsonl",
 }
 
 
 def resolve_export_dir() -> Path:
-    env = os.environ.get("MARUN_EXPORT_DIR")
+    env = os.environ.get("SENSORSIM_EXPORT_DIR") or os.environ.get("MARUN_EXPORT_DIR")
     if env:
         return Path(env)
-    if (SIBLING_EXPORT / "s1_trojan_scenario.jsonl").is_file() or (
-        SIBLING_EXPORT / "s2_osint_swarm_scenario.jsonl"
-    ).is_file():
-        return SIBLING_EXPORT
+    for candidate in (SIBLING_EXPORT, SIBLING_EXPORT_COMPAT):
+        if (
+            (candidate / "s1_trojan_scenario.jsonl").is_file()
+            or (candidate / "s2_osint_swarm_scenario.jsonl").is_file()
+            or (candidate / "s4_fusion_disagreement_scenario.jsonl").is_file()
+        ):
+            return candidate
     return DEFAULT_FIXTURE.parent
 
 
@@ -54,14 +60,14 @@ def load_scenario_jsonl(
     *,
     now: datetime | None = None,
 ) -> list[dict[str, Any]]:
-    """Load scenario events from marun exports or Nexus CI fixtures.
+    """Load scenario events from SensorSim exports or Nexus CI fixtures.
 
     Nexus-shape rows may carry ``t_offset_sec``; those are re-stamped to
     ``observed_at`` relative to ``now`` (default: UTC now).
     """
     filename = _SCENARIO_FILES.get(scenario_id)
     if filename is None:
-        raise KeyError(f"no marun export mapping for scenario {scenario_id!r}")
+        raise KeyError(f"no SensorSim export mapping for scenario {scenario_id!r}")
 
     export_dir = resolve_export_dir()
     target = export_dir / filename
@@ -73,6 +79,8 @@ def load_scenario_jsonl(
             target = DEFAULT_FIXTURE
         elif scenario_id == "S2_osint_swarm":
             target = DEFAULT_S2_FIXTURE
+        elif scenario_id == "S4_fusion_disagreement":
+            target = DEFAULT_S4_FIXTURE
         else:
             raise FileNotFoundError(f"missing scenario export: {filename}")
 

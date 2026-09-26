@@ -57,7 +57,11 @@ nav:
     - Topology: architecture/topology.md
     - Space SAR & Sensor Pipeline: architecture/sar_pipeline.md
     - Tactical Console Integration Proposal: architecture/archview-integration-proposal.md
-  - C2 REST API (frozen): api/rest.md
+  - C2 REST API (frozen):
+    - Core API & Handshake: api/rest.md
+    - Upstream Ingress & Feeds: api/ingress.md
+    - Shared Schemas & Types: api/schemas.md
+    - Admin & Diagnostics: api/admin.md
   - Data provenance: data-provenance.md
   - Cloudflare Containers: deploy.md
   - LiteLLM: litellm.md

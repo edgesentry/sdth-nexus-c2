@@ -7,7 +7,7 @@ Comprehensive runbook for executing and validating the full **Picture → Gate �
 | Alias | Repository | URL | Local sibling (typical) |
 |---|---|---|---|
 | **Nexus** | `sdth-nexus-c2` | https://github.com/edgesentry/sdth-nexus-c2 | `sdth-nexus-c2/` (this repo) |
-| **SensorSim** | `SDTH-Sensor-Simulation` | https://github.com/marun6207/SDTH-Sensor-Simulation | `marun-sensor-simulation/` (loader path; clone name may differ) |
+| **SensorSim** | `SDTH-Sensor-Simulation` | https://github.com/marun6207/SDTH-Sensor-Simulation | `SDTH-Sensor-Simulation/` (or `marun-sensor-simulation/`) |
 | **SIA** | `Sentinel-Imagery-Analysis` | https://github.com/StrixGoldhorn/Sentinel-Imagery-Analysis | `Sentinel-Imagery-Analysis/` (`:5050`) |
 | **Indago** | `indago` | https://github.com/edgesentry/indago | DuckDB under `~/.indago/…` (optional; not a port) |
 
@@ -18,7 +18,7 @@ Later sections use only these aliases.
 - **SIA** — Sentinel-1 micro SAR CV × AIS (live optional; Nexus fixtures if offline)
 - **Indago** — optional maritime AIS history in DuckDB for S3 background traffic (`open-feed`); not required for Profile A or `s1_trojan`
 
-> **Primary hero is airborne `S2_osint_swarm`. Maritime secondary track is `S1_trojan` (tri-service + GLINT hull anchor) then `S3_sar_ais` (GLINT macro × SIA × AIS dark vessel). marun `scenario_02_conflicting` is a legacy fusion bench, not Nexus S2.**
+> **Primary hero is airborne `S2_osint_swarm`. Maritime secondary track is `S1_trojan` (tri-service + GLINT hull anchor) then `S3_sar_ais` (GLINT macro × SIA × AIS dark vessel). SensorSim `scenario_02_conflicting` → Nexus auxiliary `S4_fusion_disagreement` (not Pillar-1 S2).**
 
 ### The Three Operational Pillars (Pitch & E2E Order)
 
@@ -28,7 +28,7 @@ Later sections use only these aliases.
 | **2** | `S1_trojan` | Maritime + Land/Air: AIS vs coastal radar, CNI VETO, Option B (Tri-service contradiction + spatial SAR mothership lock) | **Used** — Mothership aft-deck / hull spatial anchor (already in narrative & export) |
 | **3** | `S3_sar_ais` | Dark vessel: Dual-SAR × thin AIS → Approach Patrol (Orbital latency → reachable ellipse → USV intercept) | **Primary showcase** — macro cluster (`:5051` / live) + SIA micro |
 
-*Auxiliary baseline*: `S1_ais_spoof` serves as a lightweight baseline outside the three pillars (no GLINT).
+*Auxiliary*: `S1_ais_spoof` (no GLINT). `S4_fusion_disagreement` (SensorSim `scenario_02_conflicting` multi-site Air/Army/Navy disagreement bench → `CUE_AND_IDENTIFY`).
 
 ```text
 Pitch / E2E Sequence
@@ -44,7 +44,8 @@ Pitch / E2E Sequence
 
 - **Data Sources & Repositories**:
   - `s1_trojan`: sibling **SensorSim** `exports/s1_trojan_scenario.jsonl` (Nexus falls back to `tests/fixtures/s1_trojan_*` in CI)
-  - `s2_osint_swarm`: marun planned export `exports/s2_osint_swarm_*.jsonl` (Nexus in-tree scenario adapter active)
+  - `s2_osint_swarm`: **SensorSim** `exports/s2_osint_swarm_scenario.jsonl` (Nexus fixture fallback in CI)
+  - `s4_fusion_disagreement`: **SensorSim** `scenario_02_conflicting` → `exports/s4_fusion_disagreement_scenario.jsonl` (Nexus `tests/fixtures/s4_fusion_disagreement_scenario.jsonl`)
   - `s3_sar_ais`: **GLINT mock** (`:5051` / live) + **SIA** (`:5050` / Sentinel-1 micro fixture) + **Indago DuckDB** AIS
 - **CUI (no browser)**: pytest (in-process) · `scripts/picture_to_tasking.py` · curl against `:8080`
 - **Console UIs**: Core `/verify` (Jinja2/HTMX Screen 1/2) or external **ARCHVIEW** (`:3001`)
@@ -94,7 +95,7 @@ flowchart TD
         ACK["Signed Recipient Ack<br/>(Closed Loop Completed)"]
     end
 
-    SENSORSIM -->|arun_canonical loader<br/>s1_trojan| GRAPH
+    SENSORSIM -->|sensorsim_canonical loader<br/>s1_trojan| GRAPH
     FIX -.->|fallback when SensorSim absent| GRAPH
     INDAGO -->|open-feed source=indago| GRAPH
     AIS -->|POST /api/ingress/open-feed| GRAPH
@@ -115,21 +116,21 @@ flowchart TD
 ### 0.1 SensorSim exports (`s1_trojan`)
 
 Issue #116 E2E (Workflows 1, 3b, 4) loads the Trojan mothership picture through
-`app/adapters/arun_canonical.py` in **Nexus**.
+`app/adapters/sensorsim_canonical.py` in **Nexus**.
 **Source of truth** is the sibling **SensorSim** checkout; vendored Nexus fixtures are
 a CI fail-safe only.
 
 | Priority | Path | When |
 |---|---|---|
-| 1 | `MARUN_EXPORT_DIR` (env) | Explicit override to a SensorSim `exports/` tree |
-| 2 | `../marun-sensor-simulation/exports/` | Sibling next to **Nexus** (default local folder name) |
+| 1 | `SENSORSIM_EXPORT_DIR` (or `MARUN_EXPORT_DIR`) | Explicit override to a SensorSim `exports/` tree |
+| 2 | `../SDTH-Sensor-Simulation/exports/` | Sibling next to **Nexus** (or `../marun-sensor-simulation/exports/`) |
 | 3 | `tests/fixtures/s1_trojan_*` | SensorSim missing / CI |
 
-Clone **SensorSim** next to **Nexus** (rename the directory if the clone used the GitHub name):
+Clone **SensorSim** next to **Nexus**:
 
 ```bash
 cd /Users/yoheionishi/work/SDTH2026
-git clone https://github.com/marun6207/SDTH-Sensor-Simulation.git marun-sensor-simulation
+git clone https://github.com/marun6207/SDTH-Sensor-Simulation.git SDTH-Sensor-Simulation
 ```
 
 Expected sibling layout:
@@ -137,9 +138,11 @@ Expected sibling layout:
 ```text
 SDTH2026/
   sdth-nexus-c2/                 # Nexus (Core :8080)
-  marun-sensor-simulation/       # SensorSim — synthetic maritime + land/air
+  SDTH-Sensor-Simulation/        # SensorSim — synthetic maritime + land/air
     exports/
       s1_trojan_scenario.jsonl
+      s2_osint_swarm_scenario.jsonl
+      s4_fusion_disagreement_scenario.jsonl
       pois.json
       site_origins.json
 ```
@@ -148,10 +151,10 @@ For a full E2E rehearsal against **live SensorSim exports** (not the fixture cop
 
 ```bash
 # Terminal / one-shot: confirm sibling exports exist
-ls ../marun-sensor-simulation/exports/s1_trojan_scenario.jsonl
+ls ../SDTH-Sensor-Simulation/exports/s1_trojan_scenario.jsonl
 
 # Or point Nexus at a non-sibling SensorSim checkout
-export MARUN_EXPORT_DIR=/path/to/SDTH-Sensor-Simulation/exports
+export SENSORSIM_EXPORT_DIR=/path/to/SDTH-Sensor-Simulation/exports
 
 cd /Users/yoheionishi/work/SDTH2026/sdth-nexus-c2
 export C2_DEMO_TAMPER=1
@@ -161,16 +164,16 @@ uv run sdth-c2-server
 Regenerate SensorSim exports after changing maritime/land generators:
 
 ```bash
-cd /Users/yoheionishi/work/SDTH2026/marun-sensor-simulation
-# see exports/README.md — generate_canonical_stream.py
+cd /Users/yoheionishi/work/SDTH2026/SDTH-Sensor-Simulation
+# see exports/README.md — generate_canonical_stream.py / generate_s4_fusion_disagreement_export.py
 ```
 
 Then refresh **Nexus** fixtures if CI must stay in sync:
 
 ```bash
-cp ../marun-sensor-simulation/exports/s1_trojan_scenario.jsonl tests/fixtures/
-cp ../marun-sensor-simulation/exports/pois.json tests/fixtures/s1_trojan_pois.json
-cp ../marun-sensor-simulation/exports/site_origins.json tests/fixtures/s1_trojan_site_origins.json
+cp ../SDTH-Sensor-Simulation/exports/s1_trojan_scenario.jsonl tests/fixtures/
+cp ../SDTH-Sensor-Simulation/exports/pois.json tests/fixtures/s1_trojan_pois.json
+cp ../SDTH-Sensor-Simulation/exports/site_origins.json tests/fixtures/s1_trojan_site_origins.json
 ```
 
 Details: SensorSim `exports/README.md` · Nexus `tests/README.md`.
@@ -260,8 +263,8 @@ S3 uses built-in fail-safe fixtures. For **`s1_trojan`**, prefer a sibling
 ```bash
 # Terminal 1: Start Nexus Core
 cd /Users/yoheionishi/work/SDTH2026/sdth-nexus-c2
-# Optional: pin SensorSim exports (default = sibling ../marun-sensor-simulation/exports)
-# export MARUN_EXPORT_DIR=/Users/yoheionishi/work/SDTH2026/marun-sensor-simulation/exports
+# Optional: pin SensorSim exports (default = sibling ../SDTH-Sensor-Simulation/exports)
+# export SENSORSIM_EXPORT_DIR=/Users/yoheionishi/work/SDTH2026/SDTH-Sensor-Simulation/exports
 export C2_DEMO_TAMPER=1
 uv run sdth-c2-server
 # => Running on http://127.0.0.1:8080
@@ -441,7 +444,7 @@ curl -sf "$C2/api/audit/health" | jq .
 ### Workflow 3b: curl closed loop — `s1_trojan` (Pillar 2: CNI Guardrail + GLINT Anchor, #116)
 
 Requires **Nexus** Core running (`uv run sdth-c2-server`). Picture data comes from
-**SensorSim** exports via `arun_canonical` (§0.1), or Nexus fixtures if SensorSim
+**SensorSim** exports via `sensorsim_canonical` (§0.1), or Nexus fixtures if SensorSim
 is not checked out.
 Plain propose is expected to hard-reject; the demo path evaluates Option A
 through the live CNI interlock and queues enforced Option B for dual-unit
@@ -450,7 +453,7 @@ authorize.
 ```bash
 export C2=http://127.0.0.1:8080
 # Optional: confirm which export dir the loader will prefer
-# ls ../marun-sensor-simulation/exports/s1_trojan_scenario.jsonl
+# ls ../SDTH-Sensor-Simulation/exports/s1_trojan_scenario.jsonl
 
 curl -sf -X POST "$C2/api/admin/reset" | jq .
 
@@ -589,6 +592,57 @@ curl -sf "$C2/api/audit/health" | jq .
 
 ---
 
+### Workflow 3d: curl closed loop — `S4_fusion_disagreement` (Aux: Multi-Site Fusion Bench)
+
+Loads SensorSim `scenario_02_conflicting` via `exports/s4_fusion_disagreement_scenario.jsonl`
+(or Nexus fixture). Surfaces Air MPSTAR vs EO subset count disagreement, EW RF-negative,
+and optional Navy delayed UNKNOWN airborne — without collapsing into a fused super-track.
+COA intent: `CUE_AND_IDENTIFY` (not Pillar-1 GNSS/GBAD).
+
+```bash
+export C2=http://127.0.0.1:8080
+
+curl -sf "$C2/health" | jq .
+curl -sf -X POST "$C2/api/admin/reset" | jq .
+
+# Propose loads SensorSim export (or fixture) via scenario adapter — no separate ingress required
+PROP=$(curl -sf -X POST "$C2/api/gate/proposals" \
+  -H 'content-type: application/json' \
+  -d '{"scenario_id":"S4_fusion_disagreement","unit_id":"CUE-NODE-01"}')
+echo "$PROP" | jq '{
+  status,
+  amber: .finding.amber_alert,
+  threat: .finding.threat_class,
+  intent: .coa.intent,
+  mpstar: .finding.source_breakdown.mpstar_tracks,
+  ew_negative: .finding.source_breakdown.ew_negative
+}'
+COA_ID=$(echo "$PROP" | jq -r '.coa.coa_id')
+test "$COA_ID" != null && test -n "$COA_ID"
+
+# Expect amber containing MULTI_SITE_COUNT_DISAGREEMENT (+ EW_NON_CORROBORATION)
+echo "$PROP" | jq -e '.finding.amber_alert | test("MULTI_SITE_COUNT_DISAGREEMENT")'
+echo "$PROP" | jq -e '.coa.intent == "CUE_AND_IDENTIFY"'
+
+APPROVE=$(curl -sf -X POST "$C2/api/gate/approve" \
+  -H 'content-type: application/json' \
+  -d "{\"coa_id\":\"$COA_ID\",\"decision\":\"y\",\"operator_id\":\"commander-01\"}")
+echo "$APPROVE" | jq '{status, token_digest: .decision_token.token_digest}'
+
+curl -sf "$C2/api/recipient/inbox?unit_id=CUE-NODE-01" | jq '{count, tasking_coa: .taskings[0].coa.coa_id}'
+curl -sf -X POST "$C2/api/recipient/ack" \
+  -H 'content-type: application/json' \
+  -d "{\"coa_id\":\"$COA_ID\",\"unit_id\":\"CUE-NODE-01\",\"status\":\"ACKED\"}" | jq .
+curl -sf "$C2/api/audit/health" | jq .
+```
+Unit check without server:
+
+```bash
+uv run python -m pytest tests/unit/test_scenarios.py::test_s4_fusion_disagreement_picture -q
+```
+
+---
+
 ### Workflow 4: Core WebUI (`/verify`) rehearsal
 
 Interactive HITL using dual browser tabs (optional after CUI pass):
@@ -602,11 +656,16 @@ Interactive HITL using dual browser tabs (optional after CUI pass):
    - Service silo → **Navy** (Happy Tug AIS / coastal radar visible).
    - Guardrail panel → **Evaluate Option A (live VETO)** → AUTHORIZE Option B.
    - Screen 2: Ack for `GBAD-RSAF-01` (and Navy unit if dual-queued).
+4. **`S4_fusion_disagreement` path (aux)**:
+   - Select scenario `S4_fusion_disagreement` → Propose.
+   - Expect amber `MULTI_SITE_COUNT_DISAGREEMENT` (+ EW non-corroboration); intent `CUE_AND_IDENTIFY`.
+   - Approve → Ack on Screen 2.
 
 Deep-link:
 
 ```text
 http://127.0.0.1:8080/verify/command?scenario_id=s1_trojan&service_view=navy
+http://127.0.0.1:8080/verify/command?scenario_id=S4_fusion_disagreement
 ```
 
 ---
@@ -802,7 +861,7 @@ tail -n 3 .audit/gate.jsonl | jq '{class_name: .class_name, record_hash: .record
 | `Address already in use` error on startup | Stale C2 or mock server running in background | Run `kill $(lsof -ti :8080 :5051 :5050) 2>/dev/null \|\| true` |
 | `Duplicate COA` / `active_coa_ids` 400 error | Previous scenario state remains in memory | Execute `curl -sf -X POST http://127.0.0.1:8080/api/admin/reset` |
 | `Window expired` error during Approve | Operator exceeded HITL decision window (typically 30s) | Re-trigger proposal via `POST /api/gate/proposals` and approve promptly |
-| `s1_trojan` picture stale / missing AIS–radar mismatch | Sibling **SensorSim** `exports/` absent or out of date vs Nexus fixtures | Clone SensorSim next to Nexus as `marun-sensor-simulation`, or `export MARUN_EXPORT_DIR=…`, regenerate per §0.1 |
+| `s1_trojan` picture stale / missing AIS–radar mismatch | Sibling **SensorSim** `exports/` absent or out of date vs Nexus fixtures | Clone SensorSim next to Nexus as `SDTH-Sensor-Simulation`, or `export SENSORSIM_EXPORT_DIR=…`, regenerate per §0.1 |
 | SIA upstream 500 / unreachable | Sibling **SIA** (`Sentinel-Imagery-Analysis`) `:5050` is not running | SIA is optional; **Nexus** automatically falls back to deterministic Singapore Strait fixtures |
 | Audit health reports `broken > 0` | Audit file was tampered with or corrupted | Run `POST /api/admin/audit/restore` or remove `.audit/gate.jsonl` and reset |
 
@@ -818,9 +877,15 @@ tail -n 3 .audit/gate.jsonl | jq '{class_name: .class_name, record_hash: .record
 - [ ] **Approve / Ack / Audit**: sealed token → inbox → `ACKED` → `verified: true`, `broken: 0`.
 
 ### s1_trojan (#116)
-- [ ] **SensorSim data**: sibling `marun-sensor-simulation/exports/` present **or** intentional Nexus fixture fallback (§0.1).
+- [ ] **SensorSim data**: sibling `SDTH-Sensor-Simulation/exports/` (or `marun-sensor-simulation/exports/`) present **or** intentional Nexus fixture fallback (§0.1).
 - [ ] **pytest** Workflow 1 green (or curl Workflow 3b).
 - [ ] Plain `POST /api/gate/proposals` → `REJECTED_FAST` + `SAFETY_LOCKOUT_CNI_FALLOUT_HAZARD`.
 - [ ] `POST /api/gate/demo-evaluate-with-guardrail` → Option B queued; amber includes velocity mismatch.
 - [ ] Navy silo / ontology shows Happy Tug AIS; claim-tags show AIS vs radar.
 - [ ] Approve Option B → GBAD (+ Navy) inbox → Ack → audit healthy.
+
+### S4_fusion_disagreement (aux)
+- [ ] **SensorSim / fixture**: `exports/s4_fusion_disagreement_scenario.jsonl` or `tests/fixtures/s4_fusion_disagreement_scenario.jsonl`.
+- [ ] **pytest** `test_s4_fusion_disagreement_picture` green (or curl Workflow 3d).
+- [ ] Propose → amber contains `MULTI_SITE_COUNT_DISAGREEMENT`; `ew_negative: true`.
+- [ ] COA intent `CUE_AND_IDENTIFY` → Approve → Ack → audit healthy.

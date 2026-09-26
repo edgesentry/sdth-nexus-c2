@@ -75,16 +75,16 @@ def test_scenario_select_includes_S1_trojan(client: TestClient) -> None:
     assert b"Service silo" in cmd.content or b"service_view" in cmd.content
 
 
-def test_arun_reload_ingress(client: TestClient) -> None:
+def test_sensorsim_reload_ingress(client: TestClient) -> None:
     resp = client.post(
         "/verify/command/ingress",
         data={
-            "mode": "arun_reload",
+            "mode": "sensorsim_reload",
             "unit_id": "GBAD-RSAF-01",
             "scenario_id": "S1_trojan",
             "service_view": "navy",
         },
     )
     assert resp.status_code == 200
-    assert b"Arun canonical reload" in resp.content
+    assert b"SensorSim canonical reload" in resp.content
     assert b"ingested" in resp.content

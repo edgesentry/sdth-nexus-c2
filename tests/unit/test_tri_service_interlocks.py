@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from app.adapters.arun_canonical import load_pois
+from app.adapters.sensorsim_canonical import load_pois
 from app.c2_server import C2Runtime, _build_option_b_fallback, _load_scenario, app
 from core.coa import ActionTier, CourseOfAction
 from core.gate import LatencyBoundedGate

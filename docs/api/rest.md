@@ -13,6 +13,12 @@ Scenario IDs and pitch order: **[scenarios.md](../scenarios.md)** (Pillar 1 `S2_
 
 Screen 1 = command · Screen 2 = recipient. No BattlePlan required for Phase 2 demos.
 
+> **API Documentation Suite:**
+> - **[Core C2 REST API](rest.md)** (this document): Command & Recipient handshake, Gating, DecisionTokens, and Audit trails.
+> - **[Upstream Ingress & Feeds](ingress.md)**: CandidateEvent wire format, SAR anomalies, GLINT mock, and open AIS/air streams.
+> - **[Shared Schemas & Data Types](schemas.md)**: Canonical object definitions for `CourseOfAction`, `DecisionToken`, `Finding`, and tracks.
+> - **[Admin & Diagnostics](admin.md)**: Zero-state reset, health probes, and OCSF audit chain tamper verification.
+
 ## Endpoints
 
 | Method | Path | Role |
@@ -561,175 +567,35 @@ Operational readiness (Docker smoke, `wrangler dev`, laptop scripts). **Not** pa
 
 ---
 
-## `PUT /api/admin/audit/snapshot`
+## Operational & Admin Endpoints
 
-Replace on-disk OCSF jsonl. Used by the Cloudflare Worker to hydrate the hash chain after ephemeral container disk reset. **Does not** mint `DecisionToken`s.
+Operational diagnostics, zero-state resets, and audit tampering simulation endpoints are documented in **[Admin & Diagnostics API](admin.md)**.
 
-**Request**
+| Endpoint | Method | Role |
+|----------|--------|------|
+| `/health` | `GET` | Container / CLI readiness probe |
+| `/api/admin/reset` | `POST` | Reset graph, proposals, and taskings to zero-state |
+| `/api/admin/audit/snapshot` | `PUT` | Hydrate on-disk OCSF log (Cloudflare Worker cold start) |
+| `/api/admin/audit/tamper` | `POST` | Simulate audit hash chain tampering (`C2_DEMO_TAMPER=1`) |
+| `/api/admin/audit/restore` | `POST` | Restore pre-tamper OCSF audit snapshot (`C2_DEMO_TAMPER=1`) |
+| `/api/admin/audit/reverify` | `POST` | Re-verify in-process SHA-256 + out-of-process EDS sidecar |
 
-```json
-{ "records": [ { "class_name": "Security Finding", "hash": "…", "prev_hash": "…" } ] }
-```
-
-**Response `200`**
-
-```json
-{ "status": "restored", "count": 1 }
-```
-
----
-
-## `POST /api/admin/audit/tamper`
-
-Demo-only (#88). Requires `C2_DEMO_TAMPER=1`. Snapshots the current OCSF trail, flips one character in a sealed record (hash not updated), and optionally corrupts the EDS sidecar. Does **not** mint tokens.
-
-**Response `200`**
-
-```json
-{
-  "status": "tampered",
-  "index": 1,
-  "ocsf": {
-    "ok": false,
-    "total": 4,
-    "broken": 1,
-    "break_index": 1,
-    "reason": "hash mismatch",
-    "summary": "broken links: 1 of 4",
-    "label": "1 of 4"
-  },
-  "eds_corrupted": false
-}
-```
-
-**Response `403`** — gate unset. **`400`** — fewer than 2 sealed records.
-
----
-
-## `POST /api/admin/audit/restore`
-
-Demo-only (#88). Requires `C2_DEMO_TAMPER=1`. Restores the pre-tamper OCSF (+ EDS) snapshot from the last inject.
-
-**Response `200`**
-
-```json
-{
-  "status": "restored",
-  "count": 4,
-  "ocsf": { "ok": true, "broken": 0, "summary": "broken links: 0 of 4" }
-}
-```
-
-**Response `400`** — no snapshot.
-
----
-
-## `POST /api/admin/audit/reverify`
-
-Demo-only (#88). Requires `C2_DEMO_TAMPER=1`. Walks the OCSF SHA-256 chain in-process; when an EDS sidecar and `eds` CLI are available, also runs out-of-process `eds audit verify-chain`.
-
-**Response `200`**
-
-```json
-{
-  "status": "verified",
-  "path": "sha256",
-  "ocsf": { "ok": true, "summary": "broken links: 0 of 4" },
-  "eds": null
-}
-```
+Full request/response examples and error modes: **[Admin & Diagnostics Documentation](admin.md)**.
 
 ---
 
 ## Shared types (stable fields)
 
-### `CourseOfAction` (`coa`)
+Complete field descriptions, data constraints, and model specifications are documented in **[Shared Schemas & Data Types](schemas.md)**.
 
-| Field | Type | Notes |
-|-------|------|--------|
-| `coa_id` | string (uuid) | Client must echo into approve / ack |
-| `tier` | `0` \| `1` \| `2` | Tier-0 may auto-approve |
-| `target_entity_id` | string | |
-| `target_coordinates` | `[lat, lon]` | |
-| `intent` | string | e.g. `GNSS_DENIAL_AND_GBAD_CUE` (Pillar 1); also `APPROACH_PATROL`, `OFFSHORE_INTERCEPT_RF_SOFTKILL` |
-| `timeout_seconds` | number | HITL window |
-| `confidence` | number | |
-| `corroborating_sources` | string[] | |
-| `raw_input_digest` | string | |
-| `speed_kt` | number \| null | Interlock input |
-| `pre_conditions` / `post_conditions` / `invariants` / `metadata` | object | Opaque to clients |
+- **[`CourseOfAction`](schemas.md#1-courseofaction-coa)**: Proposed tactical action with action tier (`0` auto / `1` single-operator / `2` dual-key), timeout, confidence, and safety invariants.
+- **[`DecisionToken`](schemas.md#2-decisiontoken-token)**: Cryptographically sealed authorization token (SHA-256) issued strictly by Nexus Gate upon operator approval.
+- **[`Finding`](schemas.md#3-finding-proposal-finding)**: Probabilistic threat interpretation, spatial mismatch, amber alert classification, and multi-sensor evidence breakdown.
+- **[`Track`](schemas.md#4-track-ontologytracks)**: Live fused or segregated entity track in the `SpatialEntityGraph`.
+- **[`Observation`](schemas.md#5-observation-ontologyobservations)**: Atomic sensor measurement or intelligence report ingested from radar, AIS, SAR, acoustic, or OSINT feeds.
+- **[`AckRecord`](schemas.md#6-ackrecord-ack-on-recipient-response)**: Closed-loop execution acknowledgment returned by assigned field effectors.
 
-### `DecisionToken` (`token`)
-
-| Field | Type | Notes |
-|-------|------|--------|
-| `token_id` | string | |
-| `coa_id` | string | |
-| `verdict` | string | `APPROVED` / `REJECTED_FAST` / `REJECTED_OPERATOR` / … |
-| `issued_at` | ISO-8601 | |
-| `operator_id` | string \| null | |
-| `reason` | string \| null | |
-| `digest` | string | SHA-256 seal; empty only before seal |
-
-### `Finding` (proposal `finding`)
-
-| Field | Type | Notes |
-|-------|------|--------|
-| `scenario_id` | string | |
-| `track_id` | string | |
-| `threat_class` | string | |
-| `warning_minutes_est` | number | |
-| `mismatch_m` | number | |
-| `confidence` | number | |
-| `picture_summary` | string | |
-| `adversarial_hypothesis` | string | |
-| `spoof_sources` / `approach_sources` / `other_sources` | string[] | |
-| `message` | string | |
-| `amber_alert` | string \| null | Contradiction class — **not** the ontology key `alert` |
-| `source_breakdown` | object | Modality → claim map |
-
-### Track (`ontology.tracks[]`)
-
-| Field | Type | Notes |
-|-------|------|--------|
-| `track_id` | string | |
-| `latitude` / `longitude` | number | |
-| `speed_mps` | number | |
-| `confidence` | number | |
-| `source_ids` | string[] | |
-| `modalities` | string[] | e.g. `social`, `radar`, `optical` |
-| `updated_at` | ISO-8601 \| null | |
-| `attributes` | object | Opaque |
-
-### Observation (`ontology.observations[]`)
-
-| Field | Type | Notes |
-|-------|------|--------|
-| `observation_id` | string | |
-| `source_id` | string | |
-| `entity_hint` | string | |
-| `latitude` / `longitude` | number | |
-| `altitude_m` | number \| null | |
-| `speed_mps` | number | |
-| `heading_deg` | number \| null | |
-| `confidence` | number | |
-| `observed_at` | ISO-8601 | |
-| `modality` | string | |
-| `attributes` | object | |
-| `raw_digest` | string | |
-
-### AckRecord (`ack` on recipient ack response)
-
-| Field | Type | Notes |
-|-------|------|--------|
-| `ack_id` | string (uuid) | |
-| `coa_id` / `unit_id` | string | |
-| `status` | string | usually `ACKED` |
-| `message` | string | |
-| `telemetry` | object | |
-| `signature` | string | Client-supplied or server-sealed SHA-256 |
-| `token_digest` | string | From the sealed DecisionToken |
-| `acked_at` | ISO-8601 | |
+TypeScript interface definitions: [`archview-types.ts`](archview-types.ts).
 
 ---
 
@@ -767,166 +633,10 @@ ARCHVIEW (external repo, Vite on **`127.0.0.1:3001`**) talks to Core on **`:8080
 
 ## Upstream Ingress Contract (Assumed CandidateEvent Specification)
 
-The 7 core endpoints above govern the **downstream C2 decision, gating, and recipient handshake** and remain frozen.
+Upstream sensor ingress specifications, candidate event wire payloads, and open feeds are fully detailed in **[Upstream Ingress & Feeds](ingress.md)**.
 
-For **upstream macro intelligence ingress** (such as space-based SAR scene-difference anomaly evidence), the C2 engine assumes an open, typed `CandidateEvent` payload structure (pending final schema file handover). This enables continuous, non-blocking development via local fixtures and mock adapters.
+- **`POST /api/ingress/candidate-event`**: Macro intelligence ingress for space-based SAR scene-difference anomaly evidence, Sentinel-1 micro CV detections, and GLINT mock integration. Supports offline fixtures, upstream polling, and Dual-SAR composite corroboration.
+- **`POST /api/ingress/open-feed`**: Optional open AIS (Indago DuckDB / live / fixture) or open air (ADS-B) sensor streams.
+- **Wire format & field mappings**: Complete `CandidateEvent` v1.3.0 schema and mapping table to `Observation` entities.
 
-### Assumed Wire Payload (`CandidateEvent` v1.3.0)
-
-```json
-{
-  "event_id": "evt_sar_20260918_001",
-  "timestamp": "2026-09-18T14:30:00Z",
-  "source_id": "SPACE_SAR_SCENE_DIFF",
-  "area_id": "malacca_strait_sector_b",
-  "event_type": "UNANNOUNCED_DARK_VESSEL_CLUSTER",
-  "confidence": 0.88,
-  "location": {
-    "latitude": 1.254,
-    "longitude": 103.812
-  },
-  "bounding_box": {
-    "min_lat": 1.250,
-    "max_lat": 1.258,
-    "min_lon": 103.808,
-    "max_lon": 103.816
-  },
-  "attributes": {
-    "vessel_count_est": 2,
-    "ais_correlation": "NONE",
-    "diff_metric": "intensity_ratio_anomaly",
-    "sar_pass_id": "S1_20260918_PASS_42"
-  }
-}
-```
-
-### Ingress to Observation Mapping
-
-When ingested (either via upstream REST pull, optional `POST /api/ingress/candidate-event`, or local scenario fixture), the adapter maps the payload into an internal `Observation` entity:
-
-| `CandidateEvent` Field | Internal `Observation` Target | Notes |
-|------------------------|-------------------------------|-------|
-| `event_id` | `observation_id` | Unique ingress identifier |
-| `source_id` | `source_id` | e.g. `SPACE_SAR_SCENE_DIFF` |
-| `event_type` | `entity_hint` | Used for track correlation |
-| `location.latitude` | `latitude` | Spatial point |
-| `location.longitude` | `longitude` | Spatial point |
-| `confidence` | `confidence` | Normalized (0.0 to 1.0) |
-| `timestamp` | `observed_at` | Ingress observation time |
-| `"space_sar"` | `modality` | Explicit modality tag |
-| `bounding_box` + `attributes` | `attributes` | Preserved for audit & operator display |
-
-### Operational Assumptions
-1. **Retrospective & Periodic Ingress:** The payload represents a discrete, verified evidence package derived from satellite passes, not a high-frequency live video feed.
-2. **Non-Blocking Loose Coupling:** The C2 platform operates fully stand-alone using synthetic fixture equivalents (`tests/fixtures/candidate_event_assumed.json`) if live upstream services are offline during hackathon operations.
-3. **Transport Interfaces:** Supported via HTTP REST (`GET` pull or `POST` push) and compatible with Model Context Protocol (MCP) tool querying.
-
-### `POST /api/ingress/candidate-event`
-
-Push an assumed CandidateEvent, load the Pitch-1 offline fixture, ingest
-**Sentinel-Imagery-Analysis** dark vessels (issue #47), pull **GLINT** Assumed-mock
-(issue #55), or **Dual-SAR** corroborate GLINT × SIA (issue #56). This is the
-**Pillar 3** (`S3_sar_ais`) GLINT primary showcase (see [scenarios.md](../scenarios.md)):
-
-```bash
-# Pitch-1 assumed CandidateEvent fixture
-curl -s -X POST localhost:8080/api/ingress/candidate-event \
-  -H 'content-type: application/json' \
-  -d '{"use_fixture":true}'
-
-# Singapore Strait Sentinel run_cv fixture (uncorrelated only)
-curl -s -X POST localhost:8080/api/ingress/candidate-event \
-  -H 'content-type: application/json' \
-  -d '{"use_sentinel_fixture":true}'
-
-# Pattern B: pull sibling upstream (default http://127.0.0.1:5050); fixture if down
-curl -s -X POST localhost:8080/api/ingress/candidate-event \
-  -H 'content-type: application/json' \
-  -d '{"pull_upstream":true}'
-
-# GLINT Assumed-mock fixture (no HTTP)
-curl -s -X POST localhost:8080/api/ingress/candidate-event \
-  -H 'content-type: application/json' \
-  -d '{"use_glint_fixture":true}'
-
-# GLINT pull (default http://127.0.0.1:5051); assumed fixture if down
-#   uv run sdth-mock-glint   # or: uv run python scripts/mock_glint_server.py
-curl -s -X POST localhost:8080/api/ingress/candidate-event \
-  -H 'content-type: application/json' \
-  -d '{"pull_glint":true}'
-
-# Dual-SAR: GLINT macro × SIA micro fixtures → composite (issue #56)
-curl -s -X POST localhost:8080/api/ingress/candidate-event \
-  -H 'content-type: application/json' \
-  -d '{"dual_sar":true}'
-
-# Dual-SAR pull both; GLINT down → SIA/fixture fail-safe
-curl -s -X POST localhost:8080/api/ingress/candidate-event \
-  -H 'content-type: application/json' \
-  -d '{"pull_dual_sar":true}'
-```
-
-| Field | Role |
-|-------|------|
-| `event` | Assumed CandidateEvent v1.3.0 object |
-| `use_fixture` | Load `tests/fixtures/candidate_event_assumed.json` |
-| `use_sentinel_fixture` | Map `tests/fixtures/sentinel_run_cv_sg_strait.json` → dark vessels |
-| `pull_upstream` | `POST {SAR_UPSTREAM_URL}/api/run_cv/{SAR_UPSTREAM_SCAN}`; on failure use sentinel fixture |
-| `run_cv` | Raw Sentinel `run_cv` JSON body (push) |
-| `use_glint_fixture` | Load assumed CandidateEvent via GLINT client (tags `ingress=glint`) |
-| `pull_glint` | `GET {GLINT_BASE_URL}/api/candidate-event`; on failure use assumed fixture |
-| `dual_sar` | Corroborate GLINT × SIA fixtures via `app/adapters/dual_sar.py` |
-| `pull_dual_sar` | Pull GLINT + SIA; corroborate when aligned; fail-safe to SIA/fixture |
-
-Response `200`: `{ "status": "INGESTED", "observation": {...}, "observations": [...], "track_id": "...", "track_ids": [...], "count": N, "source": "fixture|upstream|run_cv|event|glint|glint_fixture|dual_sar|sia_only" }` — never seals a DecisionToken.
-
-On success, the raw request body is also appended to `.audit/ingress.jsonl` (`received_at`, `source`, `endpoint`, `payload`) for demo replay. Write failures are logged as warnings and **do not** fail ingress. This file is **not** the OCSF gate chain (that remains `.audit/gate.jsonl`). Re-run with:
-
-```bash
-uv run python scripts/replay_ingress.py --reset
-# Optional demo hygiene (truncate jsonl only; does not touch gate.jsonl):
-# uv run python scripts/replay_ingress.py --clear
-```
-
-### `POST /api/ingress/open-feed`
-
-Optional open AIS (Indago DuckDB / live / fixture) or open air (ADS-B-style) ingress
-(issues #16, #70). Synthetic S1–S3 remain primary; this path is additive. Never seals a DecisionToken.
-
-```bash
-# Golden fixture (deterministic CI / default demo)
-curl -s -X POST localhost:8080/api/ingress/open-feed \
-  -H 'content-type: application/json' \
-  -d '{"feed":"all","use_fixture":true}'
-
-# Indago DuckDB (Singapore/Malacca stream → ~/.indago/data/raw/ais/singapore.duckdb)
-curl -s -X POST localhost:8080/api/ingress/open-feed \
-  -H 'content-type: application/json' \
-  -d '{"feed":"ais","source":"indago","limit":80}'
-```
-
-| Field | Role |
-|-------|------|
-| `feed` | `ais`, `air`, `all`, or comma list |
-| `use_fixture` | Load `tests/fixtures/open_ais_datagovsg.json` / `open_air_traffic.json` |
-| `source` | AIS ladder: `auto` → Indago DuckDB → live → fixture; or force `indago` / `live` / `fixture` |
-| `limit` | Max vessels from Indago (default 80) |
-| `payload` | Raw snapshot for a **single** feed (`ais` or `air`) |
-
-Indago DuckDB path is configured via env `INDAGO_DUCKDB_PATH` only (not a request field — avoids path injection).
-
-Response `200`: `{ "status": "INGESTED", "feeds": [...], "resolved_sources": {...}, "count": N, "items": [{ "feed", "source", "observation", "track_id" }, ...] }`.
-
-| Open AIS field | Observation |
-|----------------|-------------|
-| `vessels[].mmsi` | `source_id` / `observation_id` |
-| `vessels[].latitude/longitude` | position |
-| `vessels[].speed_kt` | speed (via southbound) |
-| — | `modality=ais`, `attributes.ingress=open_feed` |
-
-| Open air field | Observation |
-|----------------|-------------|
-| `aircraft[].icao24` | `source_id` / `observation_id` |
-| `aircraft[].callsign` | `entity_hint` |
-| `aircraft[].velocity_kt` | speed |
-| — | `modality=adsb`, `attributes.ingress=open_feed` |
+See **[Upstream Ingress & Feeds Documentation](ingress.md)** for wire payloads, curl commands, and replay scripts.
