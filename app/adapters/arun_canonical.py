@@ -39,4 +39,7 @@ def load_pois(path: Path | None = None) -> list[dict[str, Any]]:
     target = path or (resolve_export_dir() / "pois.json")
     if not target.is_file():
         target = DEFAULT_POIS
-    return json.loads(target.read_text(encoding="utf-8"))
+    payload: Any = json.loads(target.read_text(encoding="utf-8"))
+    if not isinstance(payload, list):
+        raise TypeError(f"expected POI list in {target}, got {type(payload).__name__}")
+    return [row for row in payload if isinstance(row, dict)]
