@@ -56,7 +56,9 @@ class DeterministicInterlock:
 
     def verify_cni_debris(self, coa: CourseOfAction) -> tuple[bool, str | None]:
         """HARD VETO terminal/overhead kinetic fire whose debris cone hits CNI buffer."""
-        dangerous = bool(coa.metadata.get("dangerous_proposal_draft")) or coa.intent in TERMINAL_INTENTS
+        dangerous = (
+            bool(coa.metadata.get("dangerous_proposal_draft")) or coa.intent in TERMINAL_INTENTS
+        )
         if not dangerous or not self.cni_pois:
             return True, None
         lat, lon = coa.target_coordinates

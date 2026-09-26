@@ -101,7 +101,11 @@ def _claim_tags(finding: Any) -> list[dict[str, str]]:
         return tags
 
     ais = breakdown.get("ais") or {}
-    if isinstance(ais, dict) and isinstance(radar, dict) and (ais.get("claim") or radar.get("claim")):
+    if (
+        isinstance(ais, dict)
+        and isinstance(radar, dict)
+        and (ais.get("claim") or radar.get("claim"))
+    ):
         if ais.get("claim"):
             tags.append({"label": f"AIS: {ais['claim']}", "role": "left"})
         if ais.get("claim") and radar.get("claim"):

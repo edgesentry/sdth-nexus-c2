@@ -164,8 +164,7 @@ def _detect(graph: SpatialEntityGraph) -> Finding | None:
         approach_sources=[radar_o.source_id],
         other_sources=[o.source_id for o in ew],
         message=(
-            f"VELOCITY_MISMATCH: AIS {ais_kt:.1f} kt vs radar {radar_kt:.1f} kt "
-            f"(Δ {dist_m:.0f} m)"
+            f"VELOCITY_MISMATCH: AIS {ais_kt:.1f} kt vs radar {radar_kt:.1f} kt (Δ {dist_m:.0f} m)"
         ),
         amber_alert=amber,
         source_breakdown={

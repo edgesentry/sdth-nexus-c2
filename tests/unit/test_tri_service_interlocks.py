@@ -32,9 +32,9 @@ def test_cni_debris_vetoes_terminal_over_jurong(runtime: C2Runtime) -> None:
         target_coordinates=(float(poi01["center_lat"]), float(poi01["center_lon"])),
         metadata={"dangerous_proposal_draft": True, "altitude_m": 71.0},
     )
-    ok, reason = LatencyBoundedGate(interlock=runtime.policy.interlock).verify_deterministic_interlocks(
-        coa
-    )
+    ok, reason = LatencyBoundedGate(
+        interlock=runtime.policy.interlock
+    ).verify_deterministic_interlocks(coa)
     assert ok is False
     assert reason is not None
     assert CNI_FALLOUT_CODE in reason
@@ -46,9 +46,9 @@ def test_offshore_option_b_clears_cni_gate(runtime: C2Runtime) -> None:
     runtime.policy.interlock.set_cni_pois(pois)
     dangerous = _load_scenario(runtime, "s1_trojan", 5.0)
     fallback = _build_option_b_fallback(dangerous, runtime.finding)
-    ok, reason = LatencyBoundedGate(interlock=runtime.policy.interlock).verify_deterministic_interlocks(
-        fallback
-    )
+    ok, reason = LatencyBoundedGate(
+        interlock=runtime.policy.interlock
+    ).verify_deterministic_interlocks(fallback)
     assert ok is True
     assert reason is None
     assert fallback.intent == "OFFSHORE_INTERCEPT_RF_SOFTKILL"
