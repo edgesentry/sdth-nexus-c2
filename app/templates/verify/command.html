@@ -12,55 +12,90 @@
           <option value="S1" {% if scenario_id == "S1" %}selected{% endif %}>S1 (port clearance)</option>
           <option value="S2" {% if scenario_id == "S2" %}selected{% endif %}>S2 (non-pitch stretch)</option>
           <option value="S3" {% if scenario_id == "S3" %}selected{% endif %}>S3 (maritime hero)</option>
+          <option value="s1_trojan" {% if scenario_id == "s1_trojan" %}selected{% endif %}>s1_trojan (Happy Tug / CNI)</option>
         </select>
       </label>
       <label>Unit ID
         <input name="unit_id" value="{{ unit_id }}" />
+      </label>
+      <label>Service silo
+        <select name="service_view">
+          <option value="nexus" {% if service_view == "nexus" %}selected{% endif %}>Nexus (fused)</option>
+          <option value="navy" {% if service_view == "navy" %}selected{% endif %}>Navy</option>
+          <option value="army" {% if service_view == "army" %}selected{% endif %}>Army</option>
+          <option value="airforce" {% if service_view == "airforce" %}selected{% endif %}>Air Force</option>
+        </select>
       </label>
       <div class="actions" style="align-self:end">
         <button type="submit">Propose</button>
       </div>
     </form>
     <div class="actions">
+      <form method="get" action="/verify/command" class="controls" style="gap:0.35rem">
+        <input type="hidden" name="unit_id" value="{{ unit_id }}" />
+        <input type="hidden" name="scenario_id" value="{{ scenario_id }}" />
+        <label>Reslice silo
+          <select name="service_view" onchange="this.form.submit()">
+            <option value="nexus" {% if service_view == "nexus" %}selected{% endif %}>Nexus</option>
+            <option value="navy" {% if service_view == "navy" %}selected{% endif %}>Navy</option>
+            <option value="army" {% if service_view == "army" %}selected{% endif %}>Army</option>
+            <option value="airforce" {% if service_view == "airforce" %}selected{% endif %}>Air Force</option>
+          </select>
+        </label>
+      </form>
       <form method="post" action="/verify/command/ingress">
         <input type="hidden" name="unit_id" value="{{ unit_id }}" />
         <input type="hidden" name="scenario_id" value="{{ scenario_id }}" />
+        <input type="hidden" name="service_view" value="{{ service_view }}" />
         <input type="hidden" name="mode" value="sentinel" />
         <button type="submit" class="btn-ghost">Ingress SIA only</button>
       </form>
       <form method="post" action="/verify/command/ingress">
         <input type="hidden" name="unit_id" value="{{ unit_id }}" />
         <input type="hidden" name="scenario_id" value="{{ scenario_id }}" />
+        <input type="hidden" name="service_view" value="{{ service_view }}" />
         <input type="hidden" name="mode" value="glint" />
         <button type="submit" class="btn-ghost">Ingress GLINT only</button>
       </form>
       <form method="post" action="/verify/command/ingress">
         <input type="hidden" name="unit_id" value="{{ unit_id }}" />
         <input type="hidden" name="scenario_id" value="{{ scenario_id }}" />
+        <input type="hidden" name="service_view" value="{{ service_view }}" />
         <input type="hidden" name="mode" value="glint_pull" />
         <button type="submit" class="btn-ghost">Ingress GLINT pull</button>
       </form>
       <form method="post" action="/verify/command/ingress">
         <input type="hidden" name="unit_id" value="{{ unit_id }}" />
         <input type="hidden" name="scenario_id" value="{{ scenario_id }}" />
+        <input type="hidden" name="service_view" value="{{ service_view }}" />
         <input type="hidden" name="mode" value="dual_sar" />
         <button type="submit" class="btn-ghost">Ingress Dual-SAR (both)</button>
       </form>
       <form method="post" action="/verify/command/ingress">
         <input type="hidden" name="unit_id" value="{{ unit_id }}" />
         <input type="hidden" name="scenario_id" value="{{ scenario_id }}" />
+        <input type="hidden" name="service_view" value="{{ service_view }}" />
         <input type="hidden" name="mode" value="indago" />
         <button type="submit" class="btn-ghost">Ingress Indago AIS</button>
+      </form>
+      <form method="post" action="/verify/command/ingress">
+        <input type="hidden" name="unit_id" value="{{ unit_id }}" />
+        <input type="hidden" name="scenario_id" value="{{ scenario_id }}" />
+        <input type="hidden" name="service_view" value="{{ service_view }}" />
+        <input type="hidden" name="mode" value="arun_reload" />
+        <button type="submit" class="btn-ghost">Ingress Arun reload</button>
       </form>
       <form method="post" action="/verify/command/reset">
         <input type="hidden" name="unit_id" value="{{ unit_id }}" />
         <input type="hidden" name="scenario_id" value="{{ scenario_id }}" />
+        <input type="hidden" name="service_view" value="{{ service_view }}" />
         <button type="submit" class="btn-ghost">Reset</button>
       </form>
     </div>
     <p class="dim" style="margin-top:0.75rem">
       Compare SAR modes then check Ontology / Evidence. Dual-SAR boosts confidence and keeps SIA OBB + chip.
       Indago AIS loads live background traffic (DuckDB → live → fixture). UI never seals tokens — Core does on Approve.
+      Service silo filters Ontology to Army / Navy / Air Force / fused Nexus.
     </p>
   </section>
 
@@ -69,13 +104,22 @@
     {% if finding %}
       <p><strong>{{ finding.amber_alert or finding.threat_class }}</strong></p>
       <p class="dim">{{ finding.picture_summary }}</p>
-      {% set social = (finding.source_breakdown or {}).get("social") or {} %}
-      {% set radar = (finding.source_breakdown or {}).get("radar") or {} %}
-      {% if social.get("claimed_count") is not none and radar.get("contact_count") is not none %}
-      <div class="claim-tags" aria-label="OSINT vs radar count claim">
-        <span class="claim-tag">OSINT: {{ social.claimed_count }} UAVs (Telegram)</span>
-        <span class="claim-vs">vs</span>
-        <span class="claim-tag">Radar: {{ radar.contact_count }} Contact{% if radar.contact_count != 1 %}s{% endif %}</span>
+      {% if claim_tags %}
+      <div class="claim-tags" aria-label="Source claim breakdown">
+        {% for tag in claim_tags %}
+          {% if tag.role == "vs" %}
+            <span class="claim-vs">{{ tag.label }}</span>
+          {% else %}
+            <span class="claim-tag">{{ tag.label }}</span>
+          {% endif %}
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% if poi_eta_flags %}
+      <div class="eta-flags" aria-label="POI ETA flags">
+        {% for row in poi_eta_flags %}
+          <span class="eta-flag mono">{{ row.poi_id }} ETA {{ '%.0f'|format(row.eta_sec) }}s</span>
+        {% endfor %}
       </div>
       {% endif %}
       <p class="mono">scenario={{ finding.scenario_id }} · conf={{ '%.2f'|format(finding.confidence) }} · mismatch={{ '%.0f'|format(finding.mismatch_m) }}m</p>
@@ -84,11 +128,44 @@
     {% endif %}
   </section>
 
+  <section class="panel {% if guardrail %}amber{% endif %}">
+    <h2>Guardrail · CNI interlock</h2>
+    <form method="post" action="/verify/command/guardrail" class="controls">
+      <input type="hidden" name="scenario_id" value="s1_trojan" />
+      <input type="hidden" name="unit_id" value="{{ unit_id }}" />
+      <input type="hidden" name="navy_unit_id" value="{{ navy_unit_id }}" />
+      <input type="hidden" name="service_view" value="{{ service_view }}" />
+      <button type="submit" class="btn-bad">Evaluate Option A (live VETO)</button>
+    </form>
+    {% if guardrail %}
+      <p><strong>{{ guardrail.veto_code or "VETO" }}</strong></p>
+      <p class="dim">{{ guardrail.veto_reason }}</p>
+      <p class="mono">status={{ guardrail.status }} · Option B={{ guardrail.option_b_intent }}</p>
+      {% if guardrail.queued_for %}
+      <p class="dim">Queued for: {{ guardrail.queued_for | join(", ") }}</p>
+      {% endif %}
+      {% if queued_coa and queued_coa.metadata.get("option_id") == "B" %}
+      <div class="actions" style="margin-top:0.75rem">
+        <form method="post" action="/verify/command/approve">
+          <input type="hidden" name="coa_id" value="{{ queued_coa.coa_id }}" />
+          <input type="hidden" name="decision" value="y" />
+          <input type="hidden" name="unit_id" value="{{ unit_id }}" />
+          <input type="hidden" name="scenario_id" value="{{ scenario_id }}" />
+          <input type="hidden" name="service_view" value="{{ service_view }}" />
+          <button type="submit" class="btn-ok">AUTHORIZE Option B</button>
+        </form>
+      </div>
+      {% endif %}
+    {% else %}
+      <p class="dim">Run guardrail after s1_trojan propose — terminal SAM over Jurong is hard-vetoed; Option B (offshore + soft-kill) queues for dual-unit AUTHORIZE.</p>
+    {% endif %}
+  </section>
+
   <section class="panel">
     <h2>Operator gate</h2>
     {% if queued_coa %}
       <p class="mono">coa_id · {{ queued_coa.coa_id }}</p>
-      <p class="dim">{{ queued_coa.intent }} · unit {{ queued_coa.unit_id }}</p>
+      <p class="dim">{{ queued_coa.intent }} · unit {{ queued_coa.unit_id }}{% if queued_navy_unit_id %} · navy {{ queued_navy_unit_id }}{% endif %}</p>
       {% if poi_card %}
       <div class="poi-card" aria-label="Lead pursuit Point of Interception">
         <h3>Lead POI</h3>
@@ -110,6 +187,7 @@
           <input type="hidden" name="decision" value="y" />
           <input type="hidden" name="unit_id" value="{{ unit_id }}" />
           <input type="hidden" name="scenario_id" value="{{ scenario_id }}" />
+          <input type="hidden" name="service_view" value="{{ service_view }}" />
           <button type="submit" class="btn-ok">Approve</button>
         </form>
         <form method="post" action="/verify/command/approve">
@@ -117,6 +195,7 @@
           <input type="hidden" name="decision" value="n" />
           <input type="hidden" name="unit_id" value="{{ unit_id }}" />
           <input type="hidden" name="scenario_id" value="{{ scenario_id }}" />
+          <input type="hidden" name="service_view" value="{{ service_view }}" />
           <button type="submit" class="btn-bad">Deny</button>
         </form>
       </div>
@@ -140,8 +219,8 @@
   </section>
 
   <section class="panel">
-    <h2>Ontology snapshot</h2>
-    <p class="dim">scenario={{ scenario_runtime or "—" }} · tracks={{ tracks|length }} · observations={{ obs_count }}</p>
+    <h2>Ontology snapshot · {{ service_view }}</h2>
+    <p class="dim">scenario={{ scenario_runtime or "—" }} · tracks={{ tracks|length }} · obs shown={{ observations|length }} / total={{ obs_count }}</p>
     <ul class="track-list">
       {% for o in observations %}
         <li>
@@ -149,14 +228,16 @@
           <span class="dim">
             {{ o.modality }} · conf {{ '%.2f'|format(o.confidence) }}
             · {{ o.entity_hint }}
+            {% if o.attributes.get("service") %} · service={{ o.attributes.get("service") }}{% endif %}
             {% if o.attributes.get("ingress") %} · ingress={{ o.attributes.get("ingress") }}{% endif %}
             {% if o.attributes.get("dual_sar_status") %} · dual={{ o.attributes.get("dual_sar_status") }}{% endif %}
+            {% if o.attributes.get("vessel_name") %} · {{ o.attributes.get("vessel_name") }}{% endif %}
             {% if o.attributes.get("vessel_length_m") %} · L={{ o.attributes.get("vessel_length_m") }}m{% endif %}
             {% if o.attributes.get("vessel_count_est") %} · n≈{{ o.attributes.get("vessel_count_est") }}{% endif %}
           </span>
         </li>
       {% else %}
-        <li class="dim">No observations — try Ingress SIA / GLINT / Dual-SAR above (Reset between modes)</li>
+        <li class="dim">No observations for this silo — Propose s1_trojan, Ingress Arun reload, or switch silo to Nexus</li>
       {% endfor %}
     </ul>
   </section>

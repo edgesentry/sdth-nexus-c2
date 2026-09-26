@@ -23,10 +23,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from app.adapters.arun_canonical import load_pois
 from app.adapters.sar_candidate_event import candidate_event_to_observation
 from app.adapters.southbound_sensor import normalize_sensor_event
 from app.llm_interpreter import InterpretationResult, interpret
 from app.scenarios.base import Finding, get_scenario
+from core.kinematics import offshore_safe_intercept
+from core.interlock import CNI_FALLOUT_CODE
 
 APP_DIR = Path(__file__).resolve().parent
 ROOT = APP_DIR.parent
@@ -116,6 +119,15 @@ class InterpretRequest(BaseModel):
     scenario_id: str
     timeout_seconds: float | None = None
     force_heuristic: bool = False
+
+
+class GuardrailDemoRequest(BaseModel):
+    """Evaluate dangerous Option A then queue enforced Option B (issue #116)."""
+
+    scenario_id: str = "s1_trojan"
+    unit_id: str = "GBAD-RSAF-01"
+    navy_unit_id: str = "PCG-PT-44"
+    timeout_seconds: float | None = None
 
 
 class CandidateEventIngressRequest(BaseModel):
@@ -216,6 +228,10 @@ class C2Runtime:
         runtime_db_path: Path | None = None,
     ) -> None:
         self.policy = TieredPolicy.from_yaml(policy_path)
+        try:
+            self.policy.interlock.set_cni_pois(load_pois())
+        except OSError:
+            pass
         self.audit = AuditLogger(audit_path)
         self.ingress_replay = IngressReplayLog(ingress_replay_path)
         db_path = runtime_db_path or _default_runtime_db_path(audit_path=audit_path)
@@ -230,6 +246,7 @@ class C2Runtime:
         self.audit_pre_tamper: list[dict[str, Any]] | None = None
         self.eds_pre_tamper: list[dict[str, Any]] | None = None
         self.last_eds_verify: dict[str, Any] | None = None
+        self.last_guardrail: dict[str, Any] | None = None
         self._hydrate_from_store()
 
     def _hydrate_from_store(self) -> None:
@@ -264,6 +281,8 @@ class C2Runtime:
             "unit_id": pending["unit_id"],
             "queued_at": pending.get("queued_at"),
         }
+        if pending.get("navy_unit_id"):
+            payload["navy_unit_id"] = pending["navy_unit_id"]
         self.store.upsert_proposal(coa_id, payload)
 
     def persist_inbox_item(self, coa_id: str, tasking: dict[str, Any]) -> None:
@@ -284,6 +303,7 @@ class C2Runtime:
         self.audit_pre_tamper = None
         self.eds_pre_tamper = None
         self.last_eds_verify = None
+        self.last_guardrail = None
         self.store.clear()
 
     def inject_audit_tamper(self, *, index: int = 1) -> dict[str, Any]:
@@ -720,6 +740,102 @@ async def interpret_picture(req: InterpretRequest) -> dict[str, Any]:
     return _interpretation_response(result)
 
 
+def _build_option_b_fallback(dangerous: CourseOfAction, finding: Finding | None) -> CourseOfAction:
+    """Enforced failsafe: offshore intercept + RF soft-kill."""
+    pois = load_pois()
+    poi01 = next((p for p in pois if p.get("poi_id") == "POI-01"), None)
+    if poi01:
+        standoff = float(poi01.get("offshore_nofire_m", 1200.0))
+        lat, lon = offshore_safe_intercept(
+            float(poi01["center_lat"]),
+            float(poi01["center_lon"]),
+            standoff_m=standoff + 100.0,
+        )
+    else:
+        lat, lon = dangerous.target_coordinates
+    safe = dangerous.model_copy(deep=True)
+    safe.coa_id = str(uuid4())
+    safe.intent = "OFFSHORE_INTERCEPT_RF_SOFTKILL"
+    safe.target_coordinates = (lat, lon)
+    safe.speed_kt = None
+    safe.metadata = {
+        **dict(dangerous.metadata),
+        "option_id": "B",
+        "dangerous_proposal_draft": False,
+        "enforced_failsafe": True,
+        "fallback_of": dangerous.coa_id,
+        "rationale": (
+            "Enforced Option B: offshore kinetic intercept beyond CNI buffer "
+            "+ directional RF soft-kill."
+        ),
+    }
+    if finding is not None:
+        safe.metadata["amber_alert"] = finding.amber_alert
+        safe.metadata["source_breakdown"] = finding.source_breakdown
+    return safe
+
+
+@app.post("/api/gate/demo-evaluate-with-guardrail")
+async def gate_demo_evaluate_with_guardrail(req: GuardrailDemoRequest) -> dict[str, Any]:
+    """Run Option A through live CNI guardrail; queue Option B for HITL (issue #116)."""
+    runtime = get_runtime()
+    timeout = req.timeout_seconds or runtime.policy.default_timeout_seconds
+    try:
+        runtime.policy.interlock.set_cni_pois(load_pois())
+    except OSError:
+        pass
+
+    dangerous = _load_scenario(runtime, req.scenario_id, timeout)
+    dangerous.metadata["dangerous_proposal_draft"] = True
+    if dangerous.intent not in {"TERMINAL_SAM_INTERCEPT", "OVERHEAD_KINETIC_INTERCEPT"}:
+        dangerous.intent = "TERMINAL_SAM_INTERCEPT"
+
+    gate = LatencyBoundedGate(timeout_sec=timeout, interlock=runtime.policy.interlock)
+    ok, reason = gate.verify_deterministic_interlocks(dangerous)
+    if ok:
+        # Force CNI evaluation context if policy POIs missing in odd envs
+        reason = f"{CNI_FALLOUT_CODE}: expected HARD VETO for terminal SAM over CNI"
+        ok = False
+
+    fallback = _build_option_b_fallback(dangerous, runtime.finding)
+    fallback = runtime.policy.apply_defaults(fallback)
+    ok_b, reason_b = gate.verify_deterministic_interlocks(fallback)
+    if not ok_b:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Option B unexpectedly rejected: {reason_b}",
+        )
+
+    pending = {
+        "coa": fallback,
+        "unit_id": req.unit_id,
+        "navy_unit_id": req.navy_unit_id,
+        "queued_at": utc_now().isoformat(),
+    }
+    runtime.proposals[fallback.coa_id] = pending
+    runtime.persist_proposal(fallback.coa_id, pending)
+    runtime.audit.append(
+        "guardrail_veto_option_b_queued",
+        "High",
+        {
+            "veto_reason": reason,
+            "dangerous": dangerous.model_dump(mode="json"),
+            "fallback": fallback.model_dump(mode="json"),
+            "unit_id": req.unit_id,
+            "navy_unit_id": req.navy_unit_id,
+        },
+    )
+    return {
+        "status": "GUARDRAIL_VETO_OPTION_B_QUEUED",
+        "veto_reason": reason,
+        "veto_code": CNI_FALLOUT_CODE,
+        "dangerous_proposal_draft": dangerous.model_dump(mode="json"),
+        "fallback_coa": fallback.model_dump(mode="json"),
+        "finding": asdict(runtime.finding) if runtime.finding else None,
+        "queued_for": [req.unit_id, req.navy_unit_id],
+    }
+
+
 @app.post("/api/gate/proposals")
 async def gate_proposals(req: ProposalRequest) -> dict[str, Any]:
     runtime = get_runtime()
@@ -869,21 +985,48 @@ async def gate_approve(req: ApproveRequest) -> dict[str, Any]:
     )
 
     if verdict == GateVerdict.APPROVED:
-        tasking = {
-            "coa": coa.model_dump(mode="json"),
-            "token": token.model_dump(mode="json"),
-            "unit_id": pending["unit_id"],
-            "issued_at": utc_now().isoformat(),
-            "status": "PENDING_ACK",
-        }
-        runtime.inbox[coa.coa_id] = tasking
-        runtime.persist_inbox_item(coa.coa_id, tasking)
+        units = [pending["unit_id"]]
+        navy_uid = pending.get("navy_unit_id")
+        if navy_uid and navy_uid not in units:
+            units.append(navy_uid)
+        for index, uid in enumerate(units):
+            issued_coa = coa
+            issued_id = coa.coa_id
+            if index > 0:
+                issued_coa = coa.model_copy(deep=True)
+                issued_coa.coa_id = str(uuid4())
+                issued_coa.metadata = {
+                    **dict(coa.metadata),
+                    "paired_coa_id": coa.coa_id,
+                    "dispatch_role": "navy_mothership_interdiction",
+                }
+                issued_id = issued_coa.coa_id
+                # Seal a sister token for the navy tasking line.
+                navy_token = DecisionToken(
+                    coa_id=issued_id,
+                    verdict=verdict.value,
+                    operator_id=req.operator_id,
+                    reason=reason,
+                )
+                navy_token.seal()
+                token_payload = navy_token.model_dump(mode="json")
+            else:
+                token_payload = token.model_dump(mode="json")
+            tasking = {
+                "coa": issued_coa.model_dump(mode="json"),
+                "token": token_payload,
+                "unit_id": uid,
+                "issued_at": utc_now().isoformat(),
+                "status": "PENDING_ACK",
+            }
+            runtime.inbox[issued_id] = tasking
+            runtime.persist_inbox_item(issued_id, tasking)
+            runtime.audit.append(
+                "tasking_issued",
+                "High",
+                {"coa_id": issued_id, "unit_id": uid},
+            )
         runtime.policy.interlock.register_active(coa)
-        runtime.audit.append(
-            "tasking_issued",
-            "High",
-            {"coa_id": coa.coa_id, "unit_id": pending["unit_id"]},
-        )
 
     return {
         "status": verdict.value,

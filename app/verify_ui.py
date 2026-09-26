@@ -28,6 +28,16 @@ router = APIRouter(tags=["verify-ui"])
 DEFAULT_UNIT = "CUE-NODE-01"
 DEFAULT_SCENARIO = "S3"
 DEFAULT_TIMEOUT = 30.0
+DEFAULT_SERVICE_VIEW = "nexus"
+DEFAULT_NAVY_UNIT = "PCG-PT-44"
+
+SERVICE_VIEW_MAP = {
+    "army": "ARMY",
+    "navy": "NAVY",
+    "airforce": "AIR_FORCE",
+    "air_force": "AIR_FORCE",
+    "nexus": None,
+}
 
 
 def _c2() -> Any:
@@ -41,6 +51,86 @@ def _exc_message(exc: BaseException) -> str:
     if isinstance(exc, HTTPException):
         return str(exc.detail)
     return str(exc)
+
+
+def _normalize_service_view(raw: str | None) -> str:
+    key = (raw or DEFAULT_SERVICE_VIEW).strip().lower()
+    return key if key in SERVICE_VIEW_MAP else DEFAULT_SERVICE_VIEW
+
+
+def _obs_service(obs: Any) -> str:
+    attrs = getattr(obs, "attributes", None) or {}
+    if isinstance(attrs, dict):
+        return str(attrs.get("service") or "").upper()
+    return ""
+
+
+def _filter_by_service(items: list[Any], service_view: str) -> list[Any]:
+    wanted = SERVICE_VIEW_MAP.get(_normalize_service_view(service_view))
+    if wanted is None:
+        return items
+    return [item for item in items if _obs_service(item) == wanted]
+
+
+def _claim_tags(finding: Any) -> list[dict[str, str]]:
+    """Build display tags from ``source_breakdown`` (S2 OSINT + s1_trojan AIS/radar)."""
+    if finding is None:
+        return []
+    breakdown = getattr(finding, "source_breakdown", None) or {}
+    if not isinstance(breakdown, dict):
+        return []
+    tags: list[dict[str, str]] = []
+
+    social = breakdown.get("social") or {}
+    radar = breakdown.get("radar") or {}
+    if isinstance(social, dict) and isinstance(radar, dict):
+        if social.get("claimed_count") is not None and radar.get("contact_count") is not None:
+            n = int(radar["contact_count"])
+            tags.append({"label": f"OSINT: {social['claimed_count']} UAVs (Telegram)", "role": "left"})
+            tags.append({"label": "vs", "role": "vs"})
+            tags.append(
+                {
+                    "label": f"Radar: {n} Contact{'s' if n != 1 else ''}",
+                    "role": "right",
+                }
+            )
+            return tags
+
+    ais = breakdown.get("ais") or {}
+    if isinstance(ais, dict) and isinstance(radar, dict) and (ais.get("claim") or radar.get("claim")):
+        if ais.get("claim"):
+            tags.append({"label": f"AIS: {ais['claim']}", "role": "left"})
+        if ais.get("claim") and radar.get("claim"):
+            tags.append({"label": "vs", "role": "vs"})
+        if radar.get("claim"):
+            tags.append({"label": f"Radar: {radar['claim']}", "role": "right"})
+        ew = breakdown.get("ew") or {}
+        if isinstance(ew, dict) and ew.get("triangulated"):
+            tags.append({"label": "EW: LOB triangulated", "role": "extra"})
+        return tags
+
+    for key, payload in breakdown.items():
+        if key in {"poi_eta_sec", "kinematics", "ew"}:
+            continue
+        if isinstance(payload, dict) and payload.get("claim"):
+            tags.append({"label": f"{key}: {payload['claim']}", "role": "extra"})
+    return tags
+
+
+def _poi_eta_flags(finding: Any) -> list[dict[str, Any]]:
+    if finding is None:
+        return []
+    breakdown = getattr(finding, "source_breakdown", None) or {}
+    eta = breakdown.get("poi_eta_sec") if isinstance(breakdown, dict) else None
+    if not isinstance(eta, dict):
+        return []
+    rows: list[dict[str, Any]] = []
+    for poi_id, sec in sorted(eta.items()):
+        try:
+            rows.append({"poi_id": str(poi_id), "eta_sec": float(sec)})
+        except (TypeError, ValueError):
+            continue
+    return rows
 
 
 def _evidence_urls(runtime: Any) -> list[str]:
@@ -149,39 +239,56 @@ def _ctx(
     error: str = "",
     unit_id: str = DEFAULT_UNIT,
     scenario_id: str = DEFAULT_SCENARIO,
+    service_view: str = DEFAULT_SERVICE_VIEW,
+    guardrail: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     runtime = _c2().get_runtime()
+    service_view = _normalize_service_view(service_view)
     pending = list(runtime.proposals.keys())
     taskings = [
         t
         for cid, t in runtime.inbox.items()
         if cid not in runtime.acked and t.get("unit_id") == unit_id
     ]
-    queued_coa = runtime.proposals[pending[0]]["coa"] if pending else None
+    queued_entry = runtime.proposals[pending[0]] if pending else None
+    queued_coa = queued_entry["coa"] if queued_entry else None
     observations = list(runtime.graph.observations)
+    filtered_obs = _filter_by_service(observations, service_view)
     # Newest first so Dual-SAR / Indago just ingested stay visible after large AIS loads.
-    recent_obs = list(reversed(observations))[:12]
+    recent_obs = list(reversed(filtered_obs))[:12]
+    tracks = list(runtime.graph.all_tracks())
+    filtered_tracks = _filter_by_service(tracks, service_view)[:12]
+    last_guardrail = guardrail
+    if last_guardrail is None:
+        last_guardrail = getattr(runtime, "last_guardrail", None)
     return {
         "request": request,
         "flash": flash,
         "error": error,
         "unit_id": unit_id,
         "scenario_id": scenario_id,
+        "service_view": service_view,
         "finding": runtime.finding,
+        "claim_tags": _claim_tags(runtime.finding),
+        "poi_eta_flags": _poi_eta_flags(runtime.finding),
         "scenario_runtime": runtime.scenario_id,
         "pending_ids": pending,
         "queued_coa": queued_coa,
+        "queued_navy_unit_id": (queued_entry or {}).get("navy_unit_id"),
         "poi_card": _poi_card(queued_coa),
         "taskings": taskings,
-        "tracks": list(runtime.graph.all_tracks())[:12],
+        "tracks": filtered_tracks,
         "observations": recent_obs,
         "obs_count": len(observations),
+        "obs_filtered_count": len(filtered_obs),
         "inbox_depth": len([k for k in runtime.inbox if k not in runtime.acked]),
         "evidence": _evidence_urls(runtime),
         "audit_rows": list(reversed(runtime.audit.records()[-12:])),
         "ocsf_health": _ocsf_health(runtime),
         "demo_tamper": _c2().demo_tamper_enabled(),
         "has_tamper_snapshot": runtime.audit_pre_tamper is not None,
+        "guardrail": last_guardrail,
+        "navy_unit_id": DEFAULT_NAVY_UNIT,
     }
 
 
@@ -203,12 +310,14 @@ async def verify_command(
     request: Request,
     unit_id: str = DEFAULT_UNIT,
     scenario_id: str = DEFAULT_SCENARIO,
+    service_view: str = DEFAULT_SERVICE_VIEW,
 ) -> HTMLResponse:
     return _page(
         request,
         "verify/command.html",
         unit_id=unit_id,
         scenario_id=scenario_id,
+        service_view=service_view,
     )
 
 
@@ -237,6 +346,7 @@ async def verify_propose(
     request: Request,
     scenario_id: str = Form(DEFAULT_SCENARIO),
     unit_id: str = Form(DEFAULT_UNIT),
+    service_view: str = Form(DEFAULT_SERVICE_VIEW),
 ) -> HTMLResponse:
     runtime = _c2().get_runtime()
     flash = ""
@@ -265,6 +375,7 @@ async def verify_propose(
         error=error,
         unit_id=unit_id,
         scenario_id=scenario_id,
+        service_view=service_view,
     )
 
 
@@ -275,6 +386,7 @@ async def verify_approve(
     decision: str = Form(...),
     unit_id: str = Form(DEFAULT_UNIT),
     scenario_id: str = Form(DEFAULT_SCENARIO),
+    service_view: str = Form(DEFAULT_SERVICE_VIEW),
 ) -> HTMLResponse:
     flash = ""
     error = ""
@@ -297,6 +409,56 @@ async def verify_approve(
         error=error,
         unit_id=unit_id,
         scenario_id=scenario_id,
+        service_view=service_view,
+    )
+
+
+@router.post("/verify/command/guardrail", response_class=HTMLResponse)
+async def verify_guardrail(
+    request: Request,
+    scenario_id: str = Form("s1_trojan"),
+    unit_id: str = Form(DEFAULT_UNIT),
+    navy_unit_id: str = Form(DEFAULT_NAVY_UNIT),
+    service_view: str = Form(DEFAULT_SERVICE_VIEW),
+) -> HTMLResponse:
+    """Evaluate Option A through CNI debris interlock; queue Option B (issue #116)."""
+    flash = ""
+    error = ""
+    guardrail: dict[str, Any] | None = None
+    try:
+        c2 = _c2()
+        result = await c2.gate_demo_evaluate_with_guardrail(
+            c2.GuardrailDemoRequest(
+                scenario_id=scenario_id,
+                unit_id=unit_id,
+                navy_unit_id=navy_unit_id,
+                timeout_seconds=DEFAULT_TIMEOUT,
+            )
+        )
+        runtime = c2.get_runtime()
+        guardrail = {
+            "status": result.get("status"),
+            "veto_reason": result.get("veto_reason"),
+            "veto_code": result.get("veto_code"),
+            "option_b_intent": (result.get("fallback_coa") or {}).get("intent"),
+            "option_b_coa_id": (result.get("fallback_coa") or {}).get("coa_id"),
+            "queued_for": result.get("queued_for"),
+        }
+        runtime.last_guardrail = guardrail
+        flash = f"Guardrail VETO · Option B queued ({guardrail.get('option_b_intent')})"
+    except HTTPException as exc:
+        error = _exc_message(exc)
+    except (KeyError, ValueError, OSError) as exc:
+        error = str(exc)
+    return _page(
+        request,
+        "verify/command.html",
+        flash=flash,
+        error=error,
+        unit_id=unit_id,
+        scenario_id=scenario_id,
+        service_view=service_view,
+        guardrail=guardrail,
     )
 
 
@@ -306,8 +468,9 @@ async def verify_ingress(
     mode: str = Form("sentinel"),
     unit_id: str = Form(DEFAULT_UNIT),
     scenario_id: str = Form(DEFAULT_SCENARIO),
+    service_view: str = Form(DEFAULT_SERVICE_VIEW),
 ) -> HTMLResponse:
-    """Ingest SAR / open-AIS evidence: SIA / GLINT / Dual-SAR / Indago."""
+    """Ingest SAR / open-AIS / Arun canonical evidence."""
     from app.adapters.open_feed import open_feed_to_observations
 
     runtime = _c2().get_runtime()
@@ -327,6 +490,21 @@ async def verify_ingress(
                 runtime.graph.ingest(obs)
                 runtime.persist_observation(obs)
             flash = f"Indago AIS (open-feed): ingested {len(observations)} · source={source}"
+        elif mode in {"arun_reload", "arun", "s1_trojan_reload"}:
+            from app.adapters.arun_canonical import load_jsonl
+            from app.adapters.southbound_sensor import normalize_sensor_event
+
+            rows = load_jsonl()
+            count = 0
+            for row in rows:
+                try:
+                    obs = normalize_sensor_event(row)
+                except (ValueError, KeyError, TypeError):
+                    continue
+                runtime.graph.ingest(obs)
+                runtime.persist_observation(obs)
+                count += 1
+            flash = f"Arun canonical reload: ingested {count} · fixture/export JSONL"
         else:
             label = mode
             if mode == "dual_sar":
@@ -359,6 +537,7 @@ async def verify_ingress(
         error=error,
         unit_id=unit_id,
         scenario_id=scenario_id,
+        service_view=service_view,
     )
 
 
@@ -367,14 +546,19 @@ async def verify_reset(
     request: Request,
     unit_id: str = Form(DEFAULT_UNIT),
     scenario_id: str = Form(DEFAULT_SCENARIO),
+    service_view: str = Form(DEFAULT_SERVICE_VIEW),
 ) -> HTMLResponse:
-    _c2().get_runtime().reset()
+    runtime = _c2().get_runtime()
+    runtime.reset()
+    if hasattr(runtime, "last_guardrail"):
+        runtime.last_guardrail = None
     return _page(
         request,
         "verify/command.html",
         flash="Runtime reset",
         unit_id=unit_id,
         scenario_id=scenario_id,
+        service_view=service_view,
     )
 
 

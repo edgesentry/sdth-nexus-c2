@@ -13,6 +13,7 @@ build/
 .eds/
 .tmp/
 *.jsonl
+!tests/fixtures/*.jsonl
 .DS_Store
 site/
 node_modules/

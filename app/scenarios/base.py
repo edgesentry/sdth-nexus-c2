@@ -81,11 +81,18 @@ class Scenario:
 def get_scenario(scenario_id: str) -> Scenario:
     from app.scenarios.registry import SCENARIOS
 
-    key = scenario_id.strip().upper()
-    if key not in SCENARIOS:
-        known = ", ".join(sorted(SCENARIOS))
-        raise KeyError(f"Unknown scenario {scenario_id!r}; choose one of: {known}")
-    return SCENARIOS[key]
+    raw = scenario_id.strip()
+    key = raw.upper()
+    if key in SCENARIOS:
+        return SCENARIOS[key]
+    if raw in SCENARIOS:
+        return SCENARIOS[raw]
+    # Case-insensitive match for mixed-case ids like s1_trojan
+    for sid, scenario in SCENARIOS.items():
+        if sid.upper() == key:
+            return scenario
+    known = ", ".join(sorted(SCENARIOS))
+    raise KeyError(f"Unknown scenario {scenario_id!r}; choose one of: {known}")
 
 
 def list_scenario_ids() -> list[str]:
