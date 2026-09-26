@@ -7,7 +7,7 @@ Three operational pillars + Slide 11 scorecard:
              radar 4 → Amber → GNSS_DENIAL_AND_GBAD_CUE → Ack < 3 s
   Scene 2 — Pillar 2 Maritime (S1_trojan): CNI guardrail VETO Option A →
              queue Option B OFFSHORE_INTERCEPT_RF_SOFTKILL → Ack
-  Scene 3 — Pillar 3 Dual-SAR (S3_sar_ais): GLINT×SIA ingress → Lead POI →
+  Scene 3 — Pillar 3 Dual-SAR (S3_sar_ais): GLINT x SIA ingress → Lead POI →
              APPROACH_PATROL → Ack
   Scene 4 — Quantitative Proof (Slide 11): gate <50 ms, 0 unauthorized,
              100% OCSF audit integrity
@@ -280,7 +280,9 @@ class PitchRunner:
             self._fail(f"kinetic probe status={kbody.get('status')} (expected REJECTED_FAST)")
 
     def scene2_trojan_guardrail(self) -> None:
-        self.console.print(Rule("[bold]Scene 2 — Pillar 2 Trojan (S1_trojan + GLINT anchor)[/bold]"))
+        self.console.print(
+            Rule("[bold]Scene 2 — Pillar 2 Trojan (S1_trojan + GLINT anchor)[/bold]")
+        )
         self.console.print(
             "[dim]AIS vs coastal radar + CNI debris VETO → Option B "
             "OFFSHORE_INTERCEPT_RF_SOFTKILL (GBAD + PCG)[/dim]\n"
