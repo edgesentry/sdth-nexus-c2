@@ -24,6 +24,20 @@ In modern hybrid littoral-maritime defense, sovereign security depends on breaki
 | **`S1_ais_spoof`** | **Sea Approach Incursion** | Stationary AIS transponder vs ~20 kt radar/EO contact (~850 m spatial divergence) | `ISR_IDENTIFY_CONTACT` |
 | **`S2_osint_swarm`** | **Air Corridor Swarm Contradiction** | OSINT social media chatter (3 drones claimed) vs gap-filler radar (1 contact); EO blur | `CUE_AND_IDENTIFY` (Non-Kinetic Verification) |
 
+### Core Demonstration Highlights
+
+* **1. `S1_trojan` (Tri-Service Disagreement & CNI Safety Guardrail):**  
+  Demonstrates cross-domain contradiction resolution across Navy, Air Force, and Army sensors.  
+  `SDTH-Sensor-Simulation` JSONL $\rightarrow$ Navy AIS (6.1 kt tug) vs Coastal Radar (120.4 kt UAV) velocity mismatch $\rightarrow$ Air ESM $\cap$ Army EW Line of Bearing (AoA) launch triangulation onto mothership *Happy Tug 8* $\rightarrow$ Hard VETO of terminal SAM engagement directly over Jurong Island petrochemical complex (`SAFETY_LOCKOUT_CNI_FALLOUT_HAZARD`) $\rightarrow$ Enforced failsafe roll-over to **Option B** dual tasking (Air Force GBAD offshore kinetic engagement + Navy PCG mothership interdiction).
+
+* **2. `S3_sar_ais` (Space SAR Ground Truth × AIS Dark Vessel Corroboration & Dynamic Intercept):**  
+  Demonstrates unmasking non-emitting vessels and bridging satellite temporal latency to tactical response.  
+  Connects macro space-based SAR scene-difference alerts (GLINT) and micro OBB metrology (SIA) to tactical C2 tasking. Solves 15-minute satellite orbital latency via dynamic **Reachable Ellipse** dead-reckoning and coastal radar handoff $\rightarrow$ Computes dynamic lead-pursuit **Point of Interception (POI)** collision kinematics rather than dispatching units to stale historical coordinates $\rightarrow$ Authorizes and dispatches Approach Patrol USV.
+
+* **3. `S2_osint_swarm` (Cognitive Disinformation Filter & Anti-Overreaction):**  
+  Demonstrates filtering unverified civilian social reports against multi-modal physical sensor reality.  
+  Ingests unstructured crowdsourced recon text ("3 inbound drones heading north") via semantic parser (`osint_text`) $\rightarrow$ Evaluates against military 3D gap-filler radar (1 contact) and EW RF spectrum silence (`COUNT_AND_BEARING_MISMATCH`) $\rightarrow$ Prevents panic and kinetic missile exhaustion against phantom targets $\rightarrow$ Restricts response to sealed non-kinetic `CUE_AND_IDENTIFY` electro-optical camera slewing before weapon release.
+
 ---
 
 ## ⏱️ Operational Chronicles: Chronological Storylines
@@ -141,12 +155,15 @@ For complete commands, automated test pipelines, and interactive CUI/UI operatio
 
 ## 📡 Sensor Modalities & Provenance
 
-| Modality | Associated Scenarios | Provenance Category | Role in Contradiction |
-|----------|----------------------|---------------------|------------------------|
+Provenance labels (**Synthetic** / **Real-processed** / **Assumed-mock**): [Data provenance](data-provenance.md).
+
+| Modality | Scenarios | Provenance | Role in Contradiction |
+|----------|-----------|------------|------------------------|
 | **Space SAR (SIA micro)** | `S3_sar_ais` | Real-processed / Fixture | Dark vessel extraction, OBB metrology, image chip |
-| **Space SAR (GLINT macro)** | `S3_sar_ais`, `S1_trojan` | Assumed-mock / Live API | Corridor-scale backscatter anomaly, aft-deck rail |
-| **Coastal 3D Radar** | All Scenarios | Synthetic | Kinematic velocity mismatch (120 kt vs 6 kt), bearing lock |
-| **Coastal CCTV / EOIR** | `S1_trojan`, `S1_ais_spoof`, `S2_osint_swarm` | Synthetic | Optical silhouette verification, thermal delta |
-| **Maritime AIS** | `S1_trojan`, `S1_ais_spoof`, `S3_sar_ais` | Synthetic / Indago DuckDB | Commercial declaration, spoofing detection, background traffic |
-| **Air ESM & Army EW** | `S1_trojan`, `S2_osint_swarm` | Synthetic | Line of Bearing (AoA) intersection, FHSS emitter triangulation |
-| **Social / Recon Text** | `S2_osint_swarm` | Synthetic (`osint_text`) | Semantic extraction of crowdsourced claims vs sensor ground truth |
+| **Space SAR (GLINT macro)** | `S3_sar_ais`, `S1_trojan` | Assumed-mock / Live API | Corridor-scale backscatter anomaly, aft-deck launch rail |
+| **Social / Recon Text** | `S2_osint_swarm` | **Synthetic** (`osint_text` parser #59) | Semantic extraction of crowdsourced claims vs sensor ground truth |
+| **Coastal 3D Radar** | `S1_trojan`, `S3_sar_ais`, `S1_ais_spoof`, `S2_osint_swarm` | **Synthetic** | Kinematic velocity mismatch (120 kt vs 6 kt), bearing lock, count/bearing mismatch |
+| **Coastal CCTV / EOIR** | `S1_trojan`, `S1_ais_spoof`, `S2_osint_swarm` | **Synthetic** | Optical silhouette verification, thermal delta, low-confidence blur |
+| **Maritime AIS** | `S1_trojan`, `S1_ais_spoof`, `S3_sar_ais` | Synthetic (S1) / SIA Real-processed / Indago DuckDB (S3) | Commercial declaration, spoofing detection, background traffic |
+| **Air ESM & Army EW** | `S1_trojan`, `S2_osint_swarm` | **Synthetic** | Line of Bearing (AoA) intersection, FHSS emitter triangulation |
+| **ADS-B** | `S2_osint_swarm` | **Synthetic** (+ optional open air fixture) | Empty air sector confirmation |
