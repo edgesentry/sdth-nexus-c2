@@ -96,6 +96,7 @@ def get_scenario(scenario_id: str) -> Scenario:
 
 
 def list_scenario_ids() -> list[str]:
-    from app.scenarios.registry import SCENARIOS
+    from app.scenarios.registry import PRIMARY_SCENARIOS, SCENARIOS
 
-    return sorted(SCENARIOS.keys())
+    source = PRIMARY_SCENARIOS if "PRIMARY_SCENARIOS" in locals() or PRIMARY_SCENARIOS else SCENARIOS
+    return list(source.keys())

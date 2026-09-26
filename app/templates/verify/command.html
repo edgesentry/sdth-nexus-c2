@@ -9,10 +9,10 @@
     <form method="post" action="/verify/command/propose" class="controls">
       <label>Scenario
         <select name="scenario_id">
-          <option value="S1" {% if scenario_id == "S1" %}selected{% endif %}>S1 (port clearance)</option>
-          <option value="S2" {% if scenario_id == "S2" %}selected{% endif %}>S2 (non-pitch stretch)</option>
-          <option value="S3" {% if scenario_id == "S3" %}selected{% endif %}>S3 (maritime hero)</option>
-          <option value="s1_trojan" {% if scenario_id == "s1_trojan" %}selected{% endif %}>s1_trojan (Happy Tug / CNI)</option>
+          <option value="S1_trojan" {% if scenario_id in ["S1_trojan", "s1_trojan"] %}selected{% endif %}>S1_trojan (Happy Tug / CNI Guardrail)</option>
+          <option value="S3_sar_ais" {% if scenario_id in ["S3_sar_ais", "S3"] %}selected{% endif %}>S3_sar_ais (SAR × AIS Dark Cluster)</option>
+          <option value="S1_ais_spoof" {% if scenario_id in ["S1_ais_spoof", "S1"] %}selected{% endif %}>S1_ais_spoof (Sea Approach Spoof)</option>
+          <option value="S2_osint_swarm" {% if scenario_id in ["S2_osint_swarm", "S2"] %}selected{% endif %}>S2_osint_swarm (OSINT vs Radar Swarm)</option>
         </select>
       </label>
       <label>Unit ID
