@@ -152,7 +152,11 @@ def _detect(graph: SpatialEntityGraph) -> Finding | None:
     social_count = max((_claimed_count(o) for o in social), default=0)
     radar_count = sum(int(o.attributes.get("contact_count", 0) or 0) for o in radar)
     blur_optical = [o for o in optical if o.confidence <= 0.45 or bool(o.attributes.get("blur"))]
-    if social_count < _MIN_CLAIMED_COUNT or radar_count != _EXPECTED_RADAR_CONTACTS or not blur_optical:
+    if (
+        social_count < _MIN_CLAIMED_COUNT
+        or radar_count != _EXPECTED_RADAR_CONTACTS
+        or not blur_optical
+    ):
         return None
 
     cue = max(social + blur_optical, key=lambda o: o.confidence)
@@ -179,7 +183,7 @@ def _detect(graph: SpatialEntityGraph) -> Finding | None:
     )
     hypo = (
         "If CIVILIAN_SOCIAL_RECON exaggerates count, radar+acoustic+EO still warrant non-kinetic "
-        f"cueing (not 50× SAM shots). If GAP_FILLER_RADAR under-counts due to clutter, the "
+        f"cueing (not 50x SAM shots). If GAP_FILLER_RADAR under-counts due to clutter, the "
         f"passenger claim of ~{social_count} remains the saturation planning figure. "
         "Autonomous GPS/INS flight invalidates conventional RF soft-kill as primary defeat."
     )

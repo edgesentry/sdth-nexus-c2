@@ -122,7 +122,9 @@ def test_s2_coa_exposes_poi_metadata() -> None:
     graph.ingest_many([normalize_sensor_event(e) for e in scenario.build_events()])
     finding = scenario.detect(graph)
     assert finding is not None
-    coa = make_tier1_coa(graph, finding, intent="GNSS_DENIAL_AND_GBAD_CUE", apply_contact_speed=False)
+    coa = make_tier1_coa(
+        graph, finding, intent="GNSS_DENIAL_AND_GBAD_CUE", apply_contact_speed=False
+    )
     assert coa.metadata.get("poi")
     assert coa.metadata["poi"]["method"] in {"collision_course", "lead_along_track"}
     assert coa.speed_kt is None  # cue node must not trip surface interlocks

@@ -144,8 +144,7 @@ class PitchRunner:
             return
         coords = coa.get("target_coordinates")
         self._ok(
-            f"Lead POI method={poi.get('method')}  "
-            f"ETA={poi.get('eta_sec')}s  waypoint={coords}"
+            f"Lead POI method={poi.get('method')}  ETA={poi.get('eta_sec')}s  waypoint={coords}"
         )
 
     def _closed_loop(
@@ -274,10 +273,7 @@ class PitchRunner:
             return
         kbody = kinetic.json()
         if kbody.get("status") == "REJECTED_FAST":
-            self._ok(
-                f"Kinetic overkill {KINETIC_INTENT} → REJECTED_FAST "
-                f"({kbody.get('reason')})"
-            )
+            self._ok(f"Kinetic overkill {KINETIC_INTENT} → REJECTED_FAST ({kbody.get('reason')})")
         else:
             self._fail(f"kinetic probe status={kbody.get('status')} (expected REJECTED_FAST)")
 
@@ -313,9 +309,7 @@ class PitchRunner:
             kin = (finding.get("source_breakdown") or {}).get("kinematics") or {}
             if kin.get("radar_in_envelope") is True or kin.get("dt_sec") is not None:
                 radius = kin.get("uncertainty_radius_m", kin.get("radius_m"))
-                self._ok(
-                    f"Dead-reckoning Δt={kin.get('dt_sec')}s  envelope={radius} m"
-                )
+                self._ok(f"Dead-reckoning Δt={kin.get('dt_sec')}s  envelope={radius} m")
             else:
                 self._fail("missing kinematics breakdown")
 
@@ -383,8 +377,7 @@ class PitchRunner:
         self.console.print(Rule())
         if self._failures:
             self.console.print(
-                f"[bold red]RESULT: {self._failures} failure(s)[/bold red]  "
-                f"wall={elapsed:.2f}s"
+                f"[bold red]RESULT: {self._failures} failure(s)[/bold red]  wall={elapsed:.2f}s"
             )
             return 1
         mode = "step" if self.step else "auto"
