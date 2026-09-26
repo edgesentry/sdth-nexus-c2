@@ -22,7 +22,7 @@ In modern hybrid littoral-maritime defense, sovereign security depends on breaki
 | **`S1_trojan`** | **Trojan Mothership (Hero Scenario)** | Navy Happy Tug AIS ~6 kt vs coastal radar ~120 kt UAS; Air/Army EW LOB triangulation | Guardrail CNI VETO → `OFFSHORE_INTERCEPT_RF_SOFTKILL` (Option B) |
 | **`S3_sar_ais`** | **Shipping Lane & Coastal Anomaly** | Space-based SAR anomaly diff (GLINT macro + SIA micro) vs thin AIS; dead-reckoned reachability envelope | `APPROACH_PATROL` (Dynamic Lead-Pursuit) |
 | **`S1_ais_spoof`** | **Sea Approach Incursion** | Stationary AIS transponder vs ~20 kt radar/EO contact (~850 m spatial divergence) | `ISR_IDENTIFY_CONTACT` |
-| **`S2_osint_swarm`** | **Air Corridor Swarm Contradiction** | OSINT social media chatter (3 drones claimed) vs gap-filler radar (1 contact); EO blur | `CUE_AND_IDENTIFY` (Non-Kinetic Verification) |
+| **`S2_osint_swarm`** | **Transnational OSINT & Autonomous Shahed Swarm** | Cross-border civilian OSINT (~50 Shahed claimed) vs gap-filler radar (clutter blindspots); RF-silent autonomous GPS navigation | `CUE_AND_IDENTIFY` → `GNSS_DENIAL_AND_GBAD_CUE` |
 
 ### Core Demonstration Highlights
 
@@ -34,9 +34,9 @@ In modern hybrid littoral-maritime defense, sovereign security depends on breaki
   Demonstrates unmasking non-emitting vessels and bridging satellite temporal latency to tactical response.  
   Connects macro space-based SAR scene-difference alerts (GLINT) and micro OBB metrology (SIA) to tactical C2 tasking. Solves 15-minute satellite orbital latency via dynamic **Reachable Ellipse** dead-reckoning and coastal radar handoff $\rightarrow$ Computes dynamic lead-pursuit **Point of Interception (POI)** collision kinematics rather than dispatching units to stale historical coordinates $\rightarrow$ Authorizes and dispatches Approach Patrol USV.
 
-* **3. `S2_osint_swarm` (Cognitive Disinformation Filter & Anti-Overreaction):**  
-  Demonstrates filtering unverified civilian social reports against multi-modal physical sensor reality.  
-  Ingests unstructured crowdsourced recon text ("3 inbound drones heading north") via semantic parser (`osint_text`) $\rightarrow$ Evaluates against military 3D gap-filler radar (1 contact) and EW RF spectrum silence (`COUNT_AND_BEARING_MISMATCH`) $\rightarrow$ Prevents panic and kinetic missile exhaustion against phantom targets $\rightarrow$ Restricts response to sealed non-kinetic `CUE_AND_IDENTIFY` electro-optical camera slewing before weapon release.
+* **3. `S2_osint_swarm` (Transnational OSINT & Autonomous Swarm Corroboration):**  
+  Demonstrates cross-referencing crowdsourced foreign eyewitness feeds with military sensors to defeat pre-programmed, RF-silent saturation swarms.  
+  Foreign coastal civilians across the border post social media video/audio of ~50 delta-wing loitering munitions (Shahed-136 class) with distinct moped engine signatures heading toward Singapore $\rightarrow$ Ground EW and ESM confirm **complete RF silence** (no C2 control link detected, indicating the swarm exceeds remote-control line-of-sight and operates entirely on autonomous pre-programmed GPS/INS waypoints) $\rightarrow$ Coastal 3D gap-filler radar detects only an intermittent cluster (4 contacts) due to sea-clutter and terrain masking (`COUNT_AND_BEARING_MISMATCH` with blindspot awareness) $\rightarrow$ NexusGate fuses the OSINT azimuth corridor, acoustic engine profiles, and radar kinematics to invalidate standard RF C2 jamming (useless against autonomous flight), dynamically cues EO/IR pods, and initiates GPS denial/spoofing alongside GBAD point-defense vectoring.
 
 ---
 
@@ -120,22 +120,38 @@ In modern hybrid littoral-maritime defense, sovereign security depends on breaki
 
 ---
 
-### 4. `S2_osint_swarm` — Air Corridor OSINT Swarm vs. Radar Contradiction
+### 4. `S2_osint_swarm` — Transnational OSINT & Autonomous Shahed Swarm Contradiction
 
 ```
-[T-00:00: Panic & Disinformation Ingress]
-  • Social / Recon Chatter: Civilian eyewitness text claims "3 inbound swarm drones heading north."
+[T-00:00: Transnational OSINT & Eyewitness Ingress]
+  • Cross-Border Civilian Feeds: Overseas coastal residents post phone footage/audio to social media (X/TikTok/Telegram):
+    "Massive swarm (>50 delta-wing drones) flying low across the strait; loud lawnmower/moped buzz heading toward Singapore."
+  • Semantic & Spatial Parser: Ingests unstructured OSINT text, extracts corridor bearing (~248°), velocity (~105 kt),
+    and estimated count (~50 Shahed-136 class airframes). Initial status: unverified civilian report.
        │
        ▼
-[T+00:04: Objective Contradiction Gating]
-  • Sensor Cross-Check: Military gap-filler radar holds only 1 contact (1.2 km north); EO/IR confirms high blur;
-    RF spectrum is completely silent with no civil ADS-B broadcast.
+[T+00:03: RF-Silence Gating & Autonomous Navigation Lock]
+  • Passive EW & Air ESM: Ground spectrum sensors scan across 433 MHz, 900 MHz, 2.4 GHz, and 5.8 GHz bands.
+  • Deterministic Finding (RF_SILENT_AUTONOMOUS): Zero command-and-control (C2) RF emissions or video telemetry detected.
+    The swarm is flying well beyond direct remote-control line-of-sight range.
+  • Flight Mode Assessment: Confirms pre-programmed GPS/INS waypoint navigation.
+    Automated safety interlock disallows futile C2 soft-kill jamming (which only affects manual/tethered RF drones).
        │
        ▼
-[T+00:07: Preventing Kinetic Over-Reaction]
-  • The contradiction engine triggers COUNT_AND_BEARING_MISMATCH (Social claims 3 vs Radar holds 1).
-  • Prevents launching costly surface-to-air missiles against phantom swarm targets.
-  • Authorizes sealed CUE_AND_IDENTIFY tasking to slew electro-optical verification pods before weapon release.
+[T+00:05: Multi-Modal Sensor Cross-Reference (Radar × Acoustics × EO/IR)]
+  • Radar Clutter & Blindspot Resolution: Coastal gap-filler 3D radar detects only 4 intermittent low-RCS contacts
+    due to low-altitude sea-clutter and island masking. Rather than dismissing the ~50-drone OSINT report as false panic,
+    NexusGate correlates radar contacts with the OSINT ingress vector, confirming an ingress swarm masked by altitude.
+  • Coastal Acoustic Arrays: Triangulates the characteristic low-frequency 2-stroke moped acoustic signature along the vector.
+  • Coastal EO/IR Slewing: Slaved cameras lock onto high-speed delta-wing silhouettes breaking through thermal haze.
+       │
+       ▼
+[T+00:07: Coordinated Swarm Countermeasure Tasking (C2 Resolution)]
+  • Anti-Exhaustion Gating: Prevents blind expenditure of high-value SAM interceptors against dispersed saturation wings.
+  • Countermeasure Dispatch:
+      ➔ Electronic Warfare: Triggers local GNSS spoofing / directional satellite jamming to induce INS drift.
+      ➔ Air Force GBAD: Directs automated point-defense autocannons and short-range C-UAS kinetic interceptors (CUE_AND_ENGAGE)
+         onto the pre-calculated waypoint corridor before impact on critical infrastructure.
 ```
 
 ---
@@ -161,9 +177,10 @@ Provenance labels (**Synthetic** / **Real-processed** / **Assumed-mock**): [Data
 |----------|-----------|------------|------------------------|
 | **Space SAR (SIA micro)** | `S3_sar_ais` | Real-processed / Fixture | Dark vessel extraction, OBB metrology, image chip |
 | **Space SAR (GLINT macro)** | `S3_sar_ais`, `S1_trojan` | Assumed-mock / Live API | Corridor-scale backscatter anomaly, aft-deck launch rail |
-| **Social / Recon Text** | `S2_osint_swarm` | **Synthetic** (`osint_text` parser #59) | Semantic extraction of crowdsourced claims vs sensor ground truth |
-| **Coastal 3D Radar** | `S1_trojan`, `S3_sar_ais`, `S1_ais_spoof`, `S2_osint_swarm` | **Synthetic** | Kinematic velocity mismatch (120 kt vs 6 kt), bearing lock, count/bearing mismatch |
-| **Coastal CCTV / EOIR** | `S1_trojan`, `S1_ais_spoof`, `S2_osint_swarm` | **Synthetic** | Optical silhouette verification, thermal delta, low-confidence blur |
+| **Social / Recon Text** | `S2_osint_swarm` | **Synthetic** (`osint_text` parser #59) | Crowdsourced foreign eyewitness video/text ingestion, swarm count (~50) & ingress azimuth extraction |
+| **Coastal 3D Radar** | `S1_trojan`, `S3_sar_ais`, `S1_ais_spoof`, `S2_osint_swarm` | **Synthetic** | Kinematic velocity mismatch (120 kt vs 6 kt), bearing lock, low-altitude clutter & intermittent contacts |
+| **Coastal CCTV / EOIR** | `S1_trojan`, `S1_ais_spoof`, `S2_osint_swarm` | **Synthetic** | Optical silhouette verification, delta-wing thermal delta, visual verification pod slaving |
+| **Coastal Acoustic Array** | `S2_osint_swarm` | **Synthetic** | Triangulates low-frequency 2-stroke moped acoustic signature of Shahed-136 engines |
 | **Maritime AIS** | `S1_trojan`, `S1_ais_spoof`, `S3_sar_ais` | Synthetic (S1) / SIA Real-processed / Indago DuckDB (S3) | Commercial declaration, spoofing detection, background traffic |
-| **Air ESM & Army EW** | `S1_trojan`, `S2_osint_swarm` | **Synthetic** | Line of Bearing (AoA) intersection, FHSS emitter triangulation |
+| **Air ESM & Army EW** | `S1_trojan`, `S2_osint_swarm` | **Synthetic** | AoA intersection (S1); RF silence detection proving pre-programmed GPS/INS autonomy over remote control (S2) |
 | **ADS-B** | `S2_osint_swarm` | **Synthetic** (+ optional open air fixture) | Empty air sector confirmation |
