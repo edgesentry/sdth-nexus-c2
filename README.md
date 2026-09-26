@@ -97,7 +97,7 @@ Pitch / E2E Sequence
   S3_sar_ais (+GLINT macro + SIA)  ← Orbital latency → Reachable ellipse → Lead pursuit USV
 ```
 
-Scenario details: [`docs/scenarios.md`](docs/scenarios.md). Data provenance & marun role alignment: [`docs/data-provenance.md`](docs/data-provenance.md). E2E Runbook: [`docs/verify-e2e.md`](docs/verify-e2e.md).
+Scenario details: [`docs/scenarios.md`](docs/scenarios.md). Data provenance & SensorSim role alignment: [`docs/data-provenance.md`](docs/data-provenance.md). E2E Runbook: [`docs/verify-e2e.md`](docs/verify-e2e.md).
 
 ---
 

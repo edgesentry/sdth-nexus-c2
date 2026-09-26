@@ -7,7 +7,7 @@ Comprehensive runbook for executing and validating the full **Picture → Gate �
 | Alias | Repository | URL | Local sibling (typical) |
 |---|---|---|---|
 | **Nexus** | `sdth-nexus-c2` | https://github.com/edgesentry/sdth-nexus-c2 | `sdth-nexus-c2/` (this repo) |
-| **SensorSim** | `SDTH-Sensor-Simulation` | https://github.com/marun6207/SDTH-Sensor-Simulation | `marun-sensor-simulation/` (loader path; clone name may differ) |
+| **SensorSim** | `SDTH-Sensor-Simulation` | https://github.com/marun6207/SDTH-Sensor-Simulation | `SDTH-Sensor-Simulation/` (or `marun-sensor-simulation/`) |
 | **SIA** | `Sentinel-Imagery-Analysis` | https://github.com/StrixGoldhorn/Sentinel-Imagery-Analysis | `Sentinel-Imagery-Analysis/` (`:5050`) |
 | **Indago** | `indago` | https://github.com/edgesentry/indago | DuckDB under `~/.indago/…` (optional; not a port) |
 
@@ -94,7 +94,7 @@ flowchart TD
         ACK["Signed Recipient Ack<br/>(Closed Loop Completed)"]
     end
 
-    SENSORSIM -->|arun_canonical loader<br/>s1_trojan| GRAPH
+    SENSORSIM -->|sensorsim_canonical loader<br/>s1_trojan| GRAPH
     FIX -.->|fallback when SensorSim absent| GRAPH
     INDAGO -->|open-feed source=indago| GRAPH
     AIS -->|POST /api/ingress/open-feed| GRAPH
@@ -115,21 +115,21 @@ flowchart TD
 ### 0.1 SensorSim exports (`s1_trojan`)
 
 Issue #116 E2E (Workflows 1, 3b, 4) loads the Trojan mothership picture through
-`app/adapters/arun_canonical.py` in **Nexus**.
+`app/adapters/sensorsim_canonical.py` in **Nexus**.
 **Source of truth** is the sibling **SensorSim** checkout; vendored Nexus fixtures are
 a CI fail-safe only.
 
 | Priority | Path | When |
 |---|---|---|
-| 1 | `MARUN_EXPORT_DIR` (env) | Explicit override to a SensorSim `exports/` tree |
-| 2 | `../marun-sensor-simulation/exports/` | Sibling next to **Nexus** (default local folder name) |
+| 1 | `SENSORSIM_EXPORT_DIR` (or `MARUN_EXPORT_DIR`) | Explicit override to a SensorSim `exports/` tree |
+| 2 | `../SDTH-Sensor-Simulation/exports/` | Sibling next to **Nexus** (or `../marun-sensor-simulation/exports/`) |
 | 3 | `tests/fixtures/s1_trojan_*` | SensorSim missing / CI |
 
-Clone **SensorSim** next to **Nexus** (rename the directory if the clone used the GitHub name):
+Clone **SensorSim** next to **Nexus**:
 
 ```bash
 cd /Users/yoheionishi/work/SDTH2026
-git clone https://github.com/marun6207/SDTH-Sensor-Simulation.git marun-sensor-simulation
+git clone https://github.com/marun6207/SDTH-Sensor-Simulation.git SDTH-Sensor-Simulation
 ```
 
 Expected sibling layout:
@@ -137,7 +137,7 @@ Expected sibling layout:
 ```text
 SDTH2026/
   sdth-nexus-c2/                 # Nexus (Core :8080)
-  marun-sensor-simulation/       # SensorSim — synthetic maritime + land/air
+  SDTH-Sensor-Simulation/        # SensorSim — synthetic maritime + land/air
     exports/
       s1_trojan_scenario.jsonl
       pois.json
@@ -148,10 +148,10 @@ For a full E2E rehearsal against **live SensorSim exports** (not the fixture cop
 
 ```bash
 # Terminal / one-shot: confirm sibling exports exist
-ls ../marun-sensor-simulation/exports/s1_trojan_scenario.jsonl
+ls ../SDTH-Sensor-Simulation/exports/s1_trojan_scenario.jsonl
 
 # Or point Nexus at a non-sibling SensorSim checkout
-export MARUN_EXPORT_DIR=/path/to/SDTH-Sensor-Simulation/exports
+export SENSORSIM_EXPORT_DIR=/path/to/SDTH-Sensor-Simulation/exports
 
 cd /Users/yoheionishi/work/SDTH2026/sdth-nexus-c2
 export C2_DEMO_TAMPER=1
@@ -161,16 +161,16 @@ uv run sdth-c2-server
 Regenerate SensorSim exports after changing maritime/land generators:
 
 ```bash
-cd /Users/yoheionishi/work/SDTH2026/marun-sensor-simulation
+cd /Users/yoheionishi/work/SDTH2026/SDTH-Sensor-Simulation
 # see exports/README.md — generate_canonical_stream.py
 ```
 
 Then refresh **Nexus** fixtures if CI must stay in sync:
 
 ```bash
-cp ../marun-sensor-simulation/exports/s1_trojan_scenario.jsonl tests/fixtures/
-cp ../marun-sensor-simulation/exports/pois.json tests/fixtures/s1_trojan_pois.json
-cp ../marun-sensor-simulation/exports/site_origins.json tests/fixtures/s1_trojan_site_origins.json
+cp ../SDTH-Sensor-Simulation/exports/s1_trojan_scenario.jsonl tests/fixtures/
+cp ../SDTH-Sensor-Simulation/exports/pois.json tests/fixtures/s1_trojan_pois.json
+cp ../SDTH-Sensor-Simulation/exports/site_origins.json tests/fixtures/s1_trojan_site_origins.json
 ```
 
 Details: SensorSim `exports/README.md` · Nexus `tests/README.md`.
@@ -260,8 +260,8 @@ S3 uses built-in fail-safe fixtures. For **`s1_trojan`**, prefer a sibling
 ```bash
 # Terminal 1: Start Nexus Core
 cd /Users/yoheionishi/work/SDTH2026/sdth-nexus-c2
-# Optional: pin SensorSim exports (default = sibling ../marun-sensor-simulation/exports)
-# export MARUN_EXPORT_DIR=/Users/yoheionishi/work/SDTH2026/marun-sensor-simulation/exports
+# Optional: pin SensorSim exports (default = sibling ../SDTH-Sensor-Simulation/exports)
+# export SENSORSIM_EXPORT_DIR=/Users/yoheionishi/work/SDTH2026/SDTH-Sensor-Simulation/exports
 export C2_DEMO_TAMPER=1
 uv run sdth-c2-server
 # => Running on http://127.0.0.1:8080
@@ -441,7 +441,7 @@ curl -sf "$C2/api/audit/health" | jq .
 ### Workflow 3b: curl closed loop — `s1_trojan` (Pillar 2: CNI Guardrail + GLINT Anchor, #116)
 
 Requires **Nexus** Core running (`uv run sdth-c2-server`). Picture data comes from
-**SensorSim** exports via `arun_canonical` (§0.1), or Nexus fixtures if SensorSim
+**SensorSim** exports via `sensorsim_canonical` (§0.1), or Nexus fixtures if SensorSim
 is not checked out.
 Plain propose is expected to hard-reject; the demo path evaluates Option A
 through the live CNI interlock and queues enforced Option B for dual-unit
@@ -450,7 +450,7 @@ authorize.
 ```bash
 export C2=http://127.0.0.1:8080
 # Optional: confirm which export dir the loader will prefer
-# ls ../marun-sensor-simulation/exports/s1_trojan_scenario.jsonl
+# ls ../SDTH-Sensor-Simulation/exports/s1_trojan_scenario.jsonl
 
 curl -sf -X POST "$C2/api/admin/reset" | jq .
 
@@ -802,7 +802,7 @@ tail -n 3 .audit/gate.jsonl | jq '{class_name: .class_name, record_hash: .record
 | `Address already in use` error on startup | Stale C2 or mock server running in background | Run `kill $(lsof -ti :8080 :5051 :5050) 2>/dev/null \|\| true` |
 | `Duplicate COA` / `active_coa_ids` 400 error | Previous scenario state remains in memory | Execute `curl -sf -X POST http://127.0.0.1:8080/api/admin/reset` |
 | `Window expired` error during Approve | Operator exceeded HITL decision window (typically 30s) | Re-trigger proposal via `POST /api/gate/proposals` and approve promptly |
-| `s1_trojan` picture stale / missing AIS–radar mismatch | Sibling **SensorSim** `exports/` absent or out of date vs Nexus fixtures | Clone SensorSim next to Nexus as `marun-sensor-simulation`, or `export MARUN_EXPORT_DIR=…`, regenerate per §0.1 |
+| `s1_trojan` picture stale / missing AIS–radar mismatch | Sibling **SensorSim** `exports/` absent or out of date vs Nexus fixtures | Clone SensorSim next to Nexus as `SDTH-Sensor-Simulation`, or `export SENSORSIM_EXPORT_DIR=…`, regenerate per §0.1 |
 | SIA upstream 500 / unreachable | Sibling **SIA** (`Sentinel-Imagery-Analysis`) `:5050` is not running | SIA is optional; **Nexus** automatically falls back to deterministic Singapore Strait fixtures |
 | Audit health reports `broken > 0` | Audit file was tampered with or corrupted | Run `POST /api/admin/audit/restore` or remove `.audit/gate.jsonl` and reset |
 
@@ -818,7 +818,7 @@ tail -n 3 .audit/gate.jsonl | jq '{class_name: .class_name, record_hash: .record
 - [ ] **Approve / Ack / Audit**: sealed token → inbox → `ACKED` → `verified: true`, `broken: 0`.
 
 ### s1_trojan (#116)
-- [ ] **SensorSim data**: sibling `marun-sensor-simulation/exports/` present **or** intentional Nexus fixture fallback (§0.1).
+- [ ] **SensorSim data**: sibling `SDTH-Sensor-Simulation/exports/` (or `marun-sensor-simulation/exports/`) present **or** intentional Nexus fixture fallback (§0.1).
 - [ ] **pytest** Workflow 1 green (or curl Workflow 3b).
 - [ ] Plain `POST /api/gate/proposals` → `REJECTED_FAST` + `SAFETY_LOCKOUT_CNI_FALLOUT_HAZARD`.
 - [ ] `POST /api/gate/demo-evaluate-with-guardrail` → Option B queued; amber includes velocity mismatch.

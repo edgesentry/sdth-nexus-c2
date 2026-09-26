@@ -49,7 +49,7 @@ def _observed_at_from_row(row: dict[str, Any]) -> datetime:
 
 
 def canonical_row_to_event(row: dict[str, Any]) -> dict[str, Any] | None:
-    """Map one Arun canonical JSONL row into a normalize_sensor_event dict."""
+    """Map one SensorSim canonical JSONL row into a normalize_sensor_event dict."""
     source = str(row.get("source", ""))
     service = str(row.get("service", "")).lower()
     sensor_id = str(row.get("sensor_id", source or "UNKNOWN"))
@@ -144,7 +144,7 @@ def canonical_row_to_event(row: dict[str, Any]) -> dict[str, Any] | None:
 
 def normalize_sensor_event(event: dict[str, Any]) -> Observation:
     """Convert a dict sensor event into a domain Observation."""
-    # Accept Arun canonical rows directly.
+    # Accept SensorSim canonical rows directly.
     if "service" in event and "source" in event and "latitude" not in event and "lat" in event:
         converted = canonical_row_to_event(event)
         if converted is None:

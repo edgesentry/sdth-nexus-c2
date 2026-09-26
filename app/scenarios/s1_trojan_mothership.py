@@ -1,6 +1,6 @@
 """S1 Trojan — Happy Tug mothership + velocity mismatch (issue #116).
 
-Consumes Arun/marun canonical JSONL. Detects AIS (~6 kt) vs coastal radar (~120 kt)
+Consumes SensorSim canonical JSONL. Detects AIS (~6 kt) vs coastal radar (~120 kt)
 disagreement and optional Air/Army story LOB triangulation toward the mothership.
 """
 
@@ -12,7 +12,7 @@ from core.coa import ActionTier, CourseOfAction
 from core.ontology import SpatialEntityGraph, haversine_m
 from core.schema import Observation
 
-from app.adapters.arun_canonical import load_jsonl, load_pois
+from app.adapters.sensorsim_canonical import load_jsonl, load_pois
 from app.adapters.southbound_sensor import canonical_row_to_event
 from app.agent import make_tier1_coa, speed_kt
 from app.scenarios.base import Finding, Scenario

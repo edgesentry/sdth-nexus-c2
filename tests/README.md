@@ -79,11 +79,11 @@ Vendored ingress snapshots so CI and Core-only checkouts stay deterministic
 
 **Source of truth** for Trojan mothership data is **SensorSim**
 ([`SDTH-Sensor-Simulation`](https://github.com/marun6207/SDTH-Sensor-Simulation),
-local sibling `marun-sensor-simulation/exports/`). Loader preference
-(`app/adapters/arun_canonical.py`):
+local sibling `SDTH-Sensor-Simulation/exports/` or `marun-sensor-simulation/exports/`). Loader preference
+(`app/adapters/sensorsim_canonical.py`):
 
-1. `MARUN_EXPORT_DIR`
-2. Sibling `../marun-sensor-simulation/exports/`
+1. `SENSORSIM_EXPORT_DIR` (or `MARUN_EXPORT_DIR`)
+2. Sibling `../SDTH-Sensor-Simulation/exports/` (or `../marun-sensor-simulation/exports/`)
 3. These fixtures (CI / offline fail-safe)
 
 After regenerating SensorSim exports, refresh the three `s1_trojan_*` files here so

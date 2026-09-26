@@ -478,7 +478,7 @@ async def verify_ingress(
     scenario_id: str = Form(DEFAULT_SCENARIO),
     service_view: str = Form(DEFAULT_SERVICE_VIEW),
 ) -> HTMLResponse:
-    """Ingest SAR / open-AIS / Arun canonical evidence."""
+    """Ingest SAR / open-AIS / SensorSim canonical evidence."""
     from app.adapters.open_feed import open_feed_to_observations
 
     runtime = _c2().get_runtime()
@@ -498,8 +498,8 @@ async def verify_ingress(
                 runtime.graph.ingest(obs)
                 runtime.persist_observation(obs)
             flash = f"Indago AIS (open-feed): ingested {len(observations)} · source={source}"
-        elif mode in {"arun_reload", "arun", "s1_trojan_reload"}:
-            from app.adapters.arun_canonical import load_jsonl
+        elif mode in {"sensorsim_reload", "sensorsim", "s1_trojan_reload", "canonical_reload"}:
+            from app.adapters.sensorsim_canonical import load_jsonl
             from app.adapters.southbound_sensor import normalize_sensor_event
 
             rows = load_jsonl()
@@ -512,7 +512,7 @@ async def verify_ingress(
                 runtime.graph.ingest(obs)
                 runtime.persist_observation(obs)
                 count += 1
-            flash = f"Arun canonical reload: ingested {count} · fixture/export JSONL"
+            flash = f"SensorSim canonical reload: ingested {count} · fixture/export JSONL"
         else:
             label = mode
             if mode == "dual_sar":

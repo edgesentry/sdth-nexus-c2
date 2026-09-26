@@ -82,8 +82,8 @@
         <input type="hidden" name="unit_id" value="{{ unit_id }}" />
         <input type="hidden" name="scenario_id" value="{{ scenario_id }}" />
         <input type="hidden" name="service_view" value="{{ service_view }}" />
-        <input type="hidden" name="mode" value="arun_reload" />
-        <button type="submit" class="btn-ghost">Ingress Arun reload</button>
+        <input type="hidden" name="mode" value="sensorsim_reload" />
+        <button type="submit" class="btn-ghost">Ingress SensorSim reload</button>
       </form>
       <form method="post" action="/verify/command/reset">
         <input type="hidden" name="unit_id" value="{{ unit_id }}" />
@@ -237,7 +237,7 @@
           </span>
         </li>
       {% else %}
-        <li class="dim">No observations for this silo — Propose S1_trojan, Ingress Arun reload, or switch silo to Nexus</li>
+        <li class="dim">No observations for this silo — Propose S1_trojan, Ingress SensorSim reload, or switch silo to Nexus</li>
       {% endfor %}
     </ul>
   </section>
