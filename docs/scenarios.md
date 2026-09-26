@@ -22,7 +22,7 @@ In modern hybrid littoral-maritime defense, sovereign security depends on breaki
 | **`S1_trojan`** | **Trojan Mothership (Hero Scenario)** | Navy Happy Tug AIS ~6 kt vs coastal radar ~120 kt UAS; Air/Army EW LOB triangulation | Guardrail CNI VETO → `OFFSHORE_INTERCEPT_RF_SOFTKILL` (Option B) |
 | **`S3_sar_ais`** | **Shipping Lane & Coastal Anomaly** | Space-based SAR anomaly diff (GLINT macro + SIA micro) vs thin AIS; dead-reckoned reachability envelope | `APPROACH_PATROL` (Dynamic Lead-Pursuit) |
 | **`S1_ais_spoof`** | **Sea Approach Incursion** | Stationary AIS transponder vs ~20 kt radar/EO contact (~850 m spatial divergence) | `ISR_IDENTIFY_CONTACT` |
-| **`S2_osint_swarm`** | **Transnational OSINT & Autonomous Shahed Swarm** | Cross-border civilian OSINT (~50 Shahed claimed) vs gap-filler radar (clutter blindspots); RF-silent autonomous GPS navigation | `CUE_AND_IDENTIFY` → `GNSS_DENIAL_AND_GBAD_CUE` |
+| **`S2_osint_swarm`** | **Airborne OSINT & Autonomous Shahed Swarm** | In-flight civilian passenger OSINT (~50 Shahed spotted) vs gap-filler radar (clutter blindspots); RF-silent autonomous GPS navigation | `CUE_AND_IDENTIFY` → `GNSS_DENIAL_AND_GBAD_CUE` |
 
 ### Core Demonstration Highlights
 
@@ -34,9 +34,9 @@ In modern hybrid littoral-maritime defense, sovereign security depends on breaki
   Demonstrates unmasking non-emitting vessels and bridging satellite temporal latency to tactical response.  
   Connects macro space-based SAR scene-difference alerts (GLINT) and micro OBB metrology (SIA) to tactical C2 tasking. Solves 15-minute satellite orbital latency via dynamic **Reachable Ellipse** dead-reckoning and coastal radar handoff → Computes dynamic lead-pursuit **Point of Interception (POI)** collision kinematics rather than dispatching units to stale historical coordinates → Authorizes and dispatches Approach Patrol USV.
 
-* **3. `S2_osint_swarm` (Transnational OSINT & Multi-Stage Swarm Corroboration):**  
+* **3. `S2_osint_swarm` (Airborne Passenger OSINT & Multi-Stage Swarm Corroboration):**  
   Demonstrates how unverified civilian social reports serve as an initial trigger, progressively cross-referenced with military sensors to uncover an intentional saturation attack.  
-  Foreign civilians along the Malacca Strait notice a massive swarm of ~50 unknown delta-wing drones with buzzing moped engine sounds and post bewildered video clips to social media without knowing their destination or hostile intent → NexusGate uses this OSINT chatter as an early-warning cue and initiates phased multi-modal sensor correlation → Ground EW/ESM detects complete RF silence, proving the drones exceed remote-control line-of-sight and navigate autonomously on pre-programmed GPS/INS waypoints (invalidating standard RF C2 jamming) → Coastal 3D gap-filler radar detects only 4 intermittent contacts due to low-altitude sea clutter, but coastal acoustic arrays and EO/IR cameras confirm the low-flying swarm → NexusGate extrapolates the autonomous waypoint trajectory, revealing the true operational picture: a 50-drone saturation ingress targeting Singapore critical infrastructure → Directs local GNSS denial alongside GBAD point-defense cueing.
+  A civilian passenger aboard a commercial flight bound for Japan accidentally spots a massive swarm of ~50 unknown delta-wing drones flying low below the aircraft and posts smartphone video/photos to social media without knowing where they were or where the drones are headed → NexusGate uses this OSINT post as an early-warning cue and initiates phased multi-modal sensor correlation → Ground EW/ESM detects complete RF silence, proving the drones exceed remote-control line-of-sight and navigate autonomously on pre-programmed GPS/INS waypoints (invalidating standard RF C2 jamming) → Coastal 3D gap-filler radar detects only 4 intermittent contacts due to low-altitude sea clutter, but coastal acoustic arrays and EO/IR cameras confirm the low-flying swarm → NexusGate extrapolates the autonomous waypoint trajectory, revealing the true operational picture: a 50-drone saturation ingress targeting Singapore critical infrastructure → Directs local GNSS denial alongside GBAD point-defense cueing.
 
 ---
 
@@ -120,16 +120,19 @@ In modern hybrid littoral-maritime defense, sovereign security depends on breaki
 
 ---
 
-### 4. `S2_osint_swarm` — Transnational OSINT & Autonomous Shahed Swarm Contradiction
+### 4. `S2_osint_swarm` — Airborne Passenger OSINT & Autonomous Shahed Swarm Contradiction
 
 ```
-[Stage 1 (T-00:00): Unknowing Civilian OSINT Trigger]
-  • Malacca Strait Eyewitness Feeds: Foreign coastal civilians along the Malacca Strait notice a massive formation
-    of unknown aerial objects buzzing low overhead and post smartphone videos to TikTok/X:
-    "Insane swarm (>50 delta drones) flying low over the water; sounds like a hundred lawnmowers. What is this?!"
-  • Unaware Civilians: Eyewitnesses are bewildered and have no concept of the drones' destination, payload, or target.
-  • NexusGate Semantic Trigger: Ingests unstructured social chatter, filters noise, and extracts an initial cue:
-    ~50 Shahed-class airframes, bearing ~248° at ~105 kt. Initial status: unverified foreign civilian rumor.
+[Stage 1 (T-00:00): Unknowing Civilian Passenger OSINT Trigger]
+  • Commercial In-Flight Sighting: A civilian passenger departing on a commercial flight bound for Japan glances
+    out the cabin window, spots an eerie formation of ~50 delta-wing drones cruising low below the aircraft,
+    and uploads smartphone video and photos to social media (X/TikTok):
+    "Just saw a massive swarm of tiny delta drones flying low below our flight! What on earth is that?! #ufo #drones"
+  • Zero Geographic / Target Context: The post contains no specific coordinates or country names; the passenger has
+    no knowledge of where the drones originated or where they are headed.
+  • NexusGate Semantic Trigger: Ingests the viral passenger upload via computer vision and semantic parsing,
+    extracting an early cue: ~50 Shahed-class airframes, estimated flight vector ~248° at ~105 kt.
+    Initial status: unverified civilian airborne observation.
        │
        ▼
 [Stage 2 (T+00:03): RF-Silence Gating & Autonomous Flight Profiling]
@@ -151,8 +154,8 @@ In modern hybrid littoral-maritime defense, sovereign security depends on breaki
 [Stage 4 (T+00:07): Kinematic Trajectory Extrapolation — Revealing the Big Picture]
   • Intent & Target Unveiling: NexusGate's kinematic engine projects the autonomous waypoint vector forward.
     The projected flight corridor intersects Jurong Island petrochemical complex and western air defense sectors.
-  • Common Operating Picture (COP): Assembles the full picture from the initial Malacca tweet:
-    "Not a localized anomaly, but a 50-unit autonomous pre-programmed saturation raid inbound for Singapore CNI."
+  • Common Operating Picture (COP): Assembles the full operational picture from the passenger's aerial snapshot:
+    "Not a random anomaly, but a 50-unit autonomous pre-programmed saturation raid inbound for Singapore CNI."
        │
        ▼
 [Stage 5 (T+00:09): Coordinated Swarm Countermeasure Tasking (C2 Resolution)]
@@ -186,7 +189,7 @@ Provenance labels (**Synthetic** / **Real-processed** / **Assumed-mock**): [Data
 |----------|-----------|------------|------------------------|
 | **Space SAR (SIA micro)** | `S3_sar_ais` | Real-processed / Fixture | Dark vessel extraction, OBB metrology, image chip |
 | **Space SAR (GLINT macro)** | `S3_sar_ais`, `S1_trojan` | Assumed-mock / Live API | Corridor-scale backscatter anomaly, aft-deck launch rail |
-| **Social / Recon Text** | `S2_osint_swarm` | **Synthetic** (`osint_text` parser #59) | Crowdsourced foreign eyewitness video/text ingestion (Malacca Strait civilians notice massive unknown swarm without knowing destination); acts as early warning trigger |
+| **Social / Recon Text** | `S2_osint_swarm` | **Synthetic** (`osint_text` parser #59) | Civilian passenger in-flight video/photo ingestion (passenger on a Japan-bound flight spots unknown swarm without knowing location or destination); acts as early warning trigger |
 | **Coastal 3D Radar** | `S1_trojan`, `S3_sar_ais`, `S1_ais_spoof`, `S2_osint_swarm` | **Synthetic** | Kinematic velocity mismatch (120 kt vs 6 kt), bearing lock, low-altitude clutter & intermittent contacts |
 | **Coastal CCTV / EOIR** | `S1_trojan`, `S1_ais_spoof`, `S2_osint_swarm` | **Synthetic** | Optical silhouette verification, delta-wing thermal delta, visual verification pod slaving |
 | **Coastal Acoustic Array** | `S2_osint_swarm` | **Synthetic** | Triangulates low-frequency 2-stroke moped acoustic signature of Shahed-136 engines |
