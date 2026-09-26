@@ -25,7 +25,7 @@ def test_c2_two_screen_handshake(client: TestClient) -> None:
 
     proposed = client.post(
         "/api/gate/proposals",
-        json={"scenario_id": "S2", "unit_id": "CUE-NODE-01"},
+        json={"scenario_id": "S2_osint_swarm", "unit_id": "CUE-NODE-01"},
     )
     assert proposed.status_code == 200
     body = proposed.json()
@@ -36,7 +36,7 @@ def test_c2_two_screen_handshake(client: TestClient) -> None:
     state = client.get("/api/ontology/state")
     assert state.status_code == 200
     st = state.json()
-    assert st["scenario_id"] == "S2"
+    assert st["scenario_id"] == "S2_osint_swarm"
     assert len(st["tracks"]) >= 1
     assert st["amber_alert"]["alert"] == "COUNT_AND_BEARING_MISMATCH"
     assert coa_id in st["pending_proposals"]
@@ -51,7 +51,7 @@ def test_c2_two_screen_handshake(client: TestClient) -> None:
     # Re-propose after deny
     proposed2 = client.post(
         "/api/gate/proposals",
-        json={"scenario_id": "S2", "unit_id": "CUE-NODE-01"},
+        json={"scenario_id": "S2_osint_swarm", "unit_id": "CUE-NODE-01"},
     )
     coa_id2 = proposed2.json()["coa"]["coa_id"]
 
@@ -167,7 +167,7 @@ def test_static_fixture_sentinel_chip(client: TestClient) -> None:
 def test_admin_audit_snapshot_hydrates_chain(client: TestClient) -> None:
     proposed = client.post(
         "/api/gate/proposals",
-        json={"scenario_id": "S2", "unit_id": "CUE-NODE-01"},
+        json={"scenario_id": "S2_osint_swarm", "unit_id": "CUE-NODE-01"},
     )
     assert proposed.status_code == 200
     snapshot = client.get("/api/audit/trail").json()["records"]
@@ -187,7 +187,7 @@ def test_admin_audit_snapshot_hydrates_chain(client: TestClient) -> None:
 def _seal_closed_loop(client: TestClient) -> None:
     proposed = client.post(
         "/api/gate/proposals",
-        json={"scenario_id": "S2", "unit_id": "CUE-NODE-01"},
+        json={"scenario_id": "S2_osint_swarm", "unit_id": "CUE-NODE-01"},
     )
     assert proposed.status_code == 200
     coa_id = proposed.json()["coa"]["coa_id"]

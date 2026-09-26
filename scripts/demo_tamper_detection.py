@@ -42,7 +42,7 @@ def _build_legitimate_chain(path: Path) -> list[dict[str, Any]]:
     logger.append(
         "coa_proposed",
         "Info",
-        {"coa_id": "demo-tamper-coa", "scenario_id": "S2", "unit_id": "CUE-NODE-01"},
+        {"coa_id": "demo-tamper-coa", "scenario_id": "S2_osint_swarm", "unit_id": "CUE-NODE-01"},
     )
     logger.append(
         "gate_decision",

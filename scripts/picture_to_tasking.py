@@ -45,7 +45,7 @@ from app.adapters.raspi_hardware import blink_on_ack_sync
 ROUNDTRIP_TARGET_S = 3.0
 DEFAULT_BASE = "http://127.0.0.1:8080"
 DEFAULT_UNIT = "CUE-NODE-01"
-DEFAULT_SCENARIO = "S2"
+DEFAULT_SCENARIO = "S2_osint_swarm"
 
 
 def _base_url(cli: str | None) -> str:

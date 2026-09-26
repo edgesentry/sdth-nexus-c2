@@ -243,7 +243,7 @@ def test_graph_rejects_far_radar() -> None:
 
 
 def test_s3_radar_is_outside_static_cell_inside_envelope() -> None:
-    scenario = get_scenario("S3")
+    scenario = get_scenario("S3_sar_ais")
     events = scenario.build_events()
     sar_ev = next(e for e in events if e["modality"] == "space_sar")
     radar_ev = next(e for e in events if e["modality"] == "radar")

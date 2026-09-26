@@ -265,7 +265,7 @@ def bench_picture_to_ack() -> MetricResult:
         with TestClient(c2_server.app) as client:
             proposed = client.post(
                 "/api/gate/proposals",
-                json={"scenario_id": "S2", "unit_id": "BENCH-NODE-01"},
+                json={"scenario_id": "S2_osint_swarm", "unit_id": "BENCH-NODE-01"},
             )
             proposed.raise_for_status()
             body = proposed.json()
@@ -366,7 +366,7 @@ def bench_audit_integrity() -> MetricResult:
         with TestClient(c2_server.app) as client:
             prop = client.post(
                 "/api/gate/proposals",
-                json={"scenario_id": "S2", "unit_id": "AUDIT-NODE"},
+                json={"scenario_id": "S2_osint_swarm", "unit_id": "AUDIT-NODE"},
             )
             prop.raise_for_status()
             coa_id = prop.json()["coa"]["coa_id"]

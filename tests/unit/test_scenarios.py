@@ -10,7 +10,7 @@ from core.coa import ActionTier, GateVerdict
 from core.ontology import SpatialEntityGraph
 
 
-@pytest.mark.parametrize("sid", ["S1", "S2", "S3"])
+@pytest.mark.parametrize("sid", ["S1_ais_spoof", "S2_osint_swarm", "S3_sar_ais"])
 def test_scenario_builds_finding_and_tier1_coa(sid: str) -> None:
     scenario = get_scenario(sid)
     graph = SpatialEntityGraph(associate_radius_m=2_000.0)
@@ -28,7 +28,7 @@ def test_scenario_builds_finding_and_tier1_coa(sid: str) -> None:
 
 
 def test_s1_no_shared_entity_id() -> None:
-    scenario = get_scenario("S1")
+    scenario = get_scenario("S1_ais_spoof")
     events = scenario.build_events()
     entity_ids = [e["entity_id"] for e in events]
     assert len(set(entity_ids)) == len(entity_ids)
@@ -42,7 +42,7 @@ def test_s1_no_shared_entity_id() -> None:
 
 
 def test_s2_hero_count_and_bearing_amber() -> None:
-    scenario = get_scenario("S2")
+    scenario = get_scenario("S2_osint_swarm")
     events = scenario.build_events()
     social = [e for e in events if e.get("modality") == "social"]
     assert social
@@ -66,7 +66,7 @@ def test_s2_hero_count_and_bearing_amber() -> None:
 
 
 def test_s3_sar_ais_picture() -> None:
-    scenario = get_scenario("S3")
+    scenario = get_scenario("S3_sar_ais")
     graph = SpatialEntityGraph(associate_radius_m=2_000.0)
     graph.ingest_many([normalize_sensor_event(e) for e in scenario.build_events()])
     finding = scenario.detect(graph)

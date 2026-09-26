@@ -1,6 +1,5 @@
 """Capture screenshots of NexusGate verification harness for documentation."""
 
-import os
 import subprocess
 import threading
 import time
@@ -53,10 +52,10 @@ def main() -> None:
 
     print("Server ready at", base)
 
-    # 1. Propose S3 (maritime hero) via form
+    # 1. Propose S3_sar_ais via form
     res = httpx.post(
         f"{base}/verify/command/propose",
-        data={"scenario_id": "S3", "unit_id": "CUE-NODE-01"},
+        data={"scenario_id": "S3_sar_ais", "unit_id": "CUE-NODE-01"},
         follow_redirects=True,
     )
     print("Propose status:", res.status_code)

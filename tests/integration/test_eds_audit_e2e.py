@@ -42,7 +42,7 @@ def _closed_loop(client: TestClient, *, unit_id: str = "EDS-NODE-01") -> str:
     """Propose S2 → Approve → Ack; return coa_id."""
     proposed = client.post(
         "/api/gate/proposals",
-        json={"scenario_id": "S2", "unit_id": unit_id},
+        json={"scenario_id": "S2_osint_swarm", "unit_id": unit_id},
     )
     assert proposed.status_code == 200, proposed.text
     coa_id = proposed.json()["coa"]["coa_id"]

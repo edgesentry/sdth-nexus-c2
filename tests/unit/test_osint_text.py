@@ -65,7 +65,7 @@ def test_enrich_keeps_explicit_claimed_count() -> None:
 
 
 def test_s2_scenario_uses_parsed_count() -> None:
-    scenario = get_scenario("S2")
+    scenario = get_scenario("S2_osint_swarm")
     events = scenario.build_events()
     social = [e for e in events if e.get("modality") == "social"]
     assert social

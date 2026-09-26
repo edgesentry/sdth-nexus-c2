@@ -27,9 +27,10 @@ from app.scenarios.base import Finding
 SourceKind = Literal["llm", "heuristic"]
 
 _DEFAULT_INTENTS: dict[str, str] = {
-    "S1": "ISR_IDENTIFY_CONTACT",
-    "S2": "CUE_AND_IDENTIFY",
-    "S3": "APPROACH_PATROL",
+    "S1_trojan": "OFFSHORE_INTERCEPT_RF_SOFTKILL",
+    "S3_sar_ais": "APPROACH_PATROL",
+    "S1_ais_spoof": "ISR_IDENTIFY_CONTACT",
+    "S2_osint_swarm": "CUE_AND_IDENTIFY",
 }
 
 

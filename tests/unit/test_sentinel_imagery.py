@@ -131,7 +131,7 @@ def test_ingress_run_cv_push(client: TestClient) -> None:
 
 def test_sentinel_events_drive_s3_amber() -> None:
     """Sentinel dark vessels near fixture coords still contradict thin AIS in S3."""
-    scenario = get_scenario("S3")
+    scenario = get_scenario("S3_sar_ais")
     graph = SpatialEntityGraph(associate_radius_m=2_000.0)
     events = scenario.build_events()
     sentinel_obs = candidate_event_to_observation(

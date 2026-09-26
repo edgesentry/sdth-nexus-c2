@@ -74,13 +74,13 @@ def test_invalid_ais_payload_raises() -> None:
 
 
 def test_synthetic_s1_unchanged_without_open_feed() -> None:
-    scenario = get_scenario("S1")
+    scenario = get_scenario("S1_ais_spoof")
     events = scenario.build_events()
     assert all(e.get("ingress") != "open_feed" for e in events)
 
 
 def test_open_feed_additive_to_scenario_graph() -> None:
-    scenario = get_scenario("S2")
+    scenario = get_scenario("S2_osint_swarm")
     graph = SpatialEntityGraph(associate_radius_m=2_000.0)
     from app.adapters.southbound_sensor import normalize_sensor_event
 

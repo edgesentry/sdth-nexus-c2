@@ -419,3 +419,26 @@ def compute_lead_pursuit_poi(
         own_speed_mps=own_speed_mps,
         range_at_intercept_m=intercept_range,
     )
+
+
+def eta_sec_to_point(
+    lat: float,
+    lon: float,
+    target_lat: float,
+    target_lon: float,
+    speed_mps: float,
+) -> float:
+    """Straight-line ETA seconds from contact to a fixed POI."""
+    speed = max(float(speed_mps), 1e-3)
+    return haversine_m(lat, lon, target_lat, target_lon) / speed
+
+
+def offshore_safe_intercept(
+    poi_lat: float,
+    poi_lon: float,
+    *,
+    standoff_m: float = 1200.0,
+    bearing_from_poi_deg: float = 225.0,
+) -> tuple[float, float]:
+    """Point standoff_m from POI along bearing (default SW / seaward for Jurong)."""
+    return displace_m(poi_lat, poi_lon, bearing_from_poi_deg, standoff_m)

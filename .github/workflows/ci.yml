@@ -161,7 +161,7 @@ jobs:
         run: uv sync --locked --group dev
 
       - name: Run 19-step streamer (fast)
-        run: uv run python scripts/stream_events.py --scenario S2 --fast --no-coa
+        run: uv run python scripts/stream_events.py --scenario S2_osint_swarm --fast --no-coa
 
   container:
     name: C2 container image

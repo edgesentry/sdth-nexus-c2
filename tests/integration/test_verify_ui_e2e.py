@@ -38,7 +38,7 @@ def test_verify_ui_ocsf_health_pill_path_f(c2_client: TestClient) -> None:
 
     proposed = c2_client.post(
         "/verify/command/propose",
-        data={"scenario_id": "S2", "unit_id": "CUE-NODE-01"},
+        data={"scenario_id": "S2_osint_swarm", "unit_id": "CUE-NODE-01"},
     )
     assert proposed.status_code == 200
     assert b"OCSF Hash Chain: broken links" in proposed.content
@@ -51,7 +51,7 @@ def test_verify_ui_ocsf_health_pill_path_f(c2_client: TestClient) -> None:
             "coa_id": coa_id,
             "decision": "y",
             "unit_id": "CUE-NODE-01",
-            "scenario_id": "S2",
+            "scenario_id": "S2_osint_swarm",
         },
     )
     assert approved.status_code == 200
@@ -77,7 +77,7 @@ def test_verify_ui_osint_claim_badges_s2(c2_client: TestClient) -> None:
     c2_client.post("/api/admin/reset")
     proposed = c2_client.post(
         "/verify/command/propose",
-        data={"scenario_id": "S2", "unit_id": "CUE-NODE-01"},
+        data={"scenario_id": "S2_osint_swarm", "unit_id": "CUE-NODE-01"},
     )
     assert proposed.status_code == 200
     assert b"COUNT_AND_BEARING_MISMATCH" in proposed.content
@@ -92,7 +92,7 @@ def test_verify_ui_lead_poi_card_s3(c2_client: TestClient) -> None:
     c2_client.post("/api/admin/reset")
     proposed = c2_client.post(
         "/verify/command/propose",
-        data={"scenario_id": "S3", "unit_id": "USV-02"},
+        data={"scenario_id": "S3_sar_ais", "unit_id": "USV-02"},
     )
     assert proposed.status_code == 200
     assert b"Lead POI" in proposed.content
@@ -114,7 +114,7 @@ def test_verify_ui_lead_poi_card_also_on_s2(c2_client: TestClient) -> None:
     c2_client.post("/api/admin/reset")
     proposed = c2_client.post(
         "/verify/command/propose",
-        data={"scenario_id": "S2", "unit_id": "CUE-NODE-01"},
+        data={"scenario_id": "S2_osint_swarm", "unit_id": "CUE-NODE-01"},
     )
     assert proposed.status_code == 200
     assert b"Lead POI" in proposed.content
@@ -132,7 +132,7 @@ def test_verify_ui_tamper_detection_rehearsal(
 
     proposed = c2_client.post(
         "/verify/command/propose",
-        data={"scenario_id": "S2", "unit_id": "CUE-NODE-01"},
+        data={"scenario_id": "S2_osint_swarm", "unit_id": "CUE-NODE-01"},
     )
     assert proposed.status_code == 200
     coa_id = _coa_id_from_html(proposed.text)
@@ -144,7 +144,7 @@ def test_verify_ui_tamper_detection_rehearsal(
             "coa_id": coa_id,
             "decision": "y",
             "unit_id": "CUE-NODE-01",
-            "scenario_id": "S2",
+            "scenario_id": "S2_osint_swarm",
         },
     )
     assert approved.status_code == 200

@@ -27,7 +27,7 @@ def _load_stream_events() -> ModuleType:
 
 def test_s2_timeline_has_19_steps() -> None:
     t0 = datetime(2026, 9, 17, 12, 0, 0, tzinfo=UTC)
-    steps = build_stream_timeline("S2", t0=t0)
+    steps = build_stream_timeline("S2_osint_swarm", t0=t0)
     assert len(steps) == 19
     assert steps[0].t_minus_s == 60
     assert steps[-1].t_minus_s == 0
@@ -38,8 +38,8 @@ def test_s2_timeline_has_19_steps() -> None:
 
 def test_s2_amber_only_after_band_11() -> None:
     t0 = datetime(2026, 9, 17, 12, 0, 0, tzinfo=UTC)
-    steps = build_stream_timeline("S2", t0=t0)
-    scenario = get_scenario("S2")
+    steps = build_stream_timeline("S2_osint_swarm", t0=t0)
+    scenario = get_scenario("S2_osint_swarm")
     graph = SpatialEntityGraph(associate_radius_m=2_000.0)
 
     first_amber: int | None = None
@@ -59,16 +59,16 @@ def test_s2_amber_only_after_band_11() -> None:
 
 
 def test_s1_timeline_spreads_events() -> None:
-    steps = build_stream_timeline("S1")
+    steps = build_stream_timeline("S1_ais_spoof")
     assert len(steps) == 19
     total_events = sum(len(s.events) for s in steps)
-    assert total_events == len(get_scenario("S1").build_events())
+    assert total_events == len(get_scenario("S1_ais_spoof").build_events())
 
 
 def test_stream_events_script_fast_exits_zero(capsys: pytest.CaptureFixture[str]) -> None:
     """scripts/stream_events.py --fast must stay green (issue #19 proof path)."""
     stream = _load_stream_events()
-    code = stream.main(["--scenario", "S2", "--fast", "--no-coa"])
+    code = stream.main(["--scenario", "S2_osint_swarm", "--fast", "--no-coa"])
     captured = capsys.readouterr()
     assert code == 0
     assert "RESULT: timeline complete" in captured.out

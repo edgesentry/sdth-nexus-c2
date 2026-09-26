@@ -129,7 +129,7 @@ def test_frozen_contract_shapes(client: TestClient) -> None:
 
     queued = client.post(
         "/api/gate/proposals",
-        json={"scenario_id": "S2", "unit_id": "CUE-NODE-01"},
+        json={"scenario_id": "S2_osint_swarm", "unit_id": "CUE-NODE-01"},
     )
     assert queued.status_code == 200
     q = queued.json()
@@ -208,7 +208,7 @@ def test_frozen_contract_shapes(client: TestClient) -> None:
 def test_frozen_contract_rejected_operator_shape(client: TestClient) -> None:
     queued = client.post(
         "/api/gate/proposals",
-        json={"scenario_id": "S2", "unit_id": "CUE-NODE-01"},
+        json={"scenario_id": "S2_osint_swarm", "unit_id": "CUE-NODE-01"},
     )
     assert queued.status_code == 200
     coa_id = queued.json()["coa"]["coa_id"]

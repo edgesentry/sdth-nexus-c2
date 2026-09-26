@@ -101,7 +101,7 @@ def _detect(graph: SpatialEntityGraph) -> Finding | None:
             "to a benign AIS track — do not task on AIS alone."
         )
         return Finding(
-            scenario_id="S1",
+            scenario_id="S1_ais_spoof",
             track_id=track.track_id,
             threat_class="sea_approach_deception",
             warning_minutes_est=warning_min,
@@ -129,7 +129,7 @@ def _build_coa(
 
 
 SPEC = Scenario(
-    id="S1",
+    id="S1_ais_spoof",
     title="Sea Approach — Adversarial AIS Spoof",
     threat_class="sea_approach_deception",
     warning_minutes_est=8.0,

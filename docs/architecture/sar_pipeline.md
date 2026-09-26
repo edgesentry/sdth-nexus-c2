@@ -124,8 +124,8 @@ NexusGate resolves this dilemma not by forcing raw pixels and millions of AIS po
 | Stage | Component | AIS Usage | Time Horizon | Question Answered |
 |---|---|---|---|---|
 | **Macro SAR** | **GLINT** (Team 02) | None required | Wide corridor scene | *"Is there an anomalous statistical cluster in this sector?"* |
-| **Micro SAR × AIS** | **SIA** (In-house) | Matches against pass-time AIS snapshot to isolate unannounced returns | Satellite pass time ($T - \Delta t$) | *"Is this specific radar return a declared vessel or an unannounced dark contact?"* |
-| **Tactical C2 Picture** | **NexusGate** $\leftarrow$ **Indago** | Overlays current background traffic via `app/adapters/open_feed.py` ([#70](https://github.com/edgesentry/sdth-nexus-c2/issues/70)) | Present clock time ($T \approx 0$) | *"How is traffic flowing right now, and what is the dynamic intercept vector?"* |
+| **Micro SAR × AIS** | **SIA** (In-house) | Matches against pass-time AIS snapshot to isolate unannounced returns | Satellite pass time (T - Δt) | *"Is this specific radar return a declared vessel or an unannounced dark contact?"* |
+| **Tactical C2 Picture** | **NexusGate ← Indago** | Overlays current background traffic via `app/adapters/open_feed.py` ([#70](https://github.com/edgesentry/sdth-nexus-c2/issues/70)) | Present clock time (T ≈ 0) | *"How is traffic flowing right now, and what is the dynamic intercept vector?"* |
 
 #### Cognitive Load Compression: Why This Matters for Defense Evaluators
 1. **No Over-Fusion Hallucinations**:
