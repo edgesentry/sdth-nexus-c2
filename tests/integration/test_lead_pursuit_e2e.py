@@ -23,8 +23,8 @@ def c2_client(tmp_path: Path) -> Iterator[TestClient]:
 @pytest.mark.parametrize(
     ("scenario_id", "unit_id", "intent"),
     [
-        ("S2", "CUE-NODE-01", "CUE_AND_IDENTIFY"),
-        ("S3", "USV-02", "APPROACH_PATROL"),
+        ("S2_osint_swarm", "CUE-NODE-01", "CUE_AND_IDENTIFY"),
+        ("S3_sar_ais", "USV-02", "APPROACH_PATROL"),
     ],
 )
 def test_proposal_includes_lead_pursuit_poi(
@@ -76,7 +76,7 @@ def test_s1_proposal_has_no_poi(c2_client: TestClient) -> None:
     c2_client.post("/api/admin/reset")
     propose = c2_client.post(
         "/api/gate/proposals",
-        json={"scenario_id": "S1", "unit_id": "ISR-NODE-01"},
+        json={"scenario_id": "S1_ais_spoof", "unit_id": "ISR-NODE-01"},
     )
     assert propose.status_code == 200
     meta = propose.json()["coa"]["metadata"]
@@ -89,7 +89,7 @@ def test_verify_ui_s3_renders_lead_poi_card(c2_client: TestClient) -> None:
     c2_client.post("/api/admin/reset")
     proposed = c2_client.post(
         "/verify/command/propose",
-        data={"scenario_id": "S3", "unit_id": "USV-02"},
+        data={"scenario_id": "S3_sar_ais", "unit_id": "USV-02"},
     )
     assert proposed.status_code == 200
     assert b"Lead POI" in proposed.content

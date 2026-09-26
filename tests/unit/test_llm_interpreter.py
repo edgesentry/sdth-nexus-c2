@@ -24,7 +24,7 @@ from fastapi.testclient import TestClient
 
 
 def _s2_graph_and_finding() -> tuple[SpatialEntityGraph, Finding]:
-    scenario = get_scenario("S2")
+    scenario = get_scenario("S2_osint_swarm")
     graph = SpatialEntityGraph(associate_radius_m=2_000.0)
     graph.ingest_many([normalize_sensor_event(e) for e in scenario.build_events()])
     finding = scenario.detect(graph)
@@ -187,7 +187,7 @@ def test_api_interpret_heuristic(client: TestClient, monkeypatch: pytest.MonkeyP
     monkeypatch.delenv("LLM_BASE_URL", raising=False)
     resp = client.post(
         "/api/interpret",
-        json={"scenario_id": "S2", "force_heuristic": True},
+        json={"scenario_id": "S2_osint_swarm", "force_heuristic": True},
     )
     assert resp.status_code == 200
     body = resp.json()
@@ -204,7 +204,7 @@ def test_interpreter_coa_still_gate_denied(client: TestClient) -> None:
     """LLM/heuristic propose → gate can still REJECTED_FAST (geofence)."""
     interpreted = client.post(
         "/api/interpret",
-        json={"scenario_id": "S2", "force_heuristic": True},
+        json={"scenario_id": "S2_osint_swarm", "force_heuristic": True},
     )
     assert interpreted.status_code == 200
     coa = interpreted.json()["candidate_coa"]
@@ -229,7 +229,7 @@ def test_proposals_with_interpret_flag(client: TestClient, monkeypatch: pytest.M
     resp = client.post(
         "/api/gate/proposals",
         json={
-            "scenario_id": "S2",
+            "scenario_id": "S2_osint_swarm",
             "unit_id": "CUE-NODE-01",
             "interpret": True,
             "force_heuristic": True,

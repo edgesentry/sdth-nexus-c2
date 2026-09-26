@@ -82,12 +82,9 @@ def get_scenario(scenario_id: str) -> Scenario:
     from app.scenarios.registry import SCENARIOS
 
     raw = scenario_id.strip()
-    key = raw.upper()
-    if key in SCENARIOS:
-        return SCENARIOS[key]
     if raw in SCENARIOS:
         return SCENARIOS[raw]
-    # Case-insensitive match for mixed-case ids like s1_trojan
+    key = raw.upper()
     for sid, scenario in SCENARIOS.items():
         if sid.upper() == key:
             return scenario
@@ -96,7 +93,6 @@ def get_scenario(scenario_id: str) -> Scenario:
 
 
 def list_scenario_ids() -> list[str]:
-    from app.scenarios.registry import PRIMARY_SCENARIOS, SCENARIOS
+    from app.scenarios.registry import SCENARIOS
 
-    source = PRIMARY_SCENARIOS if "PRIMARY_SCENARIOS" in locals() or PRIMARY_SCENARIOS else SCENARIOS
-    return list(source.keys())
+    return list(SCENARIOS.keys())

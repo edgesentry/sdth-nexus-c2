@@ -93,7 +93,7 @@ def test_s2_hero_stub_cycle() -> None:
 
     verdict = asyncio.run(
         run_c2_cycle(
-            scenario_id="S2",
+            scenario_id="S2_osint_swarm",
             auto_decision="y",
             use_stub=True,
             gate_timeout_sec=2.0,
@@ -105,7 +105,7 @@ def test_s2_hero_stub_cycle() -> None:
 def test_s2_two_screen_via_testclient(c2_client: TestClient) -> None:
     proposed = c2_client.post(
         "/api/gate/proposals",
-        json={"scenario_id": "S2", "unit_id": "CUE-NODE-01"},
+        json={"scenario_id": "S2_osint_swarm", "unit_id": "CUE-NODE-01"},
     )
     assert proposed.status_code == 200
     body = proposed.json()
@@ -149,7 +149,7 @@ def test_s2_two_screen_live_http(live_c2: str) -> None:
     with httpx.Client(base_url=live_c2, timeout=5.0) as client:
         proposed = client.post(
             "/api/gate/proposals",
-            json={"scenario_id": "S2", "unit_id": "CUE-NODE-01"},
+            json={"scenario_id": "S2_osint_swarm", "unit_id": "CUE-NODE-01"},
         )
         assert proposed.status_code == 200
         body = proposed.json()
@@ -178,7 +178,7 @@ def test_s2_two_screen_live_http(live_c2: str) -> None:
 @pytest.mark.asyncio
 async def test_s2_with_live_clearbot_mock(live_mock: str, tmp_path: Path) -> None:
     verdict = await run_c2_cycle(
-        scenario_id="S2",
+        scenario_id="S2_osint_swarm",
         auto_decision="y",
         use_stub=False,
         clearbot_base_url=live_mock,

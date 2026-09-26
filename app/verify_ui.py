@@ -26,7 +26,7 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 router = APIRouter(tags=["verify-ui"])
 
 DEFAULT_UNIT = "CUE-NODE-01"
-DEFAULT_SCENARIO = "S3"
+DEFAULT_SCENARIO = "S1_trojan"
 DEFAULT_TIMEOUT = 30.0
 DEFAULT_SERVICE_VIEW = "nexus"
 DEFAULT_NAVY_UNIT = "PCG-PT-44"
@@ -424,7 +424,7 @@ async def verify_approve(
 @router.post("/verify/command/guardrail", response_class=HTMLResponse)
 async def verify_guardrail(
     request: Request,
-    scenario_id: str = Form("s1_trojan"),
+    scenario_id: str = Form("S1_trojan"),
     unit_id: str = Form(DEFAULT_UNIT),
     navy_unit_id: str = Form(DEFAULT_NAVY_UNIT),
     service_view: str = Form(DEFAULT_SERVICE_VIEW),

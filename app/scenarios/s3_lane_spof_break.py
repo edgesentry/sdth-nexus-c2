@@ -201,7 +201,7 @@ def _detect(graph: SpatialEntityGraph) -> Finding | None:
             },
         }
         return Finding(
-            scenario_id="S3",
+            scenario_id="S3_sar_ais",
             track_id=track.track_id,
             threat_class="lane_sar_ais_dark_cluster",
             warning_minutes_est=warning_min,
@@ -231,7 +231,7 @@ def _build_coa(
 
 
 SPEC = Scenario(
-    id="S3",
+    id="S3_sar_ais",
     title="Shipping Lane & Coastal Anomaly — SAR Difference vs AIS",
     threat_class="lane_sar_ais_dark_cluster",
     warning_minutes_est=12.0,

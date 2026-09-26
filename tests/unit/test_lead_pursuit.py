@@ -88,7 +88,7 @@ def test_lead_along_track_when_own_too_slow() -> None:
 
 
 def test_s3_coa_replaces_coords_with_poi() -> None:
-    scenario = get_scenario("S3")
+    scenario = get_scenario("S3_sar_ais")
     graph = SpatialEntityGraph(associate_radius_m=2_000.0)
     graph.ingest_many([normalize_sensor_event(e) for e in scenario.build_events()])
     finding = scenario.detect(graph)
@@ -117,7 +117,7 @@ def test_s3_coa_replaces_coords_with_poi() -> None:
 
 
 def test_s2_coa_exposes_poi_metadata() -> None:
-    scenario = get_scenario("S2")
+    scenario = get_scenario("S2_osint_swarm")
     graph = SpatialEntityGraph(associate_radius_m=2_000.0)
     graph.ingest_many([normalize_sensor_event(e) for e in scenario.build_events()])
     finding = scenario.detect(graph)
@@ -129,7 +129,7 @@ def test_s2_coa_exposes_poi_metadata() -> None:
 
 
 def test_s1_does_not_apply_lead_pursuit() -> None:
-    scenario = get_scenario("S1")
+    scenario = get_scenario("S1_ais_spoof")
     graph = SpatialEntityGraph(associate_radius_m=2_000.0)
     graph.ingest_many([normalize_sensor_event(e) for e in scenario.build_events()])
     finding = scenario.detect(graph)

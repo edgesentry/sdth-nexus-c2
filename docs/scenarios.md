@@ -19,14 +19,12 @@ In modern littoral-maritime defense, sovereign security relies on unifying siloe
 
 To demonstrate and rigorously verify this multi-domain integration, NexusGate implements distinct app-layer scenarios under `app/scenarios/`. Each scenario builds synthetic multi-vendor observations **without shared track IDs**, detects a Finding, surfaces contradiction badges, and proposes a Tier-1 COA:
 
-| Standard ID | Alias | Title | Contradiction / Conflict | Tasking / Resolution |
-|-------------|-------|-------|--------------------------|----------------------|
-| **`S1_trojan`** | `s1_trojan` | **Trojan Mothership (Hero Scenario)** | Navy Happy Tug AIS ~6 kt vs coastal radar ~120 kt UAS; Air/Army EW LOB triangulation; terminal SAM over Jurong CNI is hard-VETO'd | Guardrail → `OFFSHORE_INTERCEPT_RF_SOFTKILL` (Option B) |
-| **`S3_sar_ais`** | `S3` | **Shipping Lane & Coastal Anomaly** | Space-based SAR anomaly diff (GLINT macro + SIA micro) vs thin AIS; coastal radar joined via dead-reckoned reachability envelope (#57) | `APPROACH_PATROL` (Dynamic Lead-Pursuit) |
-| **`S1_ais_spoof`** | `S1` | **Sea Approach** | Stationary AIS transponder vs ~20 kt radar/EO contact (~850 m mismatch) | `ISR_IDENTIFY_CONTACT` |
-| **`S2_osint_swarm`** | `S2` | **Air Corridor** | OSINT social claims (3 drones) vs radar (1 contact); EO blur; RF silence | `CUE_AND_IDENTIFY` |
-
-> *Note:* All CLI tools, REST APIs, and Verify UI endpoints accept both the standardized `S{N}_{subcategory}` identifiers and legacy aliases (`S1`, `S2`, `S3`, `s1_trojan`) interchangeably.
+| Scenario ID | Title | Contradiction / Conflict | Tasking / Resolution |
+|-------------|-------|--------------------------|----------------------|
+| **`S1_trojan`** | **Trojan Mothership (Hero Scenario)** | Navy Happy Tug AIS ~6 kt vs coastal radar ~120 kt UAS; Air/Army EW LOB triangulation; terminal SAM over Jurong CNI is hard-VETO'd | Guardrail → `OFFSHORE_INTERCEPT_RF_SOFTKILL` (Option B) |
+| **`S3_sar_ais`** | **Shipping Lane & Coastal Anomaly** | Space-based SAR anomaly diff (GLINT macro + SIA micro) vs thin AIS; coastal radar joined via dead-reckoned reachability envelope (#57) | `APPROACH_PATROL` (Dynamic Lead-Pursuit) |
+| **`S1_ais_spoof`** | **Sea Approach** | Stationary AIS transponder vs ~20 kt radar/EO contact (~850 m mismatch) | `ISR_IDENTIFY_CONTACT` |
+| **`S2_osint_swarm`** | **Air Corridor** | OSINT social claims (3 drones) vs radar (1 contact); EO blur; RF silence | `CUE_AND_IDENTIFY` |
 
 ### Core Demonstration Highlights
 

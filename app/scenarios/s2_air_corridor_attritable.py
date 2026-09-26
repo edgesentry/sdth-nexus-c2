@@ -200,7 +200,7 @@ def _detect(graph: SpatialEntityGraph) -> Finding | None:
     }
 
     return Finding(
-        scenario_id="S2",
+        scenario_id="S2_osint_swarm",
         track_id=track.track_id,
         threat_class="attritable_air_incursion",
         warning_minutes_est=warning_min,
@@ -231,7 +231,7 @@ def _build_coa(
 
 
 SPEC = Scenario(
-    id="S2",
+    id="S2_osint_swarm",
     title="Air Corridor — Shahed Swarm Contradiction",
     threat_class="attritable_air_incursion",
     warning_minutes_est=4.0,

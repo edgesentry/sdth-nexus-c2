@@ -55,7 +55,7 @@ def test_invalid_candidate_event_raises() -> None:
 
 
 def test_s3_sar_vs_ais_amber() -> None:
-    scenario = get_scenario("S3")
+    scenario = get_scenario("S3_sar_ais")
     assert "SAR" in scenario.title or "sar" in scenario.title.lower()
     graph = SpatialEntityGraph(associate_radius_m=2_000.0)
     events = scenario.build_events()
@@ -101,7 +101,7 @@ def test_ingress_candidate_event_payload(client: TestClient) -> None:
 def test_s3_gate_proposals_queued(client: TestClient) -> None:
     resp = client.post(
         "/api/gate/proposals",
-        json={"scenario_id": "S3", "unit_id": "USV-02"},
+        json={"scenario_id": "S3_sar_ais", "unit_id": "USV-02"},
     )
     assert resp.status_code == 200
     body = resp.json()

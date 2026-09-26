@@ -125,7 +125,7 @@ class InterpretRequest(BaseModel):
 class GuardrailDemoRequest(BaseModel):
     """Evaluate dangerous Option A then queue enforced Option B (issue #116)."""
 
-    scenario_id: str = "s1_trojan"
+    scenario_id: str = "S1_trojan"
     unit_id: str = "GBAD-RSAF-01"
     navy_unit_id: str = "PCG-PT-44"
     timeout_seconds: float | None = None

@@ -36,7 +36,7 @@ DEFAULT_POLICY = APP_DIR / "config" / "maritime_defense_policy.yaml"
 
 async def run_c2_cycle(
     *,
-    scenario_id: str = "S3",
+    scenario_id: str = "S1_trojan",
     policy_path: Path = DEFAULT_POLICY,
     effector_base_url: str | None = None,
     clearbot_base_url: str | None = None,
@@ -160,9 +160,9 @@ def cli_main() -> None:
     parser = argparse.ArgumentParser(description="SDTH Nexus C2 — defense scenarios")
     parser.add_argument(
         "--scenario",
-        default=os.environ.get("SCENARIO", "S3"),
+        default=os.environ.get("SCENARIO", "S1_trojan"),
         choices=list_scenario_ids(),
-        help="Defense scenario id (default S3 maritime hero)",
+        help="Defense scenario id (default S1_trojan hero)",
     )
     parser.add_argument("--policy", type=Path, default=DEFAULT_POLICY)
     parser.add_argument(

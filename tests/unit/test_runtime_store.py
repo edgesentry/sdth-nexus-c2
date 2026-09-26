@@ -23,7 +23,7 @@ def test_runtime_picture_survives_restart(tmp_path: Path) -> None:
     with TestClient(app) as client:
         proposed = client.post(
             "/api/gate/proposals",
-            json={"scenario_id": "S3", "unit_id": "CUE-NODE-01"},
+            json={"scenario_id": "S3_sar_ais", "unit_id": "CUE-NODE-01"},
         )
         assert proposed.status_code == 200
         body = proposed.json()
@@ -65,7 +65,7 @@ def test_admin_reset_clears_sqlite_picture(tmp_path: Path) -> None:
     with TestClient(app) as client:
         proposed = client.post(
             "/api/gate/proposals",
-            json={"scenario_id": "S2", "unit_id": "CUE-NODE-01"},
+            json={"scenario_id": "S2_osint_swarm", "unit_id": "CUE-NODE-01"},
         )
         assert proposed.status_code == 200
         assert client.post("/api/admin/reset").status_code == 200

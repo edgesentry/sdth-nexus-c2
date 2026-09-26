@@ -463,14 +463,14 @@ def _spread_scenario_events(scenario_id: str, t0: datetime) -> list[StreamStep]:
 
 
 def build_stream_timeline(
-    scenario_id: str = "S2",
+    scenario_id: str = "S2_osint_swarm",
     *,
     t0: datetime | None = None,
 ) -> list[StreamStep]:
     """Return 19 StreamSteps from T-60s -> T-00s for incremental ontology ingest."""
     anchor = t0 or datetime.now(UTC)
     key = scenario_id.strip().upper()
-    if key == "S2":
+    if key in {"S2", "S2_OSINT_SWARM"}:
         return _build_s2_timeline(anchor)
     # Validate scenario exists
     get_scenario(key)

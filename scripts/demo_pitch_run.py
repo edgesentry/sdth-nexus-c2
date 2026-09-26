@@ -245,7 +245,7 @@ class PitchRunner:
                 self._fail(f"count claim social={social} radar={radar}")
 
         self._closed_loop(
-            scenario_id="S2",
+            scenario_id="S2_osint_swarm",
             unit_id="CUE-NODE-01",
             expect_intent="CUE_AND_IDENTIFY",
             assert_finding=_assert_s2,
@@ -320,7 +320,7 @@ class PitchRunner:
                 self._fail("missing kinematics breakdown")
 
         self._closed_loop(
-            scenario_id="S3",
+            scenario_id="S3_sar_ais",
             unit_id="USV-02",
             expect_intent="APPROACH_PATROL",
             assert_finding=_assert_s3,

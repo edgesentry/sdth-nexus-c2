@@ -79,7 +79,7 @@ def test_smoke_fails_when_core_down(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("C2_BASE_URL", "http://127.0.0.1:1")
     code = smoke.run_smoke(
         base_url="http://127.0.0.1:1",
-        scenario_id="S2",
+        scenario_id="S2_osint_swarm",
         timeout_s=0.05,
     )
     assert code == 2

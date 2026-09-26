@@ -94,7 +94,7 @@ async def test_c2_cycle_stub_approve() -> None:
     from app.main import run_c2_cycle
 
     verdict = await run_c2_cycle(
-        scenario_id="S1",
+        scenario_id="S1_ais_spoof",
         auto_decision="y",
         use_stub=True,
         gate_timeout_sec=2.0,
@@ -114,7 +114,7 @@ async def test_c2_cycle_stub_timeout() -> None:
     main_mod.prompt_operator_decision = silent_prompt  # type: ignore[assignment]
     try:
         verdict = await run_c2_cycle(
-            scenario_id="S1",
+            scenario_id="S1_ais_spoof",
             auto_decision=None,
             use_stub=True,
             gate_timeout_sec=0.3,

@@ -107,7 +107,7 @@ def _write_mini_indago_db(path: Path) -> None:
 
 
 def test_s1_s2_s3_stub_cycles_offline() -> None:
-    for scenario_id in ("S1", "S2", "S3"):
+    for scenario_id in ("S1_ais_spoof", "S2_osint_swarm", "S3_sar_ais"):
         verdict = asyncio.run(
             run_c2_cycle(
                 scenario_id=scenario_id,
@@ -126,7 +126,7 @@ def test_verify_ui_hub_and_propose_offline(c2_client: TestClient) -> None:
 
     proposed = c2_client.post(
         "/verify/command/propose",
-        data={"scenario_id": "S2", "unit_id": "CUE-NODE-01"},
+        data={"scenario_id": "S2_osint_swarm", "unit_id": "CUE-NODE-01"},
     )
     assert proposed.status_code == 200
     assert b"COUNT_AND_BEARING_MISMATCH" in proposed.content or b"coa" in proposed.content.lower()

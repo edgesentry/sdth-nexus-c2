@@ -33,7 +33,7 @@ def test_osint_parser_feeds_s2_gate_proposal(c2_client: TestClient) -> None:
 
     proposed = c2_client.post(
         "/api/gate/proposals",
-        json={"scenario_id": "S2", "unit_id": "CUE-NODE-01"},
+        json={"scenario_id": "S2_osint_swarm", "unit_id": "CUE-NODE-01"},
     )
     assert proposed.status_code == 200
     body = proposed.json()
@@ -65,7 +65,7 @@ def test_osint_parser_feeds_s2_gate_proposal(c2_client: TestClient) -> None:
 
 def test_osint_fallback_when_intel_unparseable() -> None:
     """Detector still gets claimed_count via fallback when text has no number."""
-    scenario = get_scenario("S2")
+    scenario = get_scenario("S2_osint_swarm")
     events = scenario.build_events()
     social = next(e for e in events if e.get("modality") == "social")
     # Strip structured count; leave unparseable rumor text.
@@ -87,7 +87,7 @@ def test_osint_s2_verify_ui_propose_approve_ack(c2_client: TestClient) -> None:
     """Screen 1/2 harness: Propose S2 → Approve → Ack with OSINT-backed amber (#59/#77)."""
     proposed = c2_client.post(
         "/verify/command/propose",
-        data={"scenario_id": "S2", "unit_id": "CUE-NODE-01"},
+        data={"scenario_id": "S2_osint_swarm", "unit_id": "CUE-NODE-01"},
     )
     assert proposed.status_code == 200
     assert b"COUNT_AND_BEARING_MISMATCH" in proposed.content
@@ -107,7 +107,7 @@ def test_osint_s2_verify_ui_propose_approve_ack(c2_client: TestClient) -> None:
             "coa_id": coa_id,
             "decision": "y",
             "unit_id": "CUE-NODE-01",
-            "scenario_id": "S2",
+            "scenario_id": "S2_osint_swarm",
         },
     )
     assert approved.status_code == 200

@@ -142,7 +142,7 @@ def _detect(graph: SpatialEntityGraph) -> Finding | None:
             eta_by_poi[str(poi["poi_id"])] = round(d / speed, 1)
 
     return Finding(
-        scenario_id="s1_trojan",
+        scenario_id="S1_trojan",
         track_id=track_id,
         threat_class="trojan_mothership_uas",
         warning_minutes_est=round(warning_min, 2),
@@ -222,7 +222,7 @@ def _build_coa(
 
 
 SPEC = Scenario(
-    id="s1_trojan",
+    id="S1_trojan",
     title="Trojan Mothership — Happy Tug 8 + UAS velocity mismatch",
     threat_class="trojan_mothership_uas",
     warning_minutes_est=3.0,

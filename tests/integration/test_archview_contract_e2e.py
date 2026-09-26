@@ -67,7 +67,7 @@ def live_c2(tmp_path: Path) -> Iterator[str]:
 def _handshake(client: TestClient | httpx.Client) -> str:
     proposed = client.post(
         "/api/gate/proposals",
-        json={"scenario_id": "S2", "unit_id": "CUE-NODE-01"},
+        json={"scenario_id": "S2_osint_swarm", "unit_id": "CUE-NODE-01"},
     )
     assert proposed.status_code == 200
     coa_id = proposed.json()["coa"]["coa_id"]

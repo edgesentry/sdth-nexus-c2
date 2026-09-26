@@ -23,7 +23,7 @@ def client(tmp_path: Path) -> TestClient:
 def test_trojan_propose_shows_amber_and_claim_tags(client: TestClient) -> None:
     resp = client.post(
         "/verify/command/propose",
-        data={"scenario_id": "s1_trojan", "unit_id": "GBAD-RSAF-01", "service_view": "nexus"},
+        data={"scenario_id": "S1_trojan", "unit_id": "GBAD-RSAF-01", "service_view": "nexus"},
     )
     assert resp.status_code == 200
     body = resp.text
@@ -37,13 +37,13 @@ def test_trojan_propose_shows_amber_and_claim_tags(client: TestClient) -> None:
 def test_navy_silo_shows_happy_tug_ais(client: TestClient) -> None:
     proposed = client.post(
         "/verify/command/propose",
-        data={"scenario_id": "s1_trojan", "unit_id": "GBAD-RSAF-01", "service_view": "navy"},
+        data={"scenario_id": "S1_trojan", "unit_id": "GBAD-RSAF-01", "service_view": "navy"},
     )
     assert proposed.status_code == 200
     # After propose, ontology is populated; request navy silo view
     navy = client.get(
         "/verify/command",
-        params={"scenario_id": "s1_trojan", "unit_id": "GBAD-RSAF-01", "service_view": "navy"},
+        params={"scenario_id": "S1_trojan", "unit_id": "GBAD-RSAF-01", "service_view": "navy"},
     )
     assert navy.status_code == 200
     text = navy.text
@@ -55,7 +55,7 @@ def test_guardrail_panel_veto_and_option_b(client: TestClient) -> None:
     resp = client.post(
         "/verify/command/guardrail",
         data={
-            "scenario_id": "s1_trojan",
+            "scenario_id": "S1_trojan",
             "unit_id": "GBAD-RSAF-01",
             "navy_unit_id": "PCG-PT-44",
             "service_view": "nexus",
@@ -68,10 +68,10 @@ def test_guardrail_panel_veto_and_option_b(client: TestClient) -> None:
     assert "AUTHORIZE Option B" in text
 
 
-def test_scenario_select_includes_s1_trojan(client: TestClient) -> None:
-    cmd = client.get("/verify/command", params={"scenario_id": "s1_trojan"})
+def test_scenario_select_includes_S1_trojan(client: TestClient) -> None:
+    cmd = client.get("/verify/command", params={"scenario_id": "S1_trojan"})
     assert cmd.status_code == 200
-    assert b"s1_trojan" in cmd.content
+    assert b"S1_trojan" in cmd.content
     assert b"Service silo" in cmd.content or b"service_view" in cmd.content
 
 
@@ -81,7 +81,7 @@ def test_arun_reload_ingress(client: TestClient) -> None:
         data={
             "mode": "arun_reload",
             "unit_id": "GBAD-RSAF-01",
-            "scenario_id": "s1_trojan",
+            "scenario_id": "S1_trojan",
             "service_view": "navy",
         },
     )

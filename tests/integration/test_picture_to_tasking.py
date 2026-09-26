@@ -67,7 +67,7 @@ def test_picture_to_tasking_demo_script(live_c2: str) -> None:
     demo = _load_demo()
     code = demo.run_demo(
         base_url=live_c2,
-        scenario_id="S2",
+        scenario_id="S2_osint_swarm",
         unit_id="CUE-NODE-01",
         operator_id="ci",
         timeout_s=5.0,
@@ -81,7 +81,7 @@ def test_picture_to_tasking_interpret_heuristic(live_c2: str) -> None:
     demo = _load_demo()
     code = demo.run_demo(
         base_url=live_c2,
-        scenario_id="S2",
+        scenario_id="S2_osint_swarm",
         unit_id="CUE-NODE-01",
         operator_id="ci",
         timeout_s=5.0,

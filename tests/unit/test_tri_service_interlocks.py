@@ -44,7 +44,7 @@ def test_cni_debris_vetoes_terminal_over_jurong(runtime: C2Runtime) -> None:
 def test_offshore_option_b_clears_cni_gate(runtime: C2Runtime) -> None:
     pois = load_pois()
     runtime.policy.interlock.set_cni_pois(pois)
-    dangerous = _load_scenario(runtime, "s1_trojan", 5.0)
+    dangerous = _load_scenario(runtime, "S1_trojan", 5.0)
     fallback = _build_option_b_fallback(dangerous, runtime.finding)
     ok, reason = LatencyBoundedGate(
         interlock=runtime.policy.interlock
@@ -82,7 +82,7 @@ def test_military_poi_does_not_hard_veto_alone() -> None:
 
 
 def test_poi_eta_flags_cover_civilian_and_military(runtime: C2Runtime) -> None:
-    _load_scenario(runtime, "s1_trojan", 5.0)
+    _load_scenario(runtime, "S1_trojan", 5.0)
     assert runtime.finding is not None
     eta = runtime.finding.source_breakdown.get("poi_eta_sec") or {}
     assert "POI-01" in eta
@@ -101,7 +101,7 @@ def test_demo_evaluate_with_guardrail_api(tmp_path: Path) -> None:
         resp = client.post(
             "/api/gate/demo-evaluate-with-guardrail",
             json={
-                "scenario_id": "s1_trojan",
+                "scenario_id": "S1_trojan",
                 "unit_id": "GBAD-RSAF-01",
                 "navy_unit_id": "PCG-PT-44",
             },

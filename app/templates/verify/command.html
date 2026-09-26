@@ -131,7 +131,7 @@
   <section class="panel {% if guardrail %}amber{% endif %}">
     <h2>Guardrail · CNI interlock</h2>
     <form method="post" action="/verify/command/guardrail" class="controls">
-      <input type="hidden" name="scenario_id" value="s1_trojan" />
+      <input type="hidden" name="scenario_id" value="S1_trojan" />
       <input type="hidden" name="unit_id" value="{{ unit_id }}" />
       <input type="hidden" name="navy_unit_id" value="{{ navy_unit_id }}" />
       <input type="hidden" name="service_view" value="{{ service_view }}" />
@@ -157,7 +157,7 @@
       </div>
       {% endif %}
     {% else %}
-      <p class="dim">Run guardrail after s1_trojan propose — terminal SAM over Jurong is hard-vetoed; Option B (offshore + soft-kill) queues for dual-unit AUTHORIZE.</p>
+      <p class="dim">Run guardrail after S1_trojan propose — terminal SAM over Jurong is hard-vetoed; Option B (offshore + soft-kill) queues for dual-unit AUTHORIZE.</p>
     {% endif %}
   </section>
 
@@ -237,7 +237,7 @@
           </span>
         </li>
       {% else %}
-        <li class="dim">No observations for this silo — Propose s1_trojan, Ingress Arun reload, or switch silo to Nexus</li>
+        <li class="dim">No observations for this silo — Propose S1_trojan, Ingress Arun reload, or switch silo to Nexus</li>
       {% endfor %}
     </ul>
   </section>

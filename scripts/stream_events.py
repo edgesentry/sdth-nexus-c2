@@ -96,7 +96,7 @@ def _play_local(
     else:
         print("  Amber: not raised (unexpected for S2 full timeline)")
         return 1
-    if scenario_id.upper() == "S2" and amber_step is not None and amber_step < 11:
+    if scenario_id.upper() in {"S2", "S2_OSINT_SWARM"} and amber_step is not None and amber_step < 11:
         print("  FAIL: Amber fired before band 11-15")
         return 1
     print("  RESULT: timeline complete")
@@ -132,8 +132,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--scenario",
-        default="S2",
-        help="Scenario id (default S2 hero timeline; S1/S3 spread build_events)",
+        default="S2_osint_swarm",
+        help="Scenario id (default S2_osint_swarm hero timeline; S1_ais_spoof/S3_sar_ais spread build_events)",
     )
     parser.add_argument(
         "--mode",

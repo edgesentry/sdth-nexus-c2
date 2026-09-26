@@ -27,7 +27,7 @@ def test_verify_hub_and_screens(client: TestClient) -> None:
     cmd = client.get("/verify/command")
     assert cmd.status_code == 200
     assert b"Screen 1" in cmd.content
-    assert b"S3 (maritime hero)" in cmd.content
+    assert b"S3_sar_ais" in cmd.content
 
     recv = client.get("/verify/recipient")
     assert recv.status_code == 200
@@ -37,7 +37,7 @@ def test_verify_hub_and_screens(client: TestClient) -> None:
 def test_verify_path_f_handshake(client: TestClient) -> None:
     proposed = client.post(
         "/verify/command/propose",
-        data={"scenario_id": "S2", "unit_id": "CUE-NODE-01"},
+        data={"scenario_id": "S2_osint_swarm", "unit_id": "CUE-NODE-01"},
     )
     assert proposed.status_code == 200
     assert b"COUNT_AND_BEARING_MISMATCH" in proposed.content
@@ -56,7 +56,7 @@ def test_verify_path_f_handshake(client: TestClient) -> None:
             "coa_id": coa_id,
             "decision": "y",
             "unit_id": "CUE-NODE-01",
-            "scenario_id": "S2",
+            "scenario_id": "S2_osint_swarm",
         },
     )
     assert approved.status_code == 200
@@ -77,7 +77,7 @@ def test_verify_path_f_handshake(client: TestClient) -> None:
 def test_verify_dual_sar_ingress(client: TestClient) -> None:
     resp = client.post(
         "/verify/command/ingress",
-        data={"mode": "dual_sar", "unit_id": "CUE-NODE-01", "scenario_id": "S3"},
+        data={"mode": "dual_sar", "unit_id": "CUE-NODE-01", "scenario_id": "S3_sar_ais"},
     )
     assert resp.status_code == 200
     assert b"Ingested" in resp.content or b"ingested" in resp.content
@@ -93,16 +93,16 @@ def test_verify_glint_and_sia_ingress_modes(client: TestClient) -> None:
 
     sia = client.post(
         "/verify/command/ingress",
-        data={"mode": "sentinel", "unit_id": "CUE-NODE-01", "scenario_id": "S3"},
+        data={"mode": "sentinel", "unit_id": "CUE-NODE-01", "scenario_id": "S3_sar_ais"},
     )
     assert sia.status_code == 200
     assert b"SIA only" in sia.content
     assert b"SENTINEL_IMAGERY_ANALYSIS" in sia.content
 
-    client.post("/verify/command/reset", data={"unit_id": "CUE-NODE-01", "scenario_id": "S3"})
+    client.post("/verify/command/reset", data={"unit_id": "CUE-NODE-01", "scenario_id": "S3_sar_ais"})
     glint = client.post(
         "/verify/command/ingress",
-        data={"mode": "glint", "unit_id": "CUE-NODE-01", "scenario_id": "S3"},
+        data={"mode": "glint", "unit_id": "CUE-NODE-01", "scenario_id": "S3_sar_ais"},
     )
     assert glint.status_code == 200
     assert b"GLINT only" in glint.content
@@ -123,7 +123,7 @@ def test_verify_indago_ais_ingress(client: TestClient, monkeypatch: pytest.Monke
 
     resp = client.post(
         "/verify/command/ingress",
-        data={"mode": "indago", "unit_id": "CUE-NODE-01", "scenario_id": "S3"},
+        data={"mode": "indago", "unit_id": "CUE-NODE-01", "scenario_id": "S3_sar_ais"},
     )
     assert resp.status_code == 200
     assert b"Indago AIS" in resp.content
@@ -142,7 +142,7 @@ def test_verify_ocsf_health_pill(client: TestClient) -> None:
     """OCSF hash-chain pill appears after audit append (issue #77)."""
     proposed = client.post(
         "/verify/command/propose",
-        data={"scenario_id": "S2", "unit_id": "CUE-NODE-01"},
+        data={"scenario_id": "S2_osint_swarm", "unit_id": "CUE-NODE-01"},
     )
     assert proposed.status_code == 200
     assert b"OCSF Hash Chain" in proposed.content
@@ -154,7 +154,7 @@ def test_verify_osint_claim_badges(client: TestClient) -> None:
     """S2 Warning Picture shows OSINT vs Radar comparison tags (issue #77)."""
     proposed = client.post(
         "/verify/command/propose",
-        data={"scenario_id": "S2", "unit_id": "CUE-NODE-01"},
+        data={"scenario_id": "S2_osint_swarm", "unit_id": "CUE-NODE-01"},
     )
     assert proposed.status_code == 200
     assert b"COUNT_AND_BEARING_MISMATCH" in proposed.content
@@ -167,7 +167,7 @@ def test_verify_lead_poi_card_s3(client: TestClient) -> None:
     """S3 propose elevates Lead POI card with lat/lon/bearing/speed/ETA (issue #77)."""
     proposed = client.post(
         "/verify/command/propose",
-        data={"scenario_id": "S3", "unit_id": "CUE-NODE-01"},
+        data={"scenario_id": "S3_sar_ais", "unit_id": "CUE-NODE-01"},
     )
     assert proposed.status_code == 200
     assert b"Lead POI" in proposed.content
@@ -186,7 +186,7 @@ def test_verify_lead_poi_card_s3(client: TestClient) -> None:
 def _closed_loop_verify(client: TestClient) -> None:
     proposed = client.post(
         "/verify/command/propose",
-        data={"scenario_id": "S2", "unit_id": "CUE-NODE-01"},
+        data={"scenario_id": "S2_osint_swarm", "unit_id": "CUE-NODE-01"},
     )
     assert proposed.status_code == 200
     marker = 'name="coa_id" value="'
@@ -197,7 +197,7 @@ def _closed_loop_verify(client: TestClient) -> None:
             "coa_id": coa_id,
             "decision": "y",
             "unit_id": "CUE-NODE-01",
-            "scenario_id": "S2",
+            "scenario_id": "S2_osint_swarm",
         },
     )
     assert approved.status_code == 200
