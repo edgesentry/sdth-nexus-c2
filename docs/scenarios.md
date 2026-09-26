@@ -51,7 +51,7 @@ Pitch / E2E Sequence
 
 | Data Feed | Storage Location | Role & Provenance |
 |-----------|------------------|-------------------|
-| **S2 Synthetic** (OSINT / radar 4 / acoustic / RF silent) | marun **new** `exports/s2_osint_swarm_*.jsonl` | Canonical export (*`scenario_02_conflicting` is a legacy fusion bench, not Nexus S2*) |
+| **S2 Synthetic** (OSINT / radar 4 / acoustic / RF silent) | marun `exports/s2_osint_swarm_scenario.jsonl` | Canonical export (*`scenario_02_conflicting` is a legacy fusion bench, not Nexus S2*) |
 | **Trojan Maritime + Land/Air + GLINT row** | Existing `synthetic_maritime_data/` → `exports/s1_trojan_*` | Canonical multi-service export |
 | **S3 Coastal AIS / Radar** | marun optional; **GLINT macro / SIA chip owned by Nexus / Team 02 / SIA** | Ingress feeds + live/fixture endpoints |
 

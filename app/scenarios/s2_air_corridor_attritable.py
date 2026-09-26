@@ -2,126 +2,45 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from core.coa import CourseOfAction
 from core.ontology import SpatialEntityGraph, haversine_m
 from core.schema import Observation
 
+from app.adapters.arun_canonical import load_scenario_jsonl
 from app.adapters.osint_text import enrich_social_event, parse_osint_text
 from app.agent import make_tier1_coa
 from app.scenarios.base import Finding, Scenario
 
-# ~1,200 m due north of the social/EO cue (ingress corridor)
-_CUE_LAT, _CUE_LON = 1.3510, 103.9900
-_RADAR_LAT, _RADAR_LON = 1.3618, 103.9900  # ≈1,200 m north
-
-# Passenger in-flight sighting (Japan-bound commercial flight) — no geo/target context.
+# Hardcoded fallback if OSINT parse fails / export missing intel_text.
+_FALLBACK_CLAIMED_COUNT = 50
+_MIN_CLAIMED_COUNT = 40
+_EXPECTED_RADAR_CONTACTS = 4
+# Kept for tests / docs that import the passenger intel string.
 _INTEL_TEXT = (
     "In-flight passenger OSINT (commercial flight bound for Japan): smartphone video/photos "
     "of ~50 unknown delta-wing drones / Shahed-class airframes flying low below the aircraft. "
     "No coordinates or destination stated. Estimated vector bearing 248° at ~105 kt. "
     "#ufo #drones"
 )
-# Hardcoded fallback if OSINT parse fails.
-_FALLBACK_CLAIMED_COUNT = 50
-_MIN_CLAIMED_COUNT = 40
-_EXPECTED_RADAR_CONTACTS = 4
 
 
 def _build_events() -> list[dict[str, Any]]:
-    now = datetime.now(UTC)
-    social = enrich_social_event(
-        {
-            "source_id": "CIVILIAN_SOCIAL_RECON",
-            "entity_id": "OSINT-SWARM-CLAIM",
-            "latitude": _CUE_LAT,
-            "longitude": _CUE_LON,
-            "speed_kt": 0.0,
-            "confidence": 0.55,
-            "observed_at": (now - timedelta(seconds=45)).isoformat(),
-            "modality": "social",
-            "note": "airborne_passenger_swarm_sighting",
-            "intel_text": _INTEL_TEXT,
-            "objective": "unknown_ingress",
-            "vendor_track": "OSINT-SWARM-CLAIM",
-        },
-        fallback_count=_FALLBACK_CLAIMED_COUNT,
-    )
-    return [
-        social,
-        {
-            "source_id": "ADS_B_SECTOR_EMPTY",
-            "entity_id": "ADSB-NULL-SECTOR",
-            "latitude": _CUE_LAT,
-            "longitude": _CUE_LON,
-            "speed_kt": 0.0,
-            "confidence": 0.4,
-            "observed_at": (now - timedelta(seconds=20)).isoformat(),
-            "modality": "adsb",
-            "note": "no_cooperative_squawk",
-            "vendor_track": "ADSB-NULL",
-            "empty_sector": True,
-        },
-        {
-            "source_id": "EO_SKY_WATCH",
-            "entity_id": "EO-DELTA-WING-BRAVO",
-            "latitude": _CUE_LAT,
-            "longitude": _CUE_LON,
-            "speed_kt": 100.0,
-            "heading_deg": 248.0,
-            "confidence": 0.42,
-            "observed_at": (now - timedelta(seconds=8)).isoformat(),
-            "modality": "optical",
-            "note": "delta_wing_thermal_silhouette",
-            "altitude_m_est": 160,
-            "blur": True,
-            "vendor_track": "EO-DELTA-WING-BRAVO",
-        },
-        {
-            "source_id": "GAP_FILLER_RADAR",
-            "entity_id": "RADAR-AIR-551",
-            "latitude": _RADAR_LAT,
-            "longitude": _RADAR_LON,
-            "speed_kt": 105.0,
-            "heading_deg": 248.0,
-            "confidence": 0.84,
-            "observed_at": now.isoformat(),
-            "modality": "radar",
-            "note": "intermittent_low_rcs_clutter_contacts",
-            "altitude_m_est": 200,
-            "contact_count": _EXPECTED_RADAR_CONTACTS,
-            "vendor_track": "RADAR-AIR-551",
-        },
-        {
-            "source_id": "COASTAL_ACOUSTIC_ARRAY",
-            "entity_id": "ACOUSTIC-SHADED-HARMONIC",
-            "latitude": (_CUE_LAT + _RADAR_LAT) / 2,
-            "longitude": _CUE_LON,
-            "speed_kt": 0.0,
-            "confidence": 0.72,
-            "observed_at": (now - timedelta(seconds=6)).isoformat(),
-            "modality": "acoustic",
-            "note": "two_stroke_moped_harmonic_shahed",
-            "engine_signature": "2stroke_moped",
-            "vendor_track": "ACOUSTIC-SHADED-HARMONIC",
-        },
-        {
-            "source_id": "RF_PASSIVE_ARRAY",
-            "entity_id": "RF-SILENT-SCAN",
-            "latitude": (_CUE_LAT + _RADAR_LAT) / 2,
-            "longitude": _CUE_LON,
-            "speed_kt": 0.0,
-            "confidence": 0.7,
-            "observed_at": (now - timedelta(seconds=2)).isoformat(),
-            "modality": "rf",
-            "note": "no_emitter_detected_autonomous_gps_ins",
-            "rf_silent": True,
-            "control_mode": "GPS_INS_WAYPOINT",
-            "vendor_track": "RF-SILENT-SCAN",
-        },
-    ]
+    """Load Pillar-1 events from marun export (or CI fixture); enrich social OSINT."""
+    events = load_scenario_jsonl("S2_osint_swarm")
+    out: list[dict[str, Any]] = []
+    for ev in events:
+        if ev.get("modality") == "social":
+            out.append(
+                enrich_social_event(
+                    dict(ev),
+                    fallback_count=_FALLBACK_CLAIMED_COUNT,
+                )
+            )
+        else:
+            out.append(ev)
+    return out
 
 
 def _claimed_count(obs: Observation) -> int:

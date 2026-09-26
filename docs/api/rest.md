@@ -2,6 +2,8 @@
 
 **Status:** Phase 2 freeze · source of truth for curl / TUI / scripts and NexusGate verify UI (`/verify` (Jinja2/HTMX on `sdth-c2-server`); `BASE_URL` / `C2_BASE_URL` swap only — **paths do not change**).
 
+Scenario IDs and pitch order: **[scenarios.md](../scenarios.md)** (Pillar 1 `S2_osint_swarm` → Pillar 2 `S1_trojan` → Pillar 3 `S3_sar_ais`). Use **full** registry IDs — shorthand `S2` / `S3` is not accepted by Core.
+
 | Item | Value |
 |------|--------|
 | Server | `app/c2_server.py` |
@@ -17,9 +19,10 @@ Screen 1 = command · Screen 2 = recipient. No BattlePlan required for Phase 2 d
 |--------|------|------|
 | `GET` | `/api/ontology/state` | Live tracks, observations, amber alert |
 | `POST` | `/api/interpret` | Probabilistic propose: hypotheses + candidate COA (**never seals**) |
-| `POST` | `/api/ingress/candidate-event` | Upstream assumed CandidateEvent → `space_sar` Observation |
+| `POST` | `/api/ingress/candidate-event` | Upstream CandidateEvent / Dual-SAR / GLINT / SIA → Observations |
 | `POST` | `/api/ingress/open-feed` | Optional open AIS / open air → Observations (fixture or payload) |
 | `POST` | `/api/gate/proposals` | Queue COA (`scenario_id`, raw `coa`, or `interpret:true`) |
+| `POST` | `/api/gate/demo-evaluate-with-guardrail` | Pillar 2: CNI VETO Option A → queue Option B for HITL |
 | `POST` | `/api/gate/approve` | Operator y/n → sealed `DecisionToken` |
 | `GET` | `/api/recipient/inbox?unit_id=` | Pending approved taskings |
 | `POST` | `/api/recipient/ack` | Recipient ack sealed to audit chain |
@@ -40,7 +43,7 @@ uv run sdth-c2-server
 
 curl -s -X POST localhost:8080/api/gate/proposals \
   -H 'content-type: application/json' \
-  -d '{"scenario_id":"S3","unit_id":"CUE-NODE-01"}'
+  -d '{"scenario_id":"S2_osint_swarm","unit_id":"CUE-NODE-01"}'
 
 curl -s -X POST localhost:8080/api/gate/approve \
   -H 'content-type: application/json' \
@@ -67,7 +70,7 @@ No body. Returns the live ontology snapshot after the last successful scenario l
 
 ```json
 {
-  "scenario_id": "S2",
+  "scenario_id": "S2_osint_swarm",
   "tracks": [
     {
       "track_id": "OSINT-SWARM-CLAIM",
@@ -104,7 +107,7 @@ No body. Returns the live ontology snapshot after the last successful scenario l
     "mismatch_m": 1200.9,
     "picture_summary": "…",
     "source_breakdown": {},
-    "scenario_id": "S2"
+    "scenario_id": "S2_osint_swarm"
   },
   "pending_proposals": ["<coa_id>"],
   "inbox_depth": 0
@@ -129,7 +132,7 @@ Probabilistic app-layer propose (Pitch-2). Returns scored hypotheses + a **candi
 
 ```json
 {
-  "scenario_id": "S2",
+  "scenario_id": "S2_osint_swarm",
   "timeout_seconds": 5.0,
   "force_heuristic": true
 }
@@ -189,6 +192,42 @@ Feed `candidate_coa` into `POST /api/gate/proposals` — gate may still `REJECTE
 
 ---
 
+## `POST /api/gate/demo-evaluate-with-guardrail`
+
+Pillar 2 (`S1_trojan`) demo path: load the scenario as a dangerous terminal-SAM draft,
+run live CNI debris interlocks (HARD VETO), and queue enforced Option B for HITL approve.
+Plain `POST /api/gate/proposals` with `S1_trojan` returns `REJECTED_FAST` by design.
+
+### Request
+
+```json
+{
+  "scenario_id": "S1_trojan",
+  "unit_id": "GBAD-RSAF-01",
+  "navy_unit_id": "PCG-PT-44"
+}
+```
+
+### Response `200`
+
+```json
+{
+  "status": "GUARDRAIL_VETO_OPTION_B_QUEUED",
+  "veto_code": "SAFETY_LOCKOUT_CNI_FALLOUT_HAZARD",
+  "veto_reason": "…",
+  "fallback_coa": {
+    "coa_id": "<uuid>",
+    "intent": "OFFSHORE_INTERCEPT_RF_SOFTKILL"
+  },
+  "finding": { "…": "Finding" },
+  "queued_for": ["GBAD-RSAF-01", "PCG-PT-44"]
+}
+```
+
+Authorize with `POST /api/gate/approve` on `fallback_coa.coa_id`. Full curl: [verify-e2e.md](../verify-e2e.md) Workflow 3b.
+
+---
+
 ## `POST /api/gate/proposals`
 
 ### Request
@@ -198,7 +237,7 @@ probabilistic interpreter first, then queues its candidate COA (response may inc
 
 ```json
 {
-  "scenario_id": "S2",
+  "scenario_id": "S2_osint_swarm",
   "unit_id": "CUE-NODE-01",
   "timeout_seconds": 30,
   "interpret": true,
@@ -240,9 +279,9 @@ Defaults: `unit_id=ISR-NODE-01`; `timeout_seconds` falls back to policy default.
 ```json
 {
   "status": "QUEUED",
-  "coa": { "coa_id": "<uuid>", "tier": 1, "intent": "CUE_AND_IDENTIFY", "…": "…" },
+  "coa": { "coa_id": "<uuid>", "tier": 1, "intent": "GNSS_DENIAL_AND_GBAD_CUE", "…": "…" },
   "finding": {
-    "scenario_id": "S2",
+    "scenario_id": "S2_osint_swarm",
     "amber_alert": "COUNT_AND_BEARING_MISMATCH",
     "threat_class": "attritable_air_incursion",
     "mismatch_m": 1200.9,
@@ -612,7 +651,7 @@ Demo-only (#88). Requires `C2_DEMO_TAMPER=1`. Walks the OCSF SHA-256 chain in-pr
 | `tier` | `0` \| `1` \| `2` | Tier-0 may auto-approve |
 | `target_entity_id` | string | |
 | `target_coordinates` | `[lat, lon]` | |
-| `intent` | string | e.g. `CUE_AND_IDENTIFY` |
+| `intent` | string | e.g. `GNSS_DENIAL_AND_GBAD_CUE` (Pillar 1); also `APPROACH_PATROL`, `OFFSHORE_INTERCEPT_RF_SOFTKILL` |
 | `timeout_seconds` | number | HITL window |
 | `confidence` | number | |
 | `corroborating_sources` | string[] | |
@@ -786,7 +825,8 @@ When ingested (either via upstream REST pull, optional `POST /api/ingress/candid
 
 Push an assumed CandidateEvent, load the Pitch-1 offline fixture, ingest
 **Sentinel-Imagery-Analysis** dark vessels (issue #47), pull **GLINT** Assumed-mock
-(issue #55), or **Dual-SAR** corroborate GLINT × SIA (issue #56):
+(issue #55), or **Dual-SAR** corroborate GLINT × SIA (issue #56). This is the
+**Pillar 3** (`S3_sar_ais`) GLINT primary showcase (see [scenarios.md](../scenarios.md)):
 
 ```bash
 # Pitch-1 assumed CandidateEvent fixture
