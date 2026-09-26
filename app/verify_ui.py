@@ -83,18 +83,22 @@ def _claim_tags(finding: Any) -> list[dict[str, str]]:
 
     social = breakdown.get("social") or {}
     radar = breakdown.get("radar") or {}
-    if isinstance(social, dict) and isinstance(radar, dict):
-        if social.get("claimed_count") is not None and radar.get("contact_count") is not None:
-            n = int(radar["contact_count"])
-            tags.append({"label": f"OSINT: {social['claimed_count']} UAVs (Telegram)", "role": "left"})
-            tags.append({"label": "vs", "role": "vs"})
-            tags.append(
-                {
-                    "label": f"Radar: {n} Contact{'s' if n != 1 else ''}",
-                    "role": "right",
-                }
-            )
-            return tags
+    if (
+        isinstance(social, dict)
+        and isinstance(radar, dict)
+        and social.get("claimed_count") is not None
+        and radar.get("contact_count") is not None
+    ):
+        n = int(radar["contact_count"])
+        tags.append({"label": f"OSINT: {social['claimed_count']} UAVs (Telegram)", "role": "left"})
+        tags.append({"label": "vs", "role": "vs"})
+        tags.append(
+            {
+                "label": f"Radar: {n} Contact{'s' if n != 1 else ''}",
+                "role": "right",
+            }
+        )
+        return tags
 
     ais = breakdown.get("ais") or {}
     if isinstance(ais, dict) and isinstance(radar, dict) and (ais.get("claim") or radar.get("claim")):

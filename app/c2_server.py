@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import copy
 import os
 from dataclasses import asdict
@@ -14,6 +15,8 @@ from core.audit import AuditLogger, inject_one_char_tamper, verify_audit_chain, 
 from core.coa import ActionTier, CourseOfAction, GateVerdict
 from core.gate import LatencyBoundedGate
 from core.ingress_replay import IngressReplayLog
+from core.interlock import CNI_FALLOUT_CODE
+from core.kinematics import offshore_safe_intercept
 from core.ontology import SpatialEntityGraph
 from core.policy import TieredPolicy
 from core.runtime_store import RuntimeStore
@@ -28,8 +31,6 @@ from app.adapters.sar_candidate_event import candidate_event_to_observation
 from app.adapters.southbound_sensor import normalize_sensor_event
 from app.llm_interpreter import InterpretationResult, interpret
 from app.scenarios.base import Finding, get_scenario
-from core.kinematics import offshore_safe_intercept
-from core.interlock import CNI_FALLOUT_CODE
 
 APP_DIR = Path(__file__).resolve().parent
 ROOT = APP_DIR.parent
@@ -228,10 +229,8 @@ class C2Runtime:
         runtime_db_path: Path | None = None,
     ) -> None:
         self.policy = TieredPolicy.from_yaml(policy_path)
-        try:
+        with contextlib.suppress(OSError):
             self.policy.interlock.set_cni_pois(load_pois())
-        except OSError:
-            pass
         self.audit = AuditLogger(audit_path)
         self.ingress_replay = IngressReplayLog(ingress_replay_path)
         db_path = runtime_db_path or _default_runtime_db_path(audit_path=audit_path)
@@ -780,10 +779,8 @@ async def gate_demo_evaluate_with_guardrail(req: GuardrailDemoRequest) -> dict[s
     """Run Option A through live CNI guardrail; queue Option B for HITL (issue #116)."""
     runtime = get_runtime()
     timeout = req.timeout_seconds or runtime.policy.default_timeout_seconds
-    try:
+    with contextlib.suppress(OSError):
         runtime.policy.interlock.set_cni_pois(load_pois())
-    except OSError:
-        pass
 
     dangerous = _load_scenario(runtime, req.scenario_id, timeout)
     dangerous.metadata["dangerous_proposal_draft"] = True

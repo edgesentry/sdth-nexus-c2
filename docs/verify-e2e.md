@@ -25,7 +25,7 @@ Later sections use only these aliases.
   `tests/fixtures/s1_trojan_*` when SensorSim is absent (CI / Nexus-only checkout)
 - **CUI (no browser)**: pytest (in-process) · `scripts/picture_to_tasking.py` · curl against `:8080`
 - **Console UIs**: Core `/verify` (Jinja2/HTMX Screen 1/2) or external **ARCHVIEW** (`:3001`)
-- **Key Specifications**: [C2 REST API](api/rest.md) · [Demo Guide](demo.md) · [Data Provenance](data-provenance.md) · [SAR Pipeline](architecture/sar_pipeline.md) · [Architecture Map](architecture/index.md) · [tests/README](../tests/README.md)
+- **Key Specifications**: [C2 REST API](api/rest.md) · [Demo Guide](demo.md) · [Data Provenance](data-provenance.md) · [SAR Pipeline](architecture/sar_pipeline.md) · [Architecture Map](architecture/index.md) · repo `tests/README.md`
 
 ---
 
@@ -92,7 +92,7 @@ flowchart TD
 ### 0.1 SensorSim exports (`s1_trojan`)
 
 Issue #116 E2E (Workflows 1, 3b, 4) loads the Trojan mothership picture through
-[`app/adapters/arun_canonical.py`](../app/adapters/arun_canonical.py) in **Nexus**.
+`app/adapters/arun_canonical.py` in **Nexus**.
 **Source of truth** is the sibling **SensorSim** checkout; vendored Nexus fixtures are
 a CI fail-safe only.
 
@@ -150,8 +150,7 @@ cp ../marun-sensor-simulation/exports/pois.json tests/fixtures/s1_trojan_pois.js
 cp ../marun-sensor-simulation/exports/site_origins.json tests/fixtures/s1_trojan_site_origins.json
 ```
 
-Details: [SensorSim `exports/README`](../../marun-sensor-simulation/exports/README.md) ·
-[tests/README](../tests/README.md).
+Details: SensorSim `exports/README.md` · Nexus `tests/README.md`.
 
 ### 0.2 Indago AIS history (optional, S3)
 
@@ -181,7 +180,7 @@ curl -sf -X POST http://127.0.0.1:8080/api/ingress/open-feed \
 ```
 
 Build / refresh the DuckDB from the **Indago** repo pipelines (see that repo’s
-README). Adapter: [`app/adapters/open_feed.py`](../app/adapters/open_feed.py).
+README). Adapter: `app/adapters/open_feed.py`.
 
 ---
 
