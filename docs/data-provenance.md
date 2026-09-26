@@ -17,7 +17,7 @@ Singapore WOG maritime context — how feeds map to MOSAIC C2 ingress (not every
 | **1. Live / Current Observations** | AIS (MPA OCEANS-X, AISStream), VTIS / STRAITREP | Cooperative traffic and port context at $T \approx 0$ |
 | **2. Historical / Retrospective Evidence** | Satellite SAR `CandidateEvent` anomalies, Sentinel-1 CV detection (SIA) | Dark-vessel / corridor cues at $T - \Delta t$ |
 | **3. Recorded Sensor Data** | Singapore Maritime Dataset (SMD) visible & NIR camera surveillance | Pitch realism / replay; not required for deterministic gate |
-| **4. Synthetic Exercise Inputs** | Controlled coastal radar disagreement fixtures | Deterministic demo contradictions (S1–S3) |
+| **4. Synthetic Exercise Inputs** | Controlled coastal radar disagreement fixtures | Deterministic demo contradictions (`S1_trojan`, `S3_sar_ais`, `S1_ais_spoof`, `S2_osint_swarm`) |
 
 Labels in the inventory below remain **Synthetic / Real-processed / Assumed-mock** for audit clarity.
 
@@ -25,15 +25,15 @@ Labels in the inventory below remain **Synthetic / Real-processed / Assumed-mock
 
 | Data | Provenance | Path | Pitch role |
 |------|------------|------|------------|
-| Social / OSINT text | **Synthetic** (Phase 2 `osint_text` #59) or **External Service** (production target) | S2 scenario (`app/adapters/osint_text.py`) | Non-pitch stretch; discrepancy mechanism reused by S1/S3 |
-| Gap-filler radar | **Synthetic** | S1–S3 scenarios | Count / bearing mismatch |
-| EO / blur | **Synthetic** | S1, S2 scenarios | Low-confidence visual |
-| RF / ADS-B | **Synthetic** | S1, S2 scenarios | Silent / empty sector |
-| Coastal radar (S3 counterpart) | **Synthetic** | Scenario (kinematics peer) | Match projected SAR |
+| Social / OSINT text | **Synthetic** (Phase 2 `osint_text` #59) or **External Service** (production target) | `S2_osint_swarm` scenario (`app/adapters/osint_text.py`) | Non-pitch stretch; discrepancy mechanism reused across multi-domain |
+| Gap-filler radar | **Synthetic** | All scenarios (`S1_trojan`, `S3_sar_ais`, `S1_ais_spoof`, `S2_osint_swarm`) | Count / bearing mismatch |
+| EO / blur | **Synthetic** | `S1_trojan`, `S1_ais_spoof`, `S2_osint_swarm` scenarios | Low-confidence visual |
+| RF / ADS-B | **Synthetic** | `S1_trojan`, `S2_osint_swarm` scenarios | Silent / empty sector |
+| Coastal radar (S3 counterpart) | **Synthetic** | `S3_sar_ais` scenario (kinematics peer) | Match projected SAR |
 | **open-feed AIS / air** | **Real-processed** (Indago DuckDB / live poll opt-in, #70) or **Synthetic** (fixture fallback) | `POST /api/ingress/open-feed` / Indago adapter | Background traffic & pitch realism |
 | **AIS history** | **Real-processed** (`demo` SIA scrape) or **Synthetic** (`offline` MockAIS) | **SIA** `ingest_ais` → local SQLite `data.db` (not C2) | Cooperative side of dark-vessel filter |
-| **SIA SAR detections + chip** | **Real-processed** (Sentinel-1 CV) or recorded **fixture** | SIA → `POST /api/ingress/candidate-event` **or** repo fixture (no SIA server) | S3 micro |
-| **GLINT macro** | **Assumed-mock** now → **Real-processed** after Team 02 | Mock `:5051` / live API → ingress | S3 macro |
+| **SIA SAR detections + chip** | **Real-processed** (Sentinel-1 CV) or recorded **fixture** | SIA → `POST /api/ingress/candidate-event` **or** repo fixture (no SIA server) | `S3_sar_ais` micro |
+| **GLINT macro** | **Assumed-mock** now → **Real-processed** after Team 02 | Mock `:5051` / live API → ingress | `S3_sar_ais`, `S1_trojan` macro |
 | LLM interpret | Optional | `POST /api/interpret` | Not pitch-critical |
 
 ## Persistence (who stores what)
