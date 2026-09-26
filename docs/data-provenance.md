@@ -8,7 +8,7 @@ Labels used across this repo. Prefer these over vague “real” / “fake”.
 | **Real-processed** | Upstream processes a real-world source; C2 receives the result indirectly |
 | **Assumed-mock** | Stand-in until the partner schema / endpoint is handed over (then becomes Real-processed) |
 
-> **Primary hero is airborne `S2_osint_swarm`. Maritime secondary track is `S1_trojan` (tri-service + GLINT hull anchor) then `S3_sar_ais` (GLINT macro × SIA × AIS dark vessel). marun `scenario_02_conflicting` is a legacy fusion bench, not Nexus S2.**
+> **Primary hero is airborne `S2_osint_swarm`. Maritime secondary track is `S1_trojan` (tri-service + GLINT hull anchor) then `S3_sar_ais` (GLINT macro × SIA × AIS dark vessel). SensorSim (`SDTH-Sensor-Simulation`) `scenario_02_conflicting` is a legacy fusion bench, not Nexus S2.**
 
 ## Three-Pillar Operational Mapping
 
@@ -20,13 +20,13 @@ Labels used across this repo. Prefer these over vague “real” / “fake”.
 
 *Auxiliary baseline*: `S1_ais_spoof` serves as a lightweight baseline outside the three pillars (no GLINT).
 
-### Data Alignment with marun
+### Data Alignment with SensorSim (`SDTH-Sensor-Simulation`)
 
 | Data Feed | Storage Location | Provenance / Role |
 |-----------|------------------|-------------------|
-| **S2 Synthetic** (OSINT / radar 4 / acoustic / RF silent) | marun `exports/s2_osint_swarm_scenario.jsonl` | **Synthetic** (*`scenario_02_conflicting` is a legacy fusion bench, not Nexus S2*) |
+| **S2 Synthetic** (OSINT / radar 4 / acoustic / RF silent) | SensorSim `exports/s2_osint_swarm_scenario.jsonl` | **Synthetic** (*`scenario_02_conflicting` is a legacy fusion bench, not Nexus S2*) |
 | **Trojan Maritime + Land/Air + GLINT row** | Existing `synthetic_maritime_data/` → `exports/s1_trojan_*` | **Synthetic** / GLINT stub |
-| **S3 Coastal AIS / Radar** | marun optional; **GLINT macro / SIA chip owned by Nexus / Team 02 / SIA** | **Assumed-mock** (`:5051`) + **Real-processed** (SIA Sentinel-1) |
+| **S3 Coastal AIS / Radar** | SensorSim optional; **GLINT macro / SIA chip owned by Nexus / Team 02 / SIA** | **Assumed-mock** (`:5051`) + **Real-processed** (SIA Sentinel-1) |
 
 ## Operational sensor classes (4-tier)
 

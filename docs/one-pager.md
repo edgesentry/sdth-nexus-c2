@@ -40,7 +40,7 @@ flowchart LR
 
 ## 3. Operational Scenarios (The Three Pillars)
 
-> **Primary hero is airborne `S2_osint_swarm`. Maritime secondary track is `S1_trojan` (tri-service + GLINT hull anchor) then `S3_sar_ais` (GLINT macro × SIA × AIS dark vessel). marun `scenario_02_conflicting` is a legacy fusion bench, not Nexus S2.**
+> **Primary hero is airborne `S2_osint_swarm`. Maritime secondary track is `S1_trojan` (tri-service + GLINT hull anchor) then `S3_sar_ais` (GLINT macro × SIA × AIS dark vessel). SensorSim (`SDTH-Sensor-Simulation`) `scenario_02_conflicting` is a legacy fusion bench, not Nexus S2.**
 
 | Rank | ID | Operational Focus | Sensor Contradiction | Deterministic Action | GLINT Usage |
 |---|---|---|---|---|---|

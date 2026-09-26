@@ -18,7 +18,7 @@ Later sections use only these aliases.
 - **SIA** — Sentinel-1 micro SAR CV × AIS (live optional; Nexus fixtures if offline)
 - **Indago** — optional maritime AIS history in DuckDB for S3 background traffic (`open-feed`); not required for Profile A or `s1_trojan`
 
-> **Primary hero is airborne `S2_osint_swarm`. Maritime secondary track is `S1_trojan` (tri-service + GLINT hull anchor) then `S3_sar_ais` (GLINT macro × SIA × AIS dark vessel). marun `scenario_02_conflicting` is a legacy fusion bench, not Nexus S2.**
+> **Primary hero is airborne `S2_osint_swarm`. Maritime secondary track is `S1_trojan` (tri-service + GLINT hull anchor) then `S3_sar_ais` (GLINT macro × SIA × AIS dark vessel). SensorSim (`SDTH-Sensor-Simulation`) `scenario_02_conflicting` is a legacy fusion bench, not Nexus S2.**
 
 ### The Three Operational Pillars (Pitch & E2E Order)
 
@@ -44,7 +44,7 @@ Pitch / E2E Sequence
 
 - **Data Sources & Repositories**:
   - `s1_trojan`: sibling **SensorSim** `exports/s1_trojan_scenario.jsonl` (Nexus falls back to `tests/fixtures/s1_trojan_*` in CI)
-  - `s2_osint_swarm`: marun planned export `exports/s2_osint_swarm_*.jsonl` (Nexus in-tree scenario adapter active)
+  - `s2_osint_swarm`: **SensorSim** planned export `exports/s2_osint_swarm_*.jsonl` (Nexus in-tree scenario adapter active)
   - `s3_sar_ais`: **GLINT mock** (`:5051` / live) + **SIA** (`:5050` / Sentinel-1 micro fixture) + **Indago DuckDB** AIS
 - **CUI (no browser)**: pytest (in-process) · `scripts/picture_to_tasking.py` · curl against `:8080`
 - **Console UIs**: Core `/verify` (Jinja2/HTMX Screen 1/2) or external **ARCHVIEW** (`:3001`)

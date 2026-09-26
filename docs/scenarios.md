@@ -17,7 +17,7 @@ In modern hybrid littoral-maritime defense, sovereign security depends on breaki
 
 ## 🏛️ The Three Operational Pillars
 
-> **Primary hero is airborne `S2_osint_swarm`. Maritime secondary track is `S1_trojan` (tri-service + GLINT hull anchor) then `S3_sar_ais` (GLINT macro × SIA × AIS dark vessel). marun `scenario_02_conflicting` is a legacy fusion bench, not Nexus S2.**
+> **Primary hero is airborne `S2_osint_swarm`. Maritime secondary track is `S1_trojan` (tri-service + GLINT hull anchor) then `S3_sar_ais` (GLINT macro × SIA × AIS dark vessel). SensorSim (`SDTH-Sensor-Simulation`) `scenario_02_conflicting` is a legacy fusion bench, not Nexus S2.**
 
 ### Pillar Hierarchy (Scenario Sequence)
 
@@ -47,13 +47,13 @@ Pitch / E2E Sequence
 
 ---
 
-### Data Alignment with marun
+### Data Alignment with SensorSim (`SDTH-Sensor-Simulation`)
 
 | Data Feed | Storage Location | Role & Provenance |
 |-----------|------------------|-------------------|
-| **S2 Synthetic** (OSINT / radar 4 / acoustic / RF silent) | marun `exports/s2_osint_swarm_scenario.jsonl` | Canonical export (*`scenario_02_conflicting` is a legacy fusion bench, not Nexus S2*) |
+| **S2 Synthetic** (OSINT / radar 4 / acoustic / RF silent) | SensorSim `exports/s2_osint_swarm_scenario.jsonl` | Canonical export (*`scenario_02_conflicting` is a legacy fusion bench, not Nexus S2*) |
 | **Trojan Maritime + Land/Air + GLINT row** | Existing `synthetic_maritime_data/` → `exports/s1_trojan_*` | Canonical multi-service export |
-| **S3 Coastal AIS / Radar** | marun optional; **GLINT macro / SIA chip owned by Nexus / Team 02 / SIA** | Ingress feeds + live/fixture endpoints |
+| **S3 Coastal AIS / Radar** | SensorSim optional; **GLINT macro / SIA chip owned by Nexus / Team 02 / SIA** | Ingress feeds + live/fixture endpoints |
 
 ---
 
