@@ -12,12 +12,14 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_FIXTURE = ROOT / "tests" / "fixtures" / "s1_trojan_scenario.jsonl"
 DEFAULT_POIS = ROOT / "tests" / "fixtures" / "s1_trojan_pois.json"
 DEFAULT_S2_FIXTURE = ROOT / "tests" / "fixtures" / "s2_osint_swarm_scenario.jsonl"
+DEFAULT_S4_FIXTURE = ROOT / "tests" / "fixtures" / "s4_fusion_disagreement_scenario.jsonl"
 SIBLING_EXPORT = ROOT.parent / "SDTH-Sensor-Simulation" / "exports"
 SIBLING_EXPORT_COMPAT = ROOT.parent / "marun-sensor-simulation" / "exports"
 
 _SCENARIO_FILES: dict[str, str] = {
     "S1_trojan": "s1_trojan_scenario.jsonl",
     "S2_osint_swarm": "s2_osint_swarm_scenario.jsonl",
+    "S4_fusion_disagreement": "s4_fusion_disagreement_scenario.jsonl",
 }
 
 
@@ -26,9 +28,11 @@ def resolve_export_dir() -> Path:
     if env:
         return Path(env)
     for candidate in (SIBLING_EXPORT, SIBLING_EXPORT_COMPAT):
-        if (candidate / "s1_trojan_scenario.jsonl").is_file() or (
-            candidate / "s2_osint_swarm_scenario.jsonl"
-        ).is_file():
+        if (
+            (candidate / "s1_trojan_scenario.jsonl").is_file()
+            or (candidate / "s2_osint_swarm_scenario.jsonl").is_file()
+            or (candidate / "s4_fusion_disagreement_scenario.jsonl").is_file()
+        ):
             return candidate
     return DEFAULT_FIXTURE.parent
 
@@ -75,6 +79,8 @@ def load_scenario_jsonl(
             target = DEFAULT_FIXTURE
         elif scenario_id == "S2_osint_swarm":
             target = DEFAULT_S2_FIXTURE
+        elif scenario_id == "S4_fusion_disagreement":
+            target = DEFAULT_S4_FIXTURE
         else:
             raise FileNotFoundError(f"missing scenario export: {filename}")
 

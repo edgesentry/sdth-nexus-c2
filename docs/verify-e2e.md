@@ -18,7 +18,7 @@ Later sections use only these aliases.
 - **SIA** — Sentinel-1 micro SAR CV × AIS (live optional; Nexus fixtures if offline)
 - **Indago** — optional maritime AIS history in DuckDB for S3 background traffic (`open-feed`); not required for Profile A or `s1_trojan`
 
-> **Primary hero is airborne `S2_osint_swarm`. Maritime secondary track is `S1_trojan` (tri-service + GLINT hull anchor) then `S3_sar_ais` (GLINT macro × SIA × AIS dark vessel). SensorSim (`SDTH-Sensor-Simulation`) `scenario_02_conflicting` is a legacy fusion bench, not Nexus S2.**
+> **Primary hero is airborne `S2_osint_swarm`. Maritime secondary track is `S1_trojan` (tri-service + GLINT hull anchor) then `S3_sar_ais` (GLINT macro × SIA × AIS dark vessel). SensorSim `scenario_02_conflicting` → Nexus auxiliary `S4_fusion_disagreement` (not Pillar-1 S2).**
 
 ### The Three Operational Pillars (Pitch & E2E Order)
 
@@ -28,7 +28,7 @@ Later sections use only these aliases.
 | **2** | `S1_trojan` | Maritime + Land/Air: AIS vs coastal radar, CNI VETO, Option B (Tri-service contradiction + spatial SAR mothership lock) | **Used** — Mothership aft-deck / hull spatial anchor (already in narrative & export) |
 | **3** | `S3_sar_ais` | Dark vessel: Dual-SAR × thin AIS → Approach Patrol (Orbital latency → reachable ellipse → USV intercept) | **Primary showcase** — macro cluster (`:5051` / live) + SIA micro |
 
-*Auxiliary baseline*: `S1_ais_spoof` serves as a lightweight baseline outside the three pillars (no GLINT).
+*Auxiliary*: `S1_ais_spoof` (no GLINT). `S4_fusion_disagreement` (SensorSim `scenario_02_conflicting` multi-site Air/Army/Navy disagreement bench → `CUE_AND_IDENTIFY`).
 
 ```text
 Pitch / E2E Sequence
@@ -44,7 +44,8 @@ Pitch / E2E Sequence
 
 - **Data Sources & Repositories**:
   - `s1_trojan`: sibling **SensorSim** `exports/s1_trojan_scenario.jsonl` (Nexus falls back to `tests/fixtures/s1_trojan_*` in CI)
-  - `s2_osint_swarm`: **SensorSim** planned export `exports/s2_osint_swarm_*.jsonl` (Nexus in-tree scenario adapter active)
+  - `s2_osint_swarm`: **SensorSim** `exports/s2_osint_swarm_scenario.jsonl` (Nexus fixture fallback in CI)
+  - `s4_fusion_disagreement`: **SensorSim** `scenario_02_conflicting` → `exports/s4_fusion_disagreement_scenario.jsonl` (Nexus `tests/fixtures/s4_fusion_disagreement_scenario.jsonl`)
   - `s3_sar_ais`: **GLINT mock** (`:5051` / live) + **SIA** (`:5050` / Sentinel-1 micro fixture) + **Indago DuckDB** AIS
 - **CUI (no browser)**: pytest (in-process) · `scripts/picture_to_tasking.py` · curl against `:8080`
 - **Console UIs**: Core `/verify` (Jinja2/HTMX Screen 1/2) or external **ARCHVIEW** (`:3001`)
@@ -140,6 +141,8 @@ SDTH2026/
   SDTH-Sensor-Simulation/        # SensorSim — synthetic maritime + land/air
     exports/
       s1_trojan_scenario.jsonl
+      s2_osint_swarm_scenario.jsonl
+      s4_fusion_disagreement_scenario.jsonl
       pois.json
       site_origins.json
 ```
@@ -162,7 +165,7 @@ Regenerate SensorSim exports after changing maritime/land generators:
 
 ```bash
 cd /Users/yoheionishi/work/SDTH2026/SDTH-Sensor-Simulation
-# see exports/README.md — generate_canonical_stream.py
+# see exports/README.md — generate_canonical_stream.py / generate_s4_fusion_disagreement_export.py
 ```
 
 Then refresh **Nexus** fixtures if CI must stay in sync:
@@ -589,6 +592,57 @@ curl -sf "$C2/api/audit/health" | jq .
 
 ---
 
+### Workflow 3d: curl closed loop — `S4_fusion_disagreement` (Aux: Multi-Site Fusion Bench)
+
+Loads SensorSim `scenario_02_conflicting` via `exports/s4_fusion_disagreement_scenario.jsonl`
+(or Nexus fixture). Surfaces Air MPSTAR vs EO subset count disagreement, EW RF-negative,
+and optional Navy delayed UNKNOWN airborne — without collapsing into a fused super-track.
+COA intent: `CUE_AND_IDENTIFY` (not Pillar-1 GNSS/GBAD).
+
+```bash
+export C2=http://127.0.0.1:8080
+
+curl -sf "$C2/health" | jq .
+curl -sf -X POST "$C2/api/admin/reset" | jq .
+
+# Propose loads SensorSim export (or fixture) via scenario adapter — no separate ingress required
+PROP=$(curl -sf -X POST "$C2/api/gate/proposals" \
+  -H 'content-type: application/json' \
+  -d '{"scenario_id":"S4_fusion_disagreement","unit_id":"CUE-NODE-01"}')
+echo "$PROP" | jq '{
+  status,
+  amber: .finding.amber_alert,
+  threat: .finding.threat_class,
+  intent: .coa.intent,
+  mpstar: .finding.source_breakdown.mpstar_tracks,
+  ew_negative: .finding.source_breakdown.ew_negative
+}'
+COA_ID=$(echo "$PROP" | jq -r '.coa.coa_id')
+test "$COA_ID" != null && test -n "$COA_ID"
+
+# Expect amber containing MULTI_SITE_COUNT_DISAGREEMENT (+ EW_NON_CORROBORATION)
+echo "$PROP" | jq -e '.finding.amber_alert | test("MULTI_SITE_COUNT_DISAGREEMENT")'
+echo "$PROP" | jq -e '.coa.intent == "CUE_AND_IDENTIFY"'
+
+APPROVE=$(curl -sf -X POST "$C2/api/gate/approve" \
+  -H 'content-type: application/json' \
+  -d "{\"coa_id\":\"$COA_ID\",\"decision\":\"y\",\"operator_id\":\"commander-01\"}")
+echo "$APPROVE" | jq '{status, token_digest: .decision_token.token_digest}'
+
+curl -sf "$C2/api/recipient/inbox?unit_id=CUE-NODE-01" | jq '{count, tasking_coa: .taskings[0].coa.coa_id}'
+curl -sf -X POST "$C2/api/recipient/ack" \
+  -H 'content-type: application/json' \
+  -d "{\"coa_id\":\"$COA_ID\",\"unit_id\":\"CUE-NODE-01\",\"status\":\"ACKED\"}" | jq .
+curl -sf "$C2/api/audit/health" | jq .
+```
+Unit check without server:
+
+```bash
+uv run python -m pytest tests/unit/test_scenarios.py::test_s4_fusion_disagreement_picture -q
+```
+
+---
+
 ### Workflow 4: Core WebUI (`/verify`) rehearsal
 
 Interactive HITL using dual browser tabs (optional after CUI pass):
@@ -602,11 +656,16 @@ Interactive HITL using dual browser tabs (optional after CUI pass):
    - Service silo → **Navy** (Happy Tug AIS / coastal radar visible).
    - Guardrail panel → **Evaluate Option A (live VETO)** → AUTHORIZE Option B.
    - Screen 2: Ack for `GBAD-RSAF-01` (and Navy unit if dual-queued).
+4. **`S4_fusion_disagreement` path (aux)**:
+   - Select scenario `S4_fusion_disagreement` → Propose.
+   - Expect amber `MULTI_SITE_COUNT_DISAGREEMENT` (+ EW non-corroboration); intent `CUE_AND_IDENTIFY`.
+   - Approve → Ack on Screen 2.
 
 Deep-link:
 
 ```text
 http://127.0.0.1:8080/verify/command?scenario_id=s1_trojan&service_view=navy
+http://127.0.0.1:8080/verify/command?scenario_id=S4_fusion_disagreement
 ```
 
 ---
@@ -824,3 +883,9 @@ tail -n 3 .audit/gate.jsonl | jq '{class_name: .class_name, record_hash: .record
 - [ ] `POST /api/gate/demo-evaluate-with-guardrail` → Option B queued; amber includes velocity mismatch.
 - [ ] Navy silo / ontology shows Happy Tug AIS; claim-tags show AIS vs radar.
 - [ ] Approve Option B → GBAD (+ Navy) inbox → Ack → audit healthy.
+
+### S4_fusion_disagreement (aux)
+- [ ] **SensorSim / fixture**: `exports/s4_fusion_disagreement_scenario.jsonl` or `tests/fixtures/s4_fusion_disagreement_scenario.jsonl`.
+- [ ] **pytest** `test_s4_fusion_disagreement_picture` green (or curl Workflow 3d).
+- [ ] Propose → amber contains `MULTI_SITE_COUNT_DISAGREEMENT`; `ew_negative: true`.
+- [ ] COA intent `CUE_AND_IDENTIFY` → Approve → Ack → audit healthy.

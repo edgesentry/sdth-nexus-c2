@@ -17,7 +17,7 @@ In modern hybrid littoral-maritime defense, sovereign security depends on breaki
 
 ## 🏛️ The Three Operational Pillars
 
-> **Primary hero is airborne `S2_osint_swarm`. Maritime secondary track is `S1_trojan` (tri-service + GLINT hull anchor) then `S3_sar_ais` (GLINT macro × SIA × AIS dark vessel). SensorSim (`SDTH-Sensor-Simulation`) `scenario_02_conflicting` is a legacy fusion bench, not Nexus S2.**
+> **Primary hero is airborne `S2_osint_swarm`. Maritime secondary track is `S1_trojan` (tri-service + GLINT hull anchor) then `S3_sar_ais` (GLINT macro × SIA × AIS dark vessel). SensorSim (`SDTH-Sensor-Simulation`) `scenario_02_conflicting` maps to auxiliary Nexus `S4_fusion_disagreement` (not Pillar-1 S2).**
 
 ### Pillar Hierarchy (Scenario Sequence)
 
@@ -27,7 +27,7 @@ In modern hybrid littoral-maritime defense, sovereign security depends on breaki
 | **2** | **`S1_trojan`** | Maritime + Land/Air: AIS vs coastal radar, CNI VETO, Option B (Tri-service contradiction + spatial SAR mothership lock) | **Used** — Mothership aft-deck / hull spatial anchor (already in narrative & export) |
 | **3** | **`S3_sar_ais`** | Dark vessel: Dual-SAR × thin AIS → Approach Patrol (Orbital latency → reachable ellipse → USV intercept) | **Primary showcase** — macro cluster (`:5051` / live) + SIA micro |
 
-*Auxiliary baseline*: `S1_ais_spoof` serves as a lightweight baseline outside the three pillars (no GLINT).
+*Auxiliary*: `S1_ais_spoof` (lightweight baseline, no GLINT). `S4_fusion_disagreement` (SensorSim `scenario_02_conflicting` multi-site count/EW/Navy disagreement bench).
 
 ---
 
@@ -51,8 +51,9 @@ Pitch / E2E Sequence
 
 | Data Feed | Storage Location | Role & Provenance |
 |-----------|------------------|-------------------|
-| **S2 Synthetic** (OSINT / radar 4 / acoustic / RF silent) | SensorSim `exports/s2_osint_swarm_scenario.jsonl` | Canonical export (*`scenario_02_conflicting` is a legacy fusion bench, not Nexus S2*) |
+| **S2 Synthetic** (OSINT / radar 4 / acoustic / RF silent) | SensorSim `exports/s2_osint_swarm_scenario.jsonl` | Canonical export (*distinct from `scenario_02_conflicting`*) |
 | **Trojan Maritime + Land/Air + GLINT row** | Existing `synthetic_maritime_data/` → `exports/s1_trojan_*` | Canonical multi-service export |
+| **S4 Fusion Bench** (Air/Army/Navy disagreement) | SensorSim `scenario_02_conflicting` → `exports/s4_fusion_disagreement_scenario.jsonl` | Auxiliary Nexus `S4_fusion_disagreement` |
 | **S3 Coastal AIS / Radar** | SensorSim optional; **GLINT macro / SIA chip owned by Nexus / Team 02 / SIA** | Ingress feeds + live/fixture endpoints |
 
 ---
@@ -65,6 +66,7 @@ Pitch / E2E Sequence
 | **`S1_trojan`** *(Pillar 2)* | **Trojan Mothership (Tri-Service Contradiction)** | Navy Happy Tug AIS ~6 kt vs coastal radar ~120 kt UAS; Air/Army EW LOB triangulation + GLINT aft-deck anchor | Guardrail CNI VETO → `OFFSHORE_INTERCEPT_RF_SOFTKILL` (Option B) |
 | **`S3_sar_ais`** *(Pillar 3)* | **Shipping Lane & Dark Vessel (Dual-SAR)** | Space-based SAR anomaly diff (GLINT macro + SIA micro) vs thin AIS; dead-reckoned reachability envelope | `APPROACH_PATROL` (Dynamic Lead-Pursuit) |
 | `S1_ais_spoof` *(Auxiliary)* | **Sea Approach Incursion** | Stationary AIS transponder vs ~20 kt radar/EO contact (~850 m spatial divergence) | `ISR_IDENTIFY_CONTACT` |
+| `S4_fusion_disagreement` *(Auxiliary)* | **Multi-Site Fusion Disagreement Bench** | Air MPSTAR 5 vs Air/Army EO subsets; EW RF-negative; Navy delayed UNKNOWN airborne (`scenario_02_conflicting`) | `CUE_AND_IDENTIFY` |
 
 ### Core Demonstration Highlights
 

@@ -1,4 +1,4 @@
-"""Defense scenarios S1-S3."""
+"""Defense scenarios S1-S4."""
 
 from __future__ import annotations
 
@@ -10,7 +10,10 @@ from core.coa import ActionTier, GateVerdict
 from core.ontology import SpatialEntityGraph
 
 
-@pytest.mark.parametrize("sid", ["S1_ais_spoof", "S2_osint_swarm", "S3_sar_ais"])
+@pytest.mark.parametrize(
+    "sid",
+    ["S1_ais_spoof", "S2_osint_swarm", "S3_sar_ais", "S4_fusion_disagreement"],
+)
 def test_scenario_builds_finding_and_tier1_coa(sid: str) -> None:
     scenario = get_scenario(sid)
     graph = SpatialEntityGraph(associate_radius_m=2_000.0)
@@ -79,6 +82,28 @@ def test_s3_sar_ais_picture() -> None:
     assert finding.source_breakdown.get("kinematics", {}).get("radar_in_envelope") is True
     coa = scenario.build_coa(graph, finding, timeout_seconds=5.0)
     assert coa.intent == "APPROACH_PATROL"
+
+
+def test_s4_fusion_disagreement_picture() -> None:
+    scenario = get_scenario("S4_fusion_disagreement")
+    events = scenario.build_events()
+    assert len(events) >= 40
+    sources = {e.get("source") for e in events}
+    assert "AIR_RADAR" in sources
+    assert "AIR_EOIR" in sources
+    assert "ARMY_EOIR" in sources
+    assert "NAVY_COASTAL_RADAR" in sources
+
+    graph = SpatialEntityGraph(associate_radius_m=50_000.0)
+    graph.ingest_many([normalize_sensor_event(e) for e in events])
+    finding = scenario.detect(graph)
+    assert finding is not None
+    assert finding.amber_alert is not None
+    assert "MULTI_SITE_COUNT_DISAGREEMENT" in finding.amber_alert
+    assert finding.source_breakdown.get("ew_negative") is True
+    assert len(finding.source_breakdown.get("mpstar_tracks", [])) >= 5
+    coa = scenario.build_coa(graph, finding, timeout_seconds=5.0)
+    assert coa.intent == "CUE_AND_IDENTIFY"
 
 
 @pytest.mark.parametrize("sid", list_scenario_ids())

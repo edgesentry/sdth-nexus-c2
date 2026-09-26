@@ -69,6 +69,7 @@ Vendored ingress snapshots so CI and Core-only checkouts stay deterministic
 | --- | --- |
 | `s1_trojan_scenario.jsonl` | SensorSim canonical stream copy for `s1_trojan` |
 | `s2_osint_swarm_scenario.jsonl` | SensorSim Pillar-1 stream copy for `S2_osint_swarm` |
+| `s4_fusion_disagreement_scenario.jsonl` | SensorSim aux stream copy for `S4_fusion_disagreement` (`scenario_02_conflicting`) |
 | `s1_trojan_pois.json` | Jurong CNI + military POI buffers |
 | `s1_trojan_site_origins.json` | Site origins for polar reverse-geocode |
 | `sentinel_run_cv_sg_strait.json` / `sentinel_chip.jpg` | SIA Singapore Strait fixture |

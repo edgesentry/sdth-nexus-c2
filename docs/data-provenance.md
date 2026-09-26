@@ -8,7 +8,7 @@ Labels used across this repo. Prefer these over vague “real” / “fake”.
 | **Real-processed** | Upstream processes a real-world source; C2 receives the result indirectly |
 | **Assumed-mock** | Stand-in until the partner schema / endpoint is handed over (then becomes Real-processed) |
 
-> **Primary hero is airborne `S2_osint_swarm`. Maritime secondary track is `S1_trojan` (tri-service + GLINT hull anchor) then `S3_sar_ais` (GLINT macro × SIA × AIS dark vessel). SensorSim (`SDTH-Sensor-Simulation`) `scenario_02_conflicting` is a legacy fusion bench, not Nexus S2.**
+> **Primary hero is airborne `S2_osint_swarm`. Maritime secondary track is `S1_trojan` (tri-service + GLINT hull anchor) then `S3_sar_ais` (GLINT macro × SIA × AIS dark vessel). SensorSim `scenario_02_conflicting` → Nexus auxiliary `S4_fusion_disagreement` (not Pillar-1 S2).**
 
 ## Three-Pillar Operational Mapping
 
@@ -18,14 +18,15 @@ Labels used across this repo. Prefer these over vague “real” / “fake”.
 | **2** | `S1_trojan` | Maritime + Land/Air: AIS vs coastal radar, CNI VETO, Option B (Tri-service contradiction + spatial SAR mothership lock) | **Used** — Mothership aft-deck / hull spatial anchor (already in narrative & export) |
 | **3** | `S3_sar_ais` | Dark vessel: Dual-SAR × thin AIS → Approach Patrol (Orbital latency → reachable ellipse → USV intercept) | **Primary showcase** — macro cluster (`:5051` / live) + SIA micro |
 
-*Auxiliary baseline*: `S1_ais_spoof` serves as a lightweight baseline outside the three pillars (no GLINT).
+*Auxiliary*: `S1_ais_spoof` (no GLINT). `S4_fusion_disagreement` (SensorSim `scenario_02_conflicting` multi-site disagreement bench).
 
 ### Data Alignment with SensorSim (`SDTH-Sensor-Simulation`)
 
 | Data Feed | Storage Location | Provenance / Role |
 |-----------|------------------|-------------------|
-| **S2 Synthetic** (OSINT / radar 4 / acoustic / RF silent) | SensorSim `exports/s2_osint_swarm_scenario.jsonl` | **Synthetic** (*`scenario_02_conflicting` is a legacy fusion bench, not Nexus S2*) |
+| **S2 Synthetic** (OSINT / radar 4 / acoustic / RF silent) | SensorSim `exports/s2_osint_swarm_scenario.jsonl` | **Synthetic** (*distinct from `scenario_02_conflicting`*) |
 | **Trojan Maritime + Land/Air + GLINT row** | Existing `synthetic_maritime_data/` → `exports/s1_trojan_*` | **Synthetic** / GLINT stub |
+| **S4 Fusion Bench** | `scenario_02_conflicting` → `exports/s4_fusion_disagreement_scenario.jsonl` | **Synthetic** auxiliary Nexus `S4_fusion_disagreement` |
 | **S3 Coastal AIS / Radar** | SensorSim optional; **GLINT macro / SIA chip owned by Nexus / Team 02 / SIA** | **Assumed-mock** (`:5051`) + **Real-processed** (SIA Sentinel-1) |
 
 ## Operational sensor classes (4-tier)

@@ -71,6 +71,17 @@ def canonical_row_to_event(row: dict[str, Any]) -> dict[str, Any] | None:
             )
         elif site_lat is not None and site_lon is not None and source == "ARMY_CCTV":
             lat, lon = float(site_lat), float(site_lon)
+        elif (
+            site_lat is not None
+            and site_lon is not None
+            and (
+                source in {"AIR_EW", "ARMY_EW"}
+                or row.get("detected") is False
+                or row.get("rf_negative")
+            )
+        ):
+            # RF-negative / null-bearing EW: anchor at the reporting site.
+            lat, lon = float(site_lat), float(site_lon)
         else:
             return None
 
